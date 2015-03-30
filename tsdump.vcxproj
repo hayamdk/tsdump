@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B2711611-69C5-42A4-96E2-8D4B4FA84CC9}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>tsdump</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="convtounicode.cpp" />
+    <ClCompile Include="load_modules.cpp" />
+    <ClCompile Include="mod_cmdexec_win.cpp" />
+    <ClCompile Include="mod_fileoutput_stdio.cpp" />
+    <ClCompile Include="mod_fileoutput_win.cpp" />
+    <ClCompile Include="mod_pipeoutput_win.cpp" />
+    <ClCompile Include="proginfo.cpp" />
+    <ClCompile Include="rplsinfo.cpp" />
+    <ClCompile Include="tsdump.cpp" />
+    <ClCompile Include="tsprocess.cpp" />
+    <ClCompile Include="ts_output.cpp" />
+    <ClCompile Include="ts_parser.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="charsize1table.h" />
+    <ClInclude Include="convtounicode.h" />
+    <ClInclude Include="hankaku1table.h" />
+    <ClInclude Include="hiragana1table.h" />
+    <ClInclude Include="IB25Decoder.h" />
+    <ClInclude Include="IBonDriver2.h" />
+    <ClInclude Include="jis12table.h" />
+    <ClInclude Include="jis12wintable.h" />
+    <ClInclude Include="jis3combiningtable.h" />
+    <ClInclude Include="jis3table.h" />
+    <ClInclude Include="jis4table.h" />
+    <ClInclude Include="kanacommon1table.h" />
+    <ClInclude Include="katakana1table.h" />
+    <ClInclude Include="kigou1excludetable.h" />
+    <ClInclude Include="load_modules.h" />
+    <ClInclude Include="modules.h" />
+    <ClInclude Include="modules_def.h" />
+    <ClInclude Include="proginfo.h" />
+    <ClInclude Include="rplsinfo.h" />
+    <ClInclude Include="tsdump.h" />
+    <ClInclude Include="tsprocess.h" />
+    <ClInclude Include="ts_output.h" />
+    <ClInclude Include="ts_parser.h" />
+    <ClInclude Include="tuikakigou1table.h" />
+    <ClInclude Include="tuikakigou2table.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
