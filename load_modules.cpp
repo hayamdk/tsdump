@@ -316,6 +316,7 @@ static int load_dll_modules()
 	char modname[MAX_PATH_LEN];
 	module_def_t *mod;
 	HMODULE hdll;
+	int len;
 
 	GetModuleFileName(NULL, exepath, MAX_PATH);
 	PathRemoveFileSpec(exepath);
@@ -323,6 +324,11 @@ static int load_dll_modules()
 	fp = _wfopen(confpath, L"r");
 	if (fp != NULL) {
 		while( fgetws(dllname, MAX_PATH_LEN-1, fp) != NULL ) {
+			if ( (len = wcslen(dllname)) > 0 ) {
+				if (dllname[len - 1] == L'\n') {
+					dllname[len - 1] = L'\0'; /* ––”ö‚Ì‰üs‚ğíœ */
+				}
+			}
 			if (dllname[0] == L'#') { /* #‚©‚çn‚Ü‚és‚Í–³‹‚·‚é */
 				continue;
 			}
