@@ -464,6 +464,7 @@ void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime)
 	__int64 starttime, endtime, starttime_last, endtime_last;
 
 	//tc_start("getpi");
+	memset(&tos->pi, 0, sizeof(ProgInfo));
 	int get_pi = get_proginfo(&tos->pi, &tos->buf[tos->pos_pi], tos->pos_filled - tos->pos_pi);
 	//tc_end();
 

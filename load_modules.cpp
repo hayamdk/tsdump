@@ -210,9 +210,6 @@ void do_open_stream()
 void do_encrypted_stream(unsigned char *buf, size_t size)
 {
 	int i;
-	if (size == 0) {
-		return;
-	}
 	for (i = 0; i < n_modules; i++) {
 		if (module_hooks[i].hook_encrypted_stream) {
 			module_hooks[i].hook_encrypted_stream(buf, size);
@@ -223,9 +220,6 @@ void do_encrypted_stream(unsigned char *buf, size_t size)
 void do_stream(unsigned char *buf, size_t size, int encrypted)
 {
 	int i;
-	if (size == 0) {
-		return;
-	}
 	for (i = 0; i < n_modules; i++) {
 		if (module_hooks[i].hook_stream) {
 			module_hooks[i].hook_stream(buf, size, encrypted);
