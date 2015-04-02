@@ -396,7 +396,7 @@ int get_cmd_params( int argc, WCHAR* argv[] )
 		cmd_load = get_cmddef(argv[i]);
 		if ( ! cmd_load ) {
 			fwprintf(stderr, L"不明なコマンドオプション %s が指定されました\n", argv[i]);
-			return 1;
+			return 0;
 		}
 		cmd_def = cmd_load->cmd_def;
 		if ( cmd_def->have_option ) {
