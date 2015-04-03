@@ -43,7 +43,7 @@ void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime);
 void ts_minimize_buf(ts_output_stat_t *tos);
 void ts_require_buf(ts_output_stat_t *tos, int require);
 void ts_copy_backward(ts_output_stat_t *tos, __int64 nowtime);
-void ts_output(ts_output_stat_t *tos, __int64 nowtime);
+void ts_output(ts_output_stat_t *tos, __int64 nowtime, int);
 int ts_wait_pgoutput(ts_output_stat_t *tos);
 void ts_check_pgoutput(ts_output_stat_t *tos);
 int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps);

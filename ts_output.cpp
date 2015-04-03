@@ -297,7 +297,24 @@ void ts_check_pgoutput(ts_output_stat_t *tos)
 	}
 }
 
-void ts_output(ts_output_stat_t *tos, __int64 nowtime)
+void ts_close_oldest_pg(ts_output_stat_t *tos)
+{
+	int i;
+	pgoutput_stat_t pgos;
+
+	/* 一番古いpgosを閉じる */
+	do_pgoutput_close(tos->pgos[0].modulestats, &tos->pgos[0].final_pi);
+
+	/* pgos[0]の中身を残しておかないといけないのは、pgos[0].fn_baseのポインタを保存するため */
+	pgos = tos->pgos[0];
+	for (i = 0; i < tos->n_pgos - 1; i++) {
+		tos->pgos[i] = tos->pgos[i + 1];
+	}
+	tos->pgos[tos->n_pgos - 1] = pgos;
+	tos->n_pgos--;
+}
+
+void ts_output(ts_output_stat_t *tos, __int64 nowtime, int force_write)
 {
 	int i, write_size, diff;
 
@@ -312,17 +329,9 @@ void ts_output(ts_output_stat_t *tos, __int64 nowtime)
 			if ( ! tos->pgos[0].close_flag ) {
 				tos->pgos[0].close_flag = 1;
 				tos->pgos[0].close_remain = tos->pos_filled - tos->pos_write;
+				tos->pgos[0].delay_remain = 0;
 			} else if ( tos->pgos[0].close_remain <= 0 ) {
-				/* closeフラグが立った番組を閉じる */
-				do_pgoutput_close(tos->pgos[0].modulestats, &tos->pgos[0].final_pi);
-
-				/* pgos[0]の中身を残しておかないといけないのは、pgos[0].fn_baseのポインタを保存するため */
-				pgoutput_stat_t pgos = tos->pgos[0];
-				for (i = 0; i < tos->n_pgos - 1; i++) {
-					tos->pgos[i] = tos->pgos[i + 1];
-				}
-				tos->pgos[tos->n_pgos - 1] = pgos;
-				tos->n_pgos--;
+				ts_close_oldest_pg(tos);
 			}
 		}
 
@@ -331,7 +340,7 @@ void ts_output(ts_output_stat_t *tos, __int64 nowtime)
 		/*if (write_size < 0) {
 			int k = 0;
 		}*/
-		if (write_size == 0) {
+		if ( write_size < 1024*1024 && !force_write ) { /* 書き出しが一定程度溜まっていない場合はパス */
 			//ts_update_transfer_history(tos, nowtime, 0);
 			return;
 		} else if (write_size > MAX_WRITE_SIZE) {
@@ -346,13 +355,19 @@ void ts_output(ts_output_stat_t *tos, __int64 nowtime)
 				if (tos->pgos[i].delay_remain < write_size) {
 					diff = write_size - tos->pgos[i].delay_remain;
 					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write+write_size-diff]), diff);
+					tos->pgos[i].delay_remain = 0; /* ここで0にしないのはバグだった？ */
 				} else {
 					tos->pgos[i].delay_remain -= write_size;
 				}
-			/* 端数の書き出しのみが残っている場合 */
+			/* 端数の書き出しが残っている場合 */
 			} else if ( tos->pgos[i].close_flag && tos->pgos[i].close_remain > 0 ) {
-				do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), tos->pgos[i].close_remain);
-				tos->pgos[i].close_remain = 0;
+				if (tos->pgos[i].close_remain > write_size) {
+					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), write_size);
+					tos->pgos[i].close_remain -= write_size;
+				} else {
+					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), tos->pgos[i].close_remain);
+					tos->pgos[i].close_remain = 0;
+				}
 			/* 通常の書き出し */
 			} else {
 				do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), write_size);
@@ -418,7 +433,7 @@ void ts_require_buf(ts_output_stat_t *tos, int require_size)
 	printf("[INFO] 書き込み完了を待機...");
 	ts_wait_pgoutput(tos);
 	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
-		ts_output(tos, gettime());
+		ts_output(tos, gettime(), 1);
 		ts_wait_pgoutput(tos);
 	}
 	printf("完了\n");
@@ -531,8 +546,8 @@ void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime)
 				pgos[-1].final_pi = tos->pi_last;
 			}
 			tos->n_pgos++;
+			tos->pi_last = tos->pi;
 		}
-		tos->pi_last = tos->pi;
 	} else if( get_pi ) {
 		/* 番組の時間が途中で変更された場合 */
 		if ( starttime != starttime_last ) {

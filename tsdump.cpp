@@ -284,9 +284,9 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 			gettscount = 0;
 		}*/
 		for (i = 0; i < n_tos; i++) {
-			if ( tos[i].pos_filled - tos[i].pos_write > 1024*1024 ) {
-				ts_output(&tos[i], nowtime);
-			}
+			//if ( tos[i].pos_filled - tos[i].pos_write > 1024*1024 ) {
+				ts_output(&tos[i], nowtime, 0);
+			//}
 		}
 		//tc_end();
 
@@ -362,7 +362,7 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 		/* まだ書き出していないバッファを書き出し */
 		err = ts_wait_pgoutput(&tos[i]);
 		while (tos[i].pos_filled - tos[i].pos_write > 0 && !err) {
-			ts_output(&tos[i], gettime());
+			ts_output(&tos[i], gettime(), 1);
 			err = ts_wait_pgoutput(&tos[i]);
 			print_buf(&tos[i], n_tos-i);
 		}
