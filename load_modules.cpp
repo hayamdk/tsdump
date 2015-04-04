@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #pragma comment(lib, "shlwapi.lib")
 
 #include <windows.h>
@@ -303,20 +301,21 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 
 static int load_dll_modules()
 {
-	FILE *fp;
+	FILE *fp = NULL;
 	WCHAR exepath[MAX_PATH_LEN];
 	WCHAR confpath[MAX_PATH_LEN];
 	WCHAR dllname[MAX_PATH_LEN];
 	char modname[MAX_PATH_LEN];
 	module_def_t *mod;
 	HMODULE hdll;
-	int len;
+	size_t len;
+	errno_t err;
 
 	GetModuleFileName(NULL, exepath, MAX_PATH);
 	PathRemoveFileSpec(exepath);
 	swprintf(confpath, MAX_PATH-1, L"%s\\modules.conf", exepath);
-	fp = _wfopen(confpath, L"r");
-	if (fp != NULL) {
+	err = _wfopen_s(&fp, confpath, L"r");
+	if (err == 0) {
 		while( fgetws(dllname, MAX_PATH_LEN-1, fp) != NULL ) {
 			if ( (len = wcslen(dllname)) > 0 ) {
 				if (dllname[len - 1] == L'\n') {
@@ -333,7 +332,7 @@ static int load_dll_modules()
 				fclose(fp);
 				return 0;
 			}
-			wcstombs(modname, dllname, MAX_PATH_LEN);
+			wcstombs_s(&len, modname, MAX_PATH_LEN-1, dllname, MAX_PATH_LEN);
 			PathRemoveExtensionA(modname);
 			mod = (module_def_t*)GetProcAddress(hdll, modname);
 			if (mod == NULL) {

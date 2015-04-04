@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 #pragma comment(lib, "shlwapi.lib")
 
 #include <windows.h>
@@ -21,7 +20,8 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 {
 	WCHAR fname[MAX_PATH_LEN];
 	WCHAR genre[1024];
-	FILE *fp;
+	FILE *fp = NULL;
+	errno_t err;
 
 	if (!pi->isok) {
 		fprintf(stderr, "[WARN] 番組情報が取得できなかったので番組情報ファイルを生成しません\n");
@@ -31,8 +31,8 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 	wcscpy_s(fname, MAX_PATH_LEN - 1, fname_ts);
 	PathRemoveExtension(fname);
 	PathAddExtension(fname, L".txt");
-	fp = _wfopen(fname, L"wt, ccs=UTF-8");
-	if (fp == NULL) {
+	err = _wfopen_s(&fp, fname, L"wt, ccs=UTF-8");
+	if (err != 0) {
 		fwprintf(stderr, L"[ERROR] 番組情報ファイルを保存できません: %s\n", fname);
 		return NULL;
 	}
@@ -63,7 +63,7 @@ static void create_new_proginfo_file(const WCHAR *fname_ts, const WCHAR *fname_p
 	if (fname_pi_init) {
 		wcscpy_s(fname, MAX_PATH_LEN - 1, fname_ts);
 		PathRemoveExtension(fname);
-		wcsncat(fname, L"_init.txt", MAX_PATH_LEN - 1);
+		wcsncat_s(fname, L"_init.txt", MAX_PATH_LEN - 1);
 		MoveFile(fname_pi_init, fname);
 	}
 	create_proginfo_file(fname_ts, pi);
@@ -71,9 +71,11 @@ static void create_new_proginfo_file(const WCHAR *fname_ts, const WCHAR *fname_p
 
 static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t*)
 {
-	FILE *fp = _wfopen(fname, L"wb");
-
-	if (fp == NULL) {
+	FILE *fp = NULL;
+	errno_t err;
+	
+	err = _wfopen_s(&fp, fname, L"wb");
+	if (err) {
 		fwprintf(stderr, L"[ERROR] tsファイルをオープンできません: %s\n", fname);
 		return NULL;
 	}

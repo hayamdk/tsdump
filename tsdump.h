@@ -21,7 +21,7 @@ static inline __int64 gettime()
 	__int64 result;
 	_timeb tv;
 
-	_ftime(&tv);
+	_ftime64_s(&tv);
 	result = (__int64)tv.time * 1000;
 	result += tv.millitm;
 
@@ -31,7 +31,7 @@ static inline __int64 gettime()
 static inline __int64 timenum_end(ProgInfo *pi)
 {
 	__int64 tn;
-	struct tm t, *te;
+	struct tm t, te;
 	time_t tt;
 	int sec, min, hour, day_diff;
 
@@ -61,12 +61,12 @@ static inline __int64 timenum_end(ProgInfo *pi)
 	tt = mktime(&t);
 	if (tt != -1) {
 		tt += day_diff * 60 * 60 * 24;
-		te = localtime(&tt);
-		tn = te->tm_year + 1900;
+		localtime_s(&te, &tt);
+		tn = te.tm_year + 1900;
 		tn *= 100;
-		tn += te->tm_mon + 1;
+		tn += te.tm_mon + 1;
 		tn *= 100;
-		tn += te->tm_mday;
+		tn += te.tm_mday;
 	} else {
 		tn = 99990101;
 	}
@@ -100,17 +100,19 @@ static inline __int64 timenum_start(ProgInfo *pi)
 static inline __int64 timenumtt(time_t t)
 {
 	__int64 tn;
-	struct tm *lt = localtime(&t);
+	struct tm lt;
+	
+	localtime_s(&lt, &t);
 
-	tn = lt->tm_year + 1900;
+	tn = lt.tm_year + 1900;
 	tn *= 100;
-	tn += (lt->tm_mon + 1);
+	tn += (lt.tm_mon + 1);
 	tn *= 100;
-	tn += lt->tm_mday;
+	tn += lt.tm_mday;
 	tn *= 100;
-	tn += lt->tm_hour;
+	tn += lt.tm_hour;
 	tn *= 100;
-	tn += lt->tm_min;
+	tn += lt.tm_min;
 	return tn;
 }
 
