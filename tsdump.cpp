@@ -118,16 +118,29 @@ int decode_dummy(BYTE *buf, DWORD n_buf, BYTE **decbuf, DWORD *n_decbuf)
 
 void print_buf(ts_output_stat_t *tos, int n_tos)
 {
-	int n, i, j, backward_size;
-	char line[100];
+	int n, i, j, backward_size, console_width, width;
+	char line[256];
 	char *p = line;
 	static int cnt = 0;
+	HANDLE hc;
+	CONSOLE_SCREEN_BUFFER_INFO ci;
 
 	if(!tos) {
 		return;
 	}
 
-	int width = (74-(n_tos-1)) / n_tos;
+	console_width = 80;
+	hc = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hc != INVALID_HANDLE_VALUE) {
+		if ( GetConsoleScreenBufferInfo(hc, &ci) != 0 ) {
+			console_width = ci.dwSize.X;
+		}
+	}
+	if (console_width >= 256) {
+		console_width = 255;
+	}
+
+	width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
 	for (i = 0; i < n_tos; i++) {
 		for (backward_size = j = 0; j < tos[i].n_th; j++) {
