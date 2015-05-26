@@ -1,9 +1,17 @@
 #define MAX_PATH_LEN		MAX_PATH
 
-#ifdef __cplusplus
-#define MODULE_EXPORT		extern "C" __declspec(dllexport)
-#elif
-#define MODULE_EXPORT		__declspec(dllexport)
+#ifdef IN_SHARED_MODULE
+	#ifdef __cplusplus
+	#define MODULE_EXPORT		extern "C" __declspec(dllimport)
+	#else
+	#define MODULE_EXPORT		__declspec(dllimport)
+	#endif
+#else
+	#ifdef __cplusplus
+	#define MODULE_EXPORT		extern "C" __declspec(dllexport)
+	#else
+	#define MODULE_EXPORT		__declspec(dllexport)
+	#endif
 #endif
 
 // î‘ëgèÓïÒç\ë¢ëÃ
@@ -49,6 +57,7 @@ typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);
 typedef enum {
 	TSDUMP_MODULE_NONE = 0,
 	TSDUMP_MODULE_V1 = 1,
+	TSDUMP_MODULE_V2 = 1,
 } module_ver;
 
 typedef struct{
@@ -81,10 +90,14 @@ typedef const int(*hook_pgoutput_wait_t)(void*);
 typedef void(*hook_pgoutput_close_t)(void*, const ProgInfo*);
 typedef void(*hook_pgoutput_postclose_t)(void*);
 typedef const WCHAR* (*hook_postconfig_t)();
+typedef void(*hook_close_module_t)();
 typedef void(*hook_open_stream_t)();
 typedef void(*hook_encrypted_stream_t)(const unsigned char*, const size_t);
 typedef void(*hook_stream_t)(const unsigned char*, const size_t, const int);
 typedef void(*hook_close_stream_t)();
+typedef void(*hook_stream_generator_t)(unsigned char **, int *);
+typedef void(*hook_stream_decoder_t)(unsigned char **, int *, const unsigned char *, int);
+//typedef void(*hook_stream_splitter)();
 
 MODULE_EXPORT void print_err(WCHAR* name, int err);
 MODULE_EXPORT int putGenreStr(WCHAR*, const int, const int*, const int*);
@@ -96,7 +109,10 @@ MODULE_EXPORT void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler);
 MODULE_EXPORT void register_hook_pgoutput_close(hook_pgoutput_close_t handler);
 MODULE_EXPORT void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler);
 MODULE_EXPORT void register_hook_postconfig(hook_postconfig_t handler);
+MODULE_EXPORT void register_hook_close_module(hook_close_module_t handler);
 MODULE_EXPORT void register_hook_open_stream(hook_open_stream_t handler);
 MODULE_EXPORT void register_hook_crypted_stream(hook_encrypted_stream_t handler);
 MODULE_EXPORT void register_hook_stream(hook_stream_t handler);
 MODULE_EXPORT void register_hook_close_stream(hook_close_stream_t handler);
+MODULE_EXPORT const WCHAR* register_hook_stream_generator(hook_stream_generator_t handler);
+MODULE_EXPORT const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler);

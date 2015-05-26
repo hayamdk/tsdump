@@ -23,11 +23,15 @@ typedef struct {
 	hook_pgoutput_close_t hook_pgoutput_close;
 	hook_pgoutput_postclose_t hook_pgoutput_postclose;
 	hook_postconfig_t hook_postconfig;
+	hook_close_module_t hook_close_module;
 	hook_open_stream_t hook_open_stream;
 	hook_encrypted_stream_t hook_encrypted_stream;
 	hook_stream_t hook_stream;
 	hook_close_stream_t hook_close_stream;
 } module_hooks_t;
+
+static hook_stream_generator_t hook_stream_generator = NULL;
+static hook_stream_decoder_t hook_stream_decoder = NULL;
 
 typedef struct {
 	module_def_t *cmd_module;
@@ -97,6 +101,11 @@ void register_hook_postconfig(hook_postconfig_t handler)
 	module_hooks_current->hook_postconfig = handler;
 }
 
+void register_hook_close_module(hook_close_module_t handler)
+{
+	module_hooks_current->hook_close_module = handler;
+}
+
 void register_hook_open_stream(hook_open_stream_t handler)
 {
 	module_hooks_current->hook_open_stream = handler;
@@ -115,6 +124,27 @@ void register_hook_stream(hook_stream_t handler)
 void register_hook_close_stream(hook_close_stream_t handler)
 {
 	module_hooks_current->hook_close_stream = handler;
+}
+
+const WCHAR* register_hook_stream_generator(hook_stream_generator_t handler)
+{
+	if (hook_stream_generator == NULL) {
+		hook_stream_generator = handler;
+	} else {
+		return L"ストリームジェネレータは既に登録されています";
+	}
+	return NULL;
+}
+
+const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler)
+{
+	if (hook_stream_decoder == NULL) {
+		hook_stream_decoder = handler;
+	}
+	else {
+		return L"ストリームデコーダは既に登録されています";
+	}
+	return NULL;
 }
 
 void **do_pgoutput_create(WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
@@ -195,6 +225,16 @@ int do_postconfig()
 	return 1;
 }
 
+void do_close_module()
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (module_hooks[i].hook_close_module) {
+			module_hooks[i].hook_close_module();
+		}
+	}
+}
+
 void do_open_stream()
 {
 	int i;
@@ -232,6 +272,20 @@ void do_close_stream()
 		if (module_hooks[i].hook_close_stream) {
 			module_hooks[i].hook_close_stream();
 		}
+	}
+}
+
+void do_stream_generator(unsigned char **buf, int *size)
+{
+	if (hook_stream_generator) {
+		hook_stream_generator(buf, size);
+	}
+}
+
+void do_stream_decoder(unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size)
+{
+	if (hook_stream_decoder) {
+		hook_stream_decoder(dst_buf, dst_size, src_buf, src_size);
 	}
 }
 

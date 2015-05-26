@@ -536,6 +536,8 @@ int _tmain(int argc, TCHAR* argv[])
 	printf("ê≥èÌèIóπ\n");
 
 END:
+	do_close_module();
+
 	free_modules();
 	if (hDll) {
 		FreeLibrary(hDll);
