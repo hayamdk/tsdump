@@ -12,7 +12,6 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 
-#include "IBonDriver2.h"
 #include "IB25Decoder.h"
 
 #include "modules_def.h"
@@ -173,10 +172,12 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 	printf("buf: %s\r", line);
 }
 
-void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
+void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decoder2)
 {
 	BYTE *recvbuf, *decbuf;
-	DWORD n_recv=0, n_dec, rem_recv;
+	//DWORD n_recv=0, n_dec, rem_recv;
+
+	int n_recv, n_dec;
 
 	__int64 total = 0;
 	__int64 subtotal = 0;
@@ -202,13 +203,14 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 		single_mode = 1;
 	}
 
-	int gettscount = 0;
+	//int gettscount = 0;
 
 	do_open_stream();
 
 	while ( !termflag ) {
 		nowtime = gettime();
 
+#ifdef AAA
 		/* 前回空取得だった場合少し待ってみる */
 		if (n_recv == 0) {
 			pBon2->WaitTsStream(100);
@@ -216,9 +218,11 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 		/* tsをチューナーから取得 */
 		pBon2->GetTsStream(&recvbuf, &n_recv, &rem_recv);
 		gettscount++;
-
+#endif
+		do_stream_generator(generator_stat, &recvbuf, &n_recv);
 		do_encrypted_stream(recvbuf, n_recv);
 
+#ifdef AAA
 		/* tsをデコード */
 		//tc_start("decode");
 		if(n_recv > 0) {
@@ -240,7 +244,8 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 			decbuf = recvbuf;
 		}
 		//tc_end();
-
+#endif
+		do_stream_decoder(&decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, !param_nodec);
 
 		//tc_start("bufcopy");
@@ -323,10 +328,10 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 				n_srmbs = pB25Decoder2->GetScramblePacketNum();
 			}
 
-			_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
+			/*_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
 				bon_tuner_name, bon_sp_name, bon_ch_name, pBon2->GetSignalLevel(), Mbps,
 				n_drops, n_srmbs,
-				(double)total / 1024 / 1024 / 1024 );
+				(double)total / 1024 / 1024 / 1024 );*/
 			SetConsoleTitle(title);
 
 			lasttime = nowtime;
@@ -335,7 +340,7 @@ void main_loop(IBonDriver2 *pBon2, IB25Decoder2 *pB25Decoder2)
 			/* 番組情報のチェック */
 			for (i = 0; i < n_tos; i++) {
 				if (tos[i].th[1].bytes > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
-					ts_check_pi(&tos[i], nowtime);
+					ts_check_pi(&tos[i], nowtime, ch_info);
 				}
 			}
 
@@ -409,7 +414,7 @@ typedef IB25Decoder2* (pCreateB25Decoder2_t)(void);
 int _tmain(int argc, TCHAR* argv[])
 {
 	HMODULE hB25dll = NULL;
-	HMODULE hDll = NULL;
+
 
 	int ret=0;
 
@@ -427,69 +432,32 @@ int _tmain(int argc, TCHAR* argv[])
 	}
 	printf("\n");
 
+	/* モジュールの引数を処理 */
 	if ( !get_cmd_params(argc, argv) ) {
 		print_cmd_usage();
 		ret = 1;
 		goto END;
 	}
 
+	/* postconfigフックを呼び出し */
 	if ( ! do_postconfig() ) {
 		print_cmd_usage();
 		ret = 1;
 		goto END;
 	}
 
-	pCreateBonDriver_t *pCreateBonDriver;
+
 	pCreateB25Decoder2_t *pCreateB25Decoder2;
 	IB25Decoder2 *pB25Decoder2;
 
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	hDll = LoadLibrary( param_bon_dll_name );
-	if (hDll == NULL) {
-		fprintf(stderr, "BonDriverをロードできませんでした\n");
-		print_err(_T("LoadLibrary"), GetLastError());
-		ret = 1;
-		goto END;
-	}
-
-	pCreateBonDriver = (pCreateBonDriver_t*)GetProcAddress(hDll, "CreateBonDriver");
-	if ( pCreateBonDriver == NULL) {
-		fprintf(stderr, "CreateBonDriver()のポインタを取得できませんでした\n");
-		print_err(_T("GetProcAddress"), GetLastError());
-		ret = 1;
-		goto END;
-	}
-
-	IBonDriver *pBon = pCreateBonDriver();
-	if (pBon == NULL) {
-		fprintf(stderr, "CreateBonDriver() returns NULL\n" );
-		ret = 1;
-		goto END;
-	}
-
-	IBonDriver2 *pBon2 = dynamic_cast<IBonDriver2 *>(pBon);
-
-	if( ! pBon2->OpenTuner() ) {
-		fprintf(stderr, "OpenTuner() returns FALSE\n" );
-		ret = 1;
-		goto END;
-	}
+	ch_info_t ch_info;
+	void *generator_stat;
+	generator_stat = do_stream_generator_open(&ch_info);
 
 	Sleep(500);
-
-	bon_ch_name = pBon2->EnumChannelName( param_sp_num, param_ch_num );
-	bon_tuner_name = pBon2->GetTunerName();
-	bon_sp_name = pBon2->EnumTuningSpace( param_sp_num );
-	_tprintf( _T("%s\n"), bon_tuner_name );
-	_tprintf(_T("%s\n"), bon_sp_name);
-	_tprintf( _T("%s\n"), bon_ch_name );
-	if( ! pBon2->SetChannel( param_sp_num, param_ch_num ) ) {
-		fprintf(stderr, "SetChannel() returns FALSE\n" );
-		ret = 1;
-		goto END;
-	}
 
 	if ( !param_nodec ) {
 		hB25dll = LoadLibrary(_T("B25Decoder.dll"));
@@ -525,46 +493,29 @@ int _tmain(int argc, TCHAR* argv[])
 		pB25Decoder2 = NULL;
 	}
 
-	main_loop(pBon2, pB25Decoder2);
+	main_loop(generator_stat, &ch_info, pB25Decoder2);
 
 	if (!param_nodec) {
 		pB25Decoder2->Release();
 	}
 
-	pBon2->CloseTuner();
+	do_stream_generator_close(generator_stat);
+
+	//pBon2->CloseTuner();
 	//fclose(fp);
+
 	printf("正常終了\n");
 
 END:
 	do_close_module();
 
 	free_modules();
-	if (hDll) {
-		FreeLibrary(hDll);
-	}
+
 	if (!param_nodec && hB25dll) {
 		FreeLibrary(hB25dll);
 	}
 	if( ret ) { getchar(); }
 	return ret;
-}
-
-static const WCHAR* set_bon(const WCHAR *param)
-{
-	param_bon_dll_name = _wcsdup(param);
-	return NULL;
-}
-
-static const WCHAR* set_sp(const WCHAR *param)
-{
-	param_sp_num = _wtoi(param);
-	return NULL;
-}
-
-static const WCHAR* set_ch(const WCHAR *param)
-{
-	param_ch_num = _wtoi(param);
-	return NULL;
 }
 
 static const WCHAR* set_dir(const WCHAR *param)
@@ -611,15 +562,6 @@ static const WCHAR* set_sv(const WCHAR *param)
 
 static const WCHAR *hook_postconfig()
 {
-	if (param_bon_dll_name == NULL) {
-		return L"BonDriverのDLLを指定してください";
-	}
-	if (param_ch_num < 0) {
-		return L"チャンネルが指定されていないか、または不正です";
-	}
-	if (param_sp_num < 0) {
-		return L"チューナー空間が指定されていないか、または不正です";
-	}
 	if ( ! param_base_dir ) {
 		return L"出力ディレクトリが指定されていないか、または不正です";
 	}
@@ -632,9 +574,6 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ L"-bon", L"BonDriverのDLL *", 1, set_bon },
-	{ L"-sp", L"チューナー空間番号 *", 1, set_sp },
-	{ L"-ch", L"チャンネル番号 *", 1, set_ch },
 	{ L"-dir", L"出力先ディレクトリ *", 1, set_dir },
 	{ L"-nodec", L"MULTI2のデコードを行わない", 0, set_nodec },
 	{ L"-sv", L"サービス番号(複数指定可能)", 1, set_sv },

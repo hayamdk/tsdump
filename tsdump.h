@@ -122,13 +122,6 @@ static inline __int64 timenumnow()
 	return timenumtt(t);
 }
 
-extern const TCHAR *bon_ch_name;
-extern const TCHAR *bon_sp_name;
-extern const TCHAR *bon_tuner_name;
-
-extern const WCHAR *param_bon_dll_name;
-extern int param_sp_num;
-extern int param_ch_num;
 extern WCHAR param_base_dir[MAX_PATH_LEN];
 extern int param_all_services;
 extern int param_services[MAX_SERVICES];

@@ -80,6 +80,7 @@
   <ItemGroup>
     <ClCompile Include="convtounicode.cpp" />
     <ClCompile Include="load_modules.cpp" />
+    <ClCompile Include="mod_bondriver.cpp" />
     <ClCompile Include="mod_cmdexec_win.cpp" />
     <ClCompile Include="mod_fileoutput_stdio.cpp" />
     <ClCompile Include="mod_fileoutput_win.cpp" />

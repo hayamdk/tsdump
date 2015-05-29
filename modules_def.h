@@ -2,15 +2,23 @@
 
 #ifdef IN_SHARED_MODULE
 	#ifdef __cplusplus
-	#define MODULE_EXPORT		extern "C" __declspec(dllimport)
+		#define MODULE_EXPORT_FUNC		extern "C" __declspec(dllimport)
+		#define MODULE_EXPORT_VAR		extern "C" __declspec(dllimport)
+		#define MODULE_DEF				extern "C" __declspec(dllexport)
 	#else
-	#define MODULE_EXPORT		__declspec(dllimport)
+		#define MODULE_EXPORT_FUNC		__declspec(dllimport)
+		#define MODULE_EXPORT_VAR		__declspec(dllimport)
+		#define MODULE_DEF				__declspec(dllexport)
 	#endif
 #else
 	#ifdef __cplusplus
-	#define MODULE_EXPORT		extern "C" __declspec(dllexport)
+		#define MODULE_EXPORT_FUNC		extern "C" __declspec(dllexport)
+		#define MODULE_EXPORT_VAR		extern "C" __declspec(dllexport)
+		#define MODULE_DEF
 	#else
-	#define MODULE_EXPORT		__declspec(dllexport)
+		#define MODULE_EXPORT_FUNC		__declspec(dllexport)
+		#define MODULE_EXPORT_VAR		__declspec(dllexport)
+		#define MODULE_DEF
 	#endif
 #endif
 
@@ -95,24 +103,35 @@ typedef void(*hook_open_stream_t)();
 typedef void(*hook_encrypted_stream_t)(const unsigned char*, const size_t);
 typedef void(*hook_stream_t)(const unsigned char*, const size_t, const int);
 typedef void(*hook_close_stream_t)();
-typedef void(*hook_stream_generator_t)(unsigned char **, int *);
+typedef void(*hook_stream_generator_t)(void *, unsigned char **, int *);
+typedef void* (*hook_stream_generator_open_t)(ch_info_t*);
+typedef double(*hook_stream_generator_siglevel_t)(void *);
+typedef void(*hook_stream_generator_close_t)(void *);
+
+typedef struct {
+	hook_stream_generator_t handler;
+	hook_stream_generator_open_t open_handler;
+	hook_stream_generator_siglevel_t siglevel_handler;
+	hook_stream_generator_close_t close_handler;
+} hooks_stream_generator_t;
+
 typedef void(*hook_stream_decoder_t)(unsigned char **, int *, const unsigned char *, int);
 //typedef void(*hook_stream_splitter)();
 
-MODULE_EXPORT void print_err(WCHAR* name, int err);
-MODULE_EXPORT int putGenreStr(WCHAR*, const int, const int*, const int*);
+MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);
+MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
 
-MODULE_EXPORT void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
-MODULE_EXPORT void register_hook_pgoutput(hook_pgoutput_t handler);
-MODULE_EXPORT void register_hook_pgoutput_check(hook_pgoutput_check_t handler);
-MODULE_EXPORT void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler);
-MODULE_EXPORT void register_hook_pgoutput_close(hook_pgoutput_close_t handler);
-MODULE_EXPORT void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler);
-MODULE_EXPORT void register_hook_postconfig(hook_postconfig_t handler);
-MODULE_EXPORT void register_hook_close_module(hook_close_module_t handler);
-MODULE_EXPORT void register_hook_open_stream(hook_open_stream_t handler);
-MODULE_EXPORT void register_hook_crypted_stream(hook_encrypted_stream_t handler);
-MODULE_EXPORT void register_hook_stream(hook_stream_t handler);
-MODULE_EXPORT void register_hook_close_stream(hook_close_stream_t handler);
-MODULE_EXPORT const WCHAR* register_hook_stream_generator(hook_stream_generator_t handler);
-MODULE_EXPORT const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput(hook_pgoutput_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput_check(hook_pgoutput_check_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput_close(hook_pgoutput_close_t handler);
+MODULE_EXPORT_FUNC void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler);
+MODULE_EXPORT_FUNC void register_hook_postconfig(hook_postconfig_t handler);
+MODULE_EXPORT_FUNC void register_hook_close_module(hook_close_module_t handler);
+MODULE_EXPORT_FUNC void register_hook_open_stream(hook_open_stream_t handler);
+MODULE_EXPORT_FUNC void register_hook_crypted_stream(hook_encrypted_stream_t handler);
+MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
+MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
+MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers);
+MODULE_EXPORT_FUNC const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler);

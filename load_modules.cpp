@@ -30,7 +30,7 @@ typedef struct {
 	hook_close_stream_t hook_close_stream;
 } module_hooks_t;
 
-static hook_stream_generator_t hook_stream_generator = NULL;
+static hooks_stream_generator_t *hooks_stream_generator = NULL;
 static hook_stream_decoder_t hook_stream_decoder = NULL;
 
 typedef struct {
@@ -126,10 +126,10 @@ void register_hook_close_stream(hook_close_stream_t handler)
 	module_hooks_current->hook_close_stream = handler;
 }
 
-const WCHAR* register_hook_stream_generator(hook_stream_generator_t handler)
+const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 {
-	if (hook_stream_generator == NULL) {
-		hook_stream_generator = handler;
+	if (hooks_stream_generator == NULL) {
+		hooks_stream_generator = handlers;
 	} else {
 		return L"ストリームジェネレータは既に登録されています";
 	}
@@ -275,10 +275,25 @@ void do_close_stream()
 	}
 }
 
-void do_stream_generator(unsigned char **buf, int *size)
+void* do_stream_generator_open(ch_info_t *chinfo)
 {
-	if (hook_stream_generator) {
-		hook_stream_generator(buf, size);
+	if (hooks_stream_generator) {
+		return hooks_stream_generator->open_handler(chinfo);
+	}
+	return NULL;
+}
+
+void do_stream_generator(void *param, unsigned char **buf, int *size)
+{
+	if (hooks_stream_generator) {
+		hooks_stream_generator->handler(param, buf, size);
+	}
+}
+
+void do_stream_generator_close(void *param)
+{
+	if (hooks_stream_generator) {
+		hooks_stream_generator->close_handler(param);
 	}
 }
 
@@ -328,11 +343,6 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 		return 0;
 	}
 
-	/* hooks */
-	module_hooks_current = &module_hooks[n_modules];
-	memset(module_hooks_current, 0, sizeof(module_hooks_t));
-	mod->register_hooks();
-
 	/* cmds */
 	if ( mod->cmds ) {
 		for ( cmd = mod->cmds; cmd->cmd_name != NULL; cmd++ ) {
@@ -341,6 +351,11 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 			}
 		}
 	}
+
+	/* hooks */
+	module_hooks_current = &module_hooks[n_modules];
+	memset(module_hooks_current, 0, sizeof(module_hooks_t));
+	mod->register_hooks();
 
 	if (hdll) {
 		wprintf(L"Module loaded(dll): %s\n", mod->modname);

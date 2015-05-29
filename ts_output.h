@@ -39,7 +39,7 @@ typedef struct
 void init_tos(ts_output_stat_t *tos);
 void close_tos(ts_output_stat_t *tos);
 void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf);
-void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime);
+void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime, ch_info_t *ch_info);
 void ts_minimize_buf(ts_output_stat_t *tos);
 void ts_require_buf(ts_output_stat_t *tos, int require);
 void ts_copy_backward(ts_output_stat_t *tos, __int64 nowtime);

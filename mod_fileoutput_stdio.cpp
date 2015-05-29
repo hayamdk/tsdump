@@ -132,7 +132,7 @@ static void register_hooks()
 	register_hook_pgoutput_close(hook_pgoutput_close);
 }
 
-module_def_t mod_fileoutput_stdio = {
+MODULE_DEF module_def_t mod_fileoutput_stdio = {
 	TSDUMP_MODULE_V1,
 	L"mod_fileoutput_stdio",
 	register_hooks,
