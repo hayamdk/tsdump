@@ -275,12 +275,12 @@ void do_close_stream()
 	}
 }
 
-void* do_stream_generator_open(ch_info_t *chinfo)
+const WCHAR* do_stream_generator_open(void **param, ch_info_t *chinfo)
 {
 	if (hooks_stream_generator) {
-		return hooks_stream_generator->open_handler(chinfo);
+		return hooks_stream_generator->open_handler(param, chinfo);
 	}
-	return NULL;
+	return L"ストリームジェネレータが一つも登録されていません";
 }
 
 void do_stream_generator(void *param, unsigned char **buf, int *size)
@@ -351,6 +351,8 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 			}
 		}
 	}
+
+	//// TODO: ↓ これをモジュールロード後の実行にする
 
 	/* hooks */
 	module_hooks_current = &module_hooks[n_modules];

@@ -61,40 +61,35 @@ static void hook_stream_generator(void*, unsigned char **buf, int *size)
 {
 }
 
-static void* hook_stream_generator_open(ch_info_t *chinfo)
+static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
 {
-	LPWSTR msg;
 	bondriver_stat_t *pstat, stat;
 	ch_info_t ci;
 
 	stat.hdll = LoadLibrary(bon_dll_name);
 	if (stat.hdll == NULL) {
-		fprintf(stderr, "BonDriverをロードできませんでした\n");
 		print_err(L"LoadLibrary", GetLastError());
-		return NULL;
+		return L"BonDriverをロードできませんでした";
 	}
 
 	stat.pCreateBonDriver = (pCreateBonDriver_t*)GetProcAddress(stat.hdll, "CreateBonDriver");
 	if (stat.pCreateBonDriver == NULL) {
-		fprintf(stderr, "CreateBonDriver()のポインタを取得できませんでした\n");
 		print_err(L"GetProcAddress", GetLastError());
 		FreeLibrary(stat.hdll);
-		return NULL;
+		return L"CreateBonDriver()のポインタを取得できませんでした";
 	}
 
 	stat.pBon = stat.pCreateBonDriver();
 	if (stat.pBon == NULL) {
-		fprintf(stderr, "CreateBonDriver() returns NULL\n" );
 		FreeLibrary(stat.hdll);
-		return NULL;
+		return L"CreateBonDriver() returns NULL";
 	}
 
 	stat.pBon2 = dynamic_cast<IBonDriver2 *>(stat.pBon);
 
 	if (! stat.pBon2->OpenTuner()) {
-		fprintf(stderr, "OpenTuner() returns FALSE\n" );
 		FreeLibrary(stat.hdll);
-		return NULL;
+		return L"OpenTuner() returns FALSE";
 	}
 
 	ci.ch_str = stat.pBon2->EnumChannelName(sp_num, ch_num);
@@ -107,16 +102,16 @@ static void* hook_stream_generator_open(ch_info_t *chinfo)
 	wprintf(L"Space: %s\n", ci.sp_str);
 	wprintf(L"Channel: %s\n", ci.ch_str);
 	if (!stat.pBon2->SetChannel(sp_num, ch_num)) {
-		fprintf(stderr, "SetChannel() returns FALSE\n");
 		stat.pBon2->CloseTuner();
 		FreeLibrary(stat.hdll);
-		return NULL;
+		return L"SetChannel() returns FALSE";
 	}
 
 	*chinfo = ci;
 	pstat = (bondriver_stat_t*)malloc(sizeof(bondriver_stat_t));
 	*pstat = stat;
-	return pstat;
+	*param = pstat;
+	return NULL;
 }
 
 static double hook_stream_generator_siglevel(void*)
@@ -141,7 +136,7 @@ static void hook_close_module()
 
 static void register_hooks()
 {
-	if (bon_dll_name != NULL) {
+	if (bon_dll_name) {
 		reg_hook_msg = register_hooks_stream_generator(&hooks_stream_generator);
 	}
 	register_hook_close_module(hook_close_module);
