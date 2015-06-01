@@ -173,7 +173,7 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 	printf("buf: %s\r", line);
 }
 
-void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decoder2)
+void main_loop(void *generator_stat, void *decoder_stat, ch_info_t *ch_info)
 {
 	BYTE *recvbuf, *decbuf;
 	//DWORD n_recv=0, n_dec, rem_recv;
@@ -246,7 +246,7 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 		}
 		//tc_end();
 #endif
-		//do_stream_decoder(&decbuf, &n_dec, recvbuf, n_recv);
+		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, !param_nodec);
 
 		//tc_start("bufcopy");
@@ -319,21 +319,25 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 
 			TCHAR title[256];
 
-			int64_t n_drops, n_srmbs;
+			//int64_t n_drops, n_srmbs;
 
-			if (param_nodec) {
+			decoder_stats_t stats;
+
+			do_stream_decoder_stats(decoder_stat, &stats);
+
+			/*if (param_nodec) {
 				n_drops = ts_n_drops;
 				n_srmbs = 0;
 			} else {
-				n_drops = pB25Decoder2->GetContinuityErrNum();
-				n_srmbs = pB25Decoder2->GetScramblePacketNum();
-			}
+				//n_drops = pB25Decoder2->GetContinuityErrNum();
+				//n_srmbs = pB25Decoder2->GetScramblePacketNum();
+			}*/
 
 			double siglevel = do_stream_generator_siglevel(generator_stat);
 
 			_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
 				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel, Mbps,
-				n_drops, n_srmbs,
+				stats.n_dropped, stats.n_scrambled,
 				(double)total / 1024 / 1024 / 1024 );
 			SetConsoleTitle(title);
 
@@ -443,8 +447,8 @@ int wmain(int argc, WCHAR* argv[])
 		goto END;
 	}
 
-	pCreateB25Decoder2_t *pCreateB25Decoder2;
-	IB25Decoder2 *pB25Decoder2;
+	//pCreateB25Decoder2_t *pCreateB25Decoder2;
+	//IB25Decoder2 *pB25Decoder2;
 
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
@@ -454,13 +458,23 @@ int wmain(int argc, WCHAR* argv[])
 	const WCHAR *sg_msg = do_stream_generator_open(&generator_stat, &ch_info);
 
 	if (sg_msg) {
-		fwprintf(stderr, L"ストリームジェネレーターを開けませんでした: %s\n", sg_msg);
+		fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", sg_msg);
+		ret = 1;
+		goto END;
+	}
+
+	void *decoder_stat;
+	const WCHAR *sd_msg = do_stream_decoder_open(&decoder_stat);
+
+	if (sd_msg) {
+		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", sd_msg);
 		ret = 1;
 		goto END;
 	}
 
 	Sleep(500);
 
+#ifdef AAA
 	if ( !param_nodec ) {
 		hB25dll = LoadLibrary(_T("B25Decoder.dll"));
 		if (hB25dll == NULL) {
@@ -494,12 +508,13 @@ int wmain(int argc, WCHAR* argv[])
 	} else {
 		pB25Decoder2 = NULL;
 	}
+#endif
 
-	main_loop(generator_stat, &ch_info, pB25Decoder2);
+	main_loop(generator_stat, decoder_stat, &ch_info);
 
-	if (!param_nodec) {
+/*	if (!param_nodec) {
 		pB25Decoder2->Release();
-	}
+	}*/
 
 	printf("正常終了\n");
 

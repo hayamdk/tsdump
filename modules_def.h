@@ -115,21 +115,21 @@ typedef struct {
 } hooks_stream_generator_t;
 
 typedef struct {
-	uint64_t n_input;
-	uint64_t n_output;
-	uint64_t n_dropped;
-	uint64_t n_scrambled;
-} decoder_stat_t;
+	int64_t n_input;
+	int64_t n_output;
+	int64_t n_dropped;
+	int64_t n_scrambled;
+} decoder_stats_t;
 
 typedef const WCHAR* (*hook_stream_decoder_open_t)(void**);
 typedef void(*hook_stream_decoder_t)(void*, unsigned char **, int *, const unsigned char *, int);
-typedef void(*hook_stream_decoder_stat_t)(void*, decoder_stat_t*);
+typedef void(*hook_stream_decoder_stats_t)(void*, decoder_stats_t*);
 typedef void(*hook_stream_decoder_close_t)(void*);
 
 typedef struct {
 	hook_stream_decoder_t handler;
 	hook_stream_decoder_open_t open_handler;
-	hook_stream_decoder_stat_t stat_handler;
+	hook_stream_decoder_stats_t stats_handler;
 	hook_stream_decoder_close_t close_handler;
 } hooks_stream_decoder_t;
 
@@ -151,4 +151,4 @@ MODULE_EXPORT_FUNC void register_hook_crypted_stream(hook_encrypted_stream_t han
 MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
 MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers);
-MODULE_EXPORT_FUNC const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler);
+MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);

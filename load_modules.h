@@ -19,3 +19,6 @@ void do_stream_generator(void *param, unsigned char **buf, int *size);
 double do_stream_generator_siglevel(void *param);
 void do_stream_generator_close(void *param);
 void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size);
+const WCHAR* do_stream_decoder_open(void **param);
+void do_stream_decoder_stats(void *param, decoder_stats_t *stats);
+void do_stream_decoder_close(void *param);

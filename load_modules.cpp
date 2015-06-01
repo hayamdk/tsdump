@@ -30,7 +30,7 @@ typedef struct {
 } module_hooks_t;
 
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
-static hook_stream_decoder_t hook_stream_decoder = NULL;
+static hooks_stream_decoder_t *hooks_stream_decoder = NULL;
 
 typedef struct {
 	module_def_t *def;
@@ -141,10 +141,10 @@ const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 	return NULL;
 }
 
-const WCHAR* register_hook_stream_decoder(hook_stream_decoder_t handler)
+const WCHAR* register_hook_stream_decoder(hooks_stream_decoder_t *handlers)
 {
-	if (hook_stream_decoder == NULL) {
-		hook_stream_decoder = handler;
+	if (hooks_stream_decoder == NULL) {
+		hooks_stream_decoder = handlers;
 	}
 	else {
 		return L"ストリームデコーダは既に登録されています";
@@ -312,8 +312,30 @@ void do_stream_generator_close(void *param)
 
 void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size)
 {
-	if (hook_stream_decoder) {
-		hook_stream_decoder(param, dst_buf, dst_size, src_buf, src_size);
+	if (hooks_stream_decoder) {
+		hooks_stream_decoder->handler(param, dst_buf, dst_size, src_buf, src_size);
+	}
+}
+
+const WCHAR* do_stream_decoder_open(void **param)
+{
+	if (hooks_stream_decoder) {
+		return hooks_stream_decoder->open_handler(param);
+	}
+	return NULL;
+}
+
+void do_stream_decoder_stats(void *param, decoder_stats_t *stats)
+{
+	if (hooks_stream_decoder) {
+		hooks_stream_decoder->stats_handler(param, stats);
+	}
+}
+
+void do_stream_decoder_close(void *param)
+{
+	if (hooks_stream_decoder) {
+		hooks_stream_decoder->close_handler(param);
 	}
 }
 
