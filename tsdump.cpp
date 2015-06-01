@@ -33,7 +33,6 @@ int termflag = 0;
 //const WCHAR *bon_sp_name = NULL;
 //const WCHAR *bon_tuner_name = NULL;
 
-const WCHAR *param_bon_dll_name = NULL;
 int param_sp_num = -1;
 int param_ch_num = -1;
 WCHAR param_base_dir[MAX_PATH_LEN];
@@ -467,7 +466,10 @@ END:
 	/*if (!param_nodec && hB25dll) {
 		FreeLibrary(hB25dll);
 	}*/
-	if( ret ) { getchar(); }
+	if( ret ) {
+		printf("‰½‚©ƒL[‚ğ‰Ÿ‚µ‚Ä‚­‚¾‚³‚¢");
+		getchar();
+	}
 	return ret;
 }
 
