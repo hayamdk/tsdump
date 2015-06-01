@@ -391,7 +391,7 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGTERM, signal_handler);
 
 	ch_info_t ch_info;
-	void *generator_stat;
+	void *generator_stat = NULL;
 	const WCHAR *sg_msg = do_stream_generator_open(&generator_stat, &ch_info);
 
 	if (sg_msg) {
@@ -400,7 +400,7 @@ int wmain(int argc, WCHAR* argv[])
 		goto END;
 	}
 
-	void *decoder_stat;
+	void *decoder_stat = NULL;
 	const WCHAR *sd_msg = do_stream_decoder_open(&decoder_stat);
 
 	if (sd_msg) {
@@ -461,7 +461,6 @@ END1:
 
 	do_stream_generator_close(generator_stat);
 
-	//pBon2->CloseTuner();
 	//fclose(fp);
 
 END:

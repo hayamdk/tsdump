@@ -10,6 +10,7 @@ typedef struct {
 	pCreateBonDriver_t *pCreateBonDriver;
 	IBonDriver *pBon;
 	IBonDriver2 *pBon2;
+	DWORD n_rem;
 } bondriver_stat_t;
 
 static WCHAR errmsg[1024];
@@ -58,8 +59,18 @@ static const WCHAR* hook_postconfig()
 	return NULL;
 }
 
-static void hook_stream_generator(void*, unsigned char **buf, int *size)
+static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 {
+	DWORD n_recv;
+
+	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
+	/* 空取得が予測される場合少し待ってみる */
+	if (pstat->n_rem == 0) {
+		pstat->pBon2->WaitTsStream(100);
+	}
+	/* tsをチューナーから取得 */
+	pstat->pBon2->GetTsStream(buf, &n_recv, &pstat->n_rem);
+	*size = n_recv;
 }
 
 static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
@@ -108,6 +119,8 @@ static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		return L"SetChannel() returns FALSE";
 	}
 
+	stat.n_rem = 1;
+
 	*chinfo = ci;
 	pstat = (bondriver_stat_t*)malloc(sizeof(bondriver_stat_t));
 	*pstat = stat;
@@ -115,13 +128,17 @@ static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	return NULL;
 }
 
-static double hook_stream_generator_siglevel(void*)
+static double hook_stream_generator_siglevel(void *param)
 {
-	return 0.0;
+	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
+	return pstat->pBon2->GetSignalLevel();
 }
 
-static void hook_stream_generator_close(void*)
+static void hook_stream_generator_close(void *param)
 {
+	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
+	pstat->pBon2->CloseTuner();
+	FreeLibrary(pstat->hdll);
 }
 
 static hooks_stream_generator_t hooks_stream_generator = {
@@ -131,16 +148,11 @@ static hooks_stream_generator_t hooks_stream_generator = {
 	hook_stream_generator_close
 };
 
-static void hook_close_module()
-{
-}
-
 static void register_hooks()
 {
 	if (bon_dll_name) {
 		reg_hook_msg = register_hooks_stream_generator(&hooks_stream_generator);
 	}
-	register_hook_close_module(hook_close_module);
 	register_hook_postconfig(hook_postconfig);
 }
 

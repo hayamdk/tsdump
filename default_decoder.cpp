@@ -44,8 +44,7 @@ static inline const int64_t ts_drop_counter(unsigned char *packet)
 END:
 	return ts_n_drops;
 }
-
-int default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char *buf, int n_buf)
+void default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char *buf, int n_buf)
 {
 	static unsigned char *tmpbuf = NULL;
 	static int n_tmpbuf = 0;
@@ -57,6 +56,12 @@ int default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char *
 	//return 1;
 
 	//n_rem = 0;
+
+	if (n_buf == 0) {
+		*decbuf = NULL;
+		*n_decbuf = 0;
+		return;
+	}
 
 	int n = n_rem + n_buf;
 
@@ -97,6 +102,4 @@ int default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char *
 //	if (n_rem != 0) {
 		//printf("n=%d rem=%d\n", n, n_rem);
 //	}
-
-	return 1;
 }
