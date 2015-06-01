@@ -14,8 +14,6 @@
 #define MAX_HOOKS_NUM 256
 
 typedef struct {
-	module_def_t *module_def;
-	HMODULE hdll;
 	hook_pgoutput_create_t hook_pgoutput_create;
 	hook_pgoutput_t hook_pgoutput;
 	hook_pgoutput_check_t hook_pgoutput_check;
@@ -34,6 +32,12 @@ static hooks_stream_generator_t *hooks_stream_generator = NULL;
 static hook_stream_decoder_t hook_stream_decoder = NULL;
 
 typedef struct {
+	module_def_t *def;
+	HMODULE hdll;
+	module_hooks_t hooks;
+} module_load_t;
+
+typedef struct {
 	module_def_t *cmd_module;
 	cmd_def_t *cmd_def;
 } cmd_load_t;
@@ -41,7 +45,7 @@ typedef struct {
 #define MAX_MODULES			32
 #define MAX_MODULECMDS		128
 
-static module_hooks_t module_hooks[MAX_MODULES];
+static module_load_t modules[MAX_MODULES];
 static module_hooks_t *module_hooks_current;
 static int n_modules = 0;
 
@@ -152,8 +156,8 @@ void **do_pgoutput_create(WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
 	int i;
 	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
 	for ( i = 0; i < n_modules; i++ ) {
-		if (module_hooks[i].hook_pgoutput_create) {
-			modulestats[i] = module_hooks[i].hook_pgoutput_create(fname, pi, ch_info);
+		if (modules[i].hooks.hook_pgoutput_create) {
+			modulestats[i] = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info);
 		}
 	}
 	return modulestats;
@@ -163,8 +167,8 @@ void do_pgoutput(void **modulestats, unsigned char *buf, size_t size)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_pgoutput) {
-			module_hooks[i].hook_pgoutput(modulestats[i], buf, size);
+		if (modules[i].hooks.hook_pgoutput) {
+			modules[i].hooks.hook_pgoutput(modulestats[i], buf, size);
 		}
 	}
 }
@@ -174,8 +178,8 @@ int do_pgoutput_check(void **modulestats)
 	int i;
 	int write_busy = 0;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_pgoutput_check) {
-			write_busy |= module_hooks[i].hook_pgoutput_check(modulestats[i]);
+		if (modules[i].hooks.hook_pgoutput_check) {
+			write_busy |= modules[i].hooks.hook_pgoutput_check(modulestats[i]);
 		}
 	}
 	return write_busy;
@@ -186,8 +190,8 @@ int do_pgoutput_wait(void **modulestats)
 	int i;
 	int err = 0;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_pgoutput_wait) {
-			err |= module_hooks[i].hook_pgoutput_wait(modulestats[i]);
+		if (modules[i].hooks.hook_pgoutput_wait) {
+			err |= modules[i].hooks.hook_pgoutput_wait(modulestats[i]);
 		}
 	}
 	return err;
@@ -197,13 +201,13 @@ void do_pgoutput_close(void **modulestats, ProgInfo *pi)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_pgoutput_close) {
-			module_hooks[i].hook_pgoutput_close(modulestats[i], pi);
+		if (modules[i].hooks.hook_pgoutput_close) {
+			modules[i].hooks.hook_pgoutput_close(modulestats[i], pi);
 		}
 	}
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_pgoutput_postclose) {
-			module_hooks[i].hook_pgoutput_postclose(modulestats[i]);
+		if (modules[i].hooks.hook_pgoutput_postclose) {
+			modules[i].hooks.hook_pgoutput_postclose(modulestats[i]);
 		}
 	}
 	free(modulestats);
@@ -214,8 +218,8 @@ int do_postconfig()
 	int i;
 	const WCHAR *msg;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_postconfig) {
-			msg = module_hooks[i].hook_postconfig();
+		if (modules[i].hooks.hook_postconfig) {
+			msg = modules[i].hooks.hook_postconfig();
 			if ( msg ) {
 				fwprintf(stderr, L"%s\n", msg );
 				return 0;
@@ -229,8 +233,8 @@ void do_close_module()
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_close_module) {
-			module_hooks[i].hook_close_module();
+		if (modules[i].hooks.hook_close_module) {
+			modules[i].hooks.hook_close_module();
 		}
 	}
 }
@@ -239,8 +243,8 @@ void do_open_stream()
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_open_stream) {
-			module_hooks[i].hook_open_stream();
+		if (modules[i].hooks.hook_open_stream) {
+			modules[i].hooks.hook_open_stream();
 		}
 	}
 }
@@ -249,8 +253,8 @@ void do_encrypted_stream(unsigned char *buf, size_t size)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_encrypted_stream) {
-			module_hooks[i].hook_encrypted_stream(buf, size);
+		if (modules[i].hooks.hook_encrypted_stream) {
+			modules[i].hooks.hook_encrypted_stream(buf, size);
 		}
 	}
 }
@@ -259,8 +263,8 @@ void do_stream(unsigned char *buf, size_t size, int encrypted)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_stream) {
-			module_hooks[i].hook_stream(buf, size, encrypted);
+		if (modules[i].hooks.hook_stream) {
+			modules[i].hooks.hook_stream(buf, size, encrypted);
 		}
 	}
 }
@@ -269,8 +273,8 @@ void do_close_stream()
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hook_close_stream) {
-			module_hooks[i].hook_close_stream();
+		if (modules[i].hooks.hook_close_stream) {
+			modules[i].hooks.hook_close_stream();
 		}
 	}
 }
@@ -331,8 +335,6 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
-	cmd_def_t *cmd;
-
 	if ( mod->mod_ver != TSDUMP_MODULE_V1 ) {
 		fwprintf(stderr, L"Invalid module version: %s\n", mod->modname);
 		return 0;
@@ -344,18 +346,18 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 	}
 
 	/* cmds */
-	if ( mod->cmds ) {
+	/*if ( mod->cmds ) {
 		for ( cmd = mod->cmds; cmd->cmd_name != NULL; cmd++ ) {
 			if ( ! load_module_cmd(mod, cmd) ) {
 				return  0;
 			}
 		}
-	}
+	}*/
 
 	/* hooks */
-	module_hooks_current = &module_hooks[n_modules];
-	memset(module_hooks_current, 0, sizeof(module_hooks_t));
-	mod->register_hooks();
+	//module_hooks_current = &module_hooks[n_modules];
+	//memset(module_hooks_current, 0, sizeof(module_hooks_t));
+	//mod->register_hooks();
 
 	if (hdll) {
 		wprintf(L"Module loaded(dll): %s\n", mod->modname);
@@ -363,7 +365,9 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 		wprintf(L"Module loaded: %s\n", mod->modname);
 	}
 
-	module_hooks_current->hdll = hdll;
+	modules[n_modules].def = mod;
+	memset(&modules[n_modules].hooks, 0, sizeof(module_hooks_t));
+	modules[n_modules].hdll = hdll;
 	n_modules++;
 	return 1;
 }
@@ -424,32 +428,7 @@ static int load_dll_modules()
 	return 1;
 }
 
-int load_modules()
-{
-	int i;
-	int n = sizeof(static_modules) / sizeof(module_def_t*);
-	for ( i = 0; i < n; i++ ) {
-		if( ! load_module(static_modules[i], NULL) ) {
-			return -1;
-		}
-	}
-	if ( ! load_dll_modules() ) {
-		return -1;
-	}
-	return n_modules;
-}
-
-void free_modules()
-{
-	int i;
-	for (i = 0; i < n_modules; i++) {
-		if (module_hooks[i].hdll) {
-			FreeLibrary(module_hooks[i].hdll);
-		}
-	}
-}
-
-int get_cmd_params( int argc, WCHAR* argv[] )
+static int get_cmd_params( int argc, WCHAR* argv[] )
 {
 	int i;
 	cmd_load_t *cmd_load;
@@ -476,7 +455,7 @@ int get_cmd_params( int argc, WCHAR* argv[] )
 	return 1;
 }
 
-void print_cmd_usage()
+static void print_cmd_usage()
 {
 	int i;
 	wprintf(L"\n<使用法>\n");
@@ -487,4 +466,67 @@ void print_cmd_usage()
 		);
 	}
 	wprintf(L"* は必須オプション\n");
+}
+
+int init_modules(int argc, WCHAR* argv[])
+{
+	int i;
+	cmd_def_t *cmd;
+
+	/* cmds */
+	for (i = 0; i < n_modules; i++) {
+		if ( modules[i].def->cmds ) {
+			for ( cmd = modules[i].def->cmds; cmd->cmd_name != NULL; cmd++ ) {
+				if ( !load_module_cmd(modules[i].def, cmd) ) {
+					return  0;
+				}
+			}
+		}
+	}
+
+	/* モジュールの引数を処理 */
+	if (!get_cmd_params(argc, argv)) {
+		print_cmd_usage();
+		return 0;
+	}
+
+	/* hooks */
+	for (i = 0; i < n_modules; i++) {
+		/* hooks */
+		module_hooks_current = &modules[i].hooks;
+		modules[i].def->register_hooks();
+	}
+
+	/* postconfigフックを呼び出し */
+	if (!do_postconfig()) {
+		print_cmd_usage();
+		return 0;
+	}
+
+	return 1;
+}
+
+int load_modules()
+{
+	int i;
+	int n = sizeof(static_modules) / sizeof(module_def_t*);
+	for ( i = 0; i < n; i++ ) {
+		if( ! load_module(static_modules[i], NULL) ) {
+			return -1;
+		}
+	}
+	if ( ! load_dll_modules() ) {
+		return -1;
+	}
+	return n_modules;
+}
+
+void free_modules()
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hdll) {
+			FreeLibrary(modules[i].hdll);
+		}
+	}
 }

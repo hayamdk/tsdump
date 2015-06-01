@@ -411,10 +411,9 @@ void load_ini()
 
 typedef IB25Decoder2* (pCreateB25Decoder2_t)(void);
 
-int _tmain(int argc, TCHAR* argv[])
+int wmain(int argc, WCHAR* argv[])
 {
 	HMODULE hB25dll = NULL;
-
 
 	int ret=0;
 
@@ -422,6 +421,7 @@ int _tmain(int argc, TCHAR* argv[])
 
 	printf("tsdump ver%s (%s)\n\n", VERSION_STR, DATE_STR);
 
+	/* iniファイルをロード */
 	load_ini();
 
 	/* モジュールをロード */
@@ -432,20 +432,12 @@ int _tmain(int argc, TCHAR* argv[])
 	}
 	printf("\n");
 
-	/* モジュールの引数を処理 */
-	if ( !get_cmd_params(argc, argv) ) {
-		print_cmd_usage();
+	/* モジュールを初期化 */
+	if ( !init_modules(argc, argv) ) {
+		fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
 		ret = 1;
 		goto END;
 	}
-
-	/* postconfigフックを呼び出し */
-	if ( ! do_postconfig() ) {
-		print_cmd_usage();
-		ret = 1;
-		goto END;
-	}
-
 
 	pCreateB25Decoder2_t *pCreateB25Decoder2;
 	IB25Decoder2 *pB25Decoder2;
@@ -462,18 +454,18 @@ int _tmain(int argc, TCHAR* argv[])
 	if ( !param_nodec ) {
 		hB25dll = LoadLibrary(_T("B25Decoder.dll"));
 		if (hB25dll == NULL) {
-			fprintf(stderr, "B25Decoder.dllをロードできませんでした\n");
+			fprintf(stderr, "B25Decoder.dllをロードできませんでした: ");
 			print_err(_T("LoadLibrary"), GetLastError());
 			ret = 1;
-			goto END;
+			goto END1;
 		}
 
 		pCreateB25Decoder2 = (pCreateB25Decoder2_t*)GetProcAddress(hB25dll, "CreateB25Decoder2");
 		if (pCreateB25Decoder2 == NULL) {
-			fprintf(stderr, "CreateB25Decoder2()のポインタを取得できませんでした\n");
+			fprintf(stderr, "CreateB25Decoder2()のポインタを取得できませんでした: ");
 			print_err(_T("GetProcAddress"), GetLastError());
 			ret = 1;
-			goto END;
+			goto END1;
 		}
 
 		pB25Decoder2 = pCreateB25Decoder2();
@@ -481,13 +473,13 @@ int _tmain(int argc, TCHAR* argv[])
 		if ( pB25Decoder2 == NULL ) {
 			fprintf(stderr, "CreateB25Decoder2()に失敗\n");
 			ret = 1;
-			goto END;
+			goto END1;
 		}
 
 		if ( ! pB25Decoder2->Initialize() ) {
 			fprintf(stderr, "pB25Decoder2->Initialize()に失敗\n");
 			ret = 1;
-			goto END;
+			goto END1;
 		}
 	} else {
 		pB25Decoder2 = NULL;
@@ -499,12 +491,14 @@ int _tmain(int argc, TCHAR* argv[])
 		pB25Decoder2->Release();
 	}
 
+	printf("正常終了\n");
+
+END1:
+
 	do_stream_generator_close(generator_stat);
 
 	//pBon2->CloseTuner();
 	//fclose(fp);
-
-	printf("正常終了\n");
 
 END:
 	do_close_module();
