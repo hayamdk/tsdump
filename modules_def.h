@@ -121,7 +121,7 @@ typedef struct {
 	int64_t n_scrambled;
 } decoder_stats_t;
 
-typedef const WCHAR* (*hook_stream_decoder_open_t)(void**);
+typedef const WCHAR* (*hook_stream_decoder_open_t)(void**, int *);
 typedef void(*hook_stream_decoder_t)(void*, unsigned char **, int *, const unsigned char *, int);
 typedef void(*hook_stream_decoder_stats_t)(void*, decoder_stats_t*);
 typedef void(*hook_stream_decoder_close_t)(void*);

@@ -61,8 +61,8 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ L"-cmd", L"番組終了時実行コマンド (複数指定可)", 1, set_cmd },
-	{ L"-cwmin", L"終了時実行コマンドのウィンドウを最小化する", 0, set_min },
+	{ L"--cmd", L"番組終了時実行コマンド (複数指定可)", 1, set_cmd },
+	{ L"--cwmin", L"終了時実行コマンドのウィンドウを最小化する", 0, set_min },
 	NULL,
 };
 

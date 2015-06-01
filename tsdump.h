@@ -126,5 +126,4 @@ extern WCHAR param_base_dir[MAX_PATH_LEN];
 extern int param_all_services;
 extern int param_services[MAX_SERVICES];
 extern int param_n_services;
-extern int param_nodec;
 extern int param_nowait;

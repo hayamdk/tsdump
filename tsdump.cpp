@@ -40,7 +40,6 @@ WCHAR param_base_dir[MAX_PATH_LEN];
 int param_all_services;
 int param_services[MAX_SERVICES];
 int param_n_services = 0;
-int param_nodec = 0;
 int param_nowait = 0;
 
 void signal_handler(int)
@@ -115,7 +114,7 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 	printf("buf: %s\r", line);
 }
 
-void main_loop(void *generator_stat, void *decoder_stat, ch_info_t *ch_info)
+void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
 	BYTE *recvbuf, *decbuf;
 	//DWORD n_recv=0, n_dec, rem_recv;
@@ -189,7 +188,7 @@ void main_loop(void *generator_stat, void *decoder_stat, ch_info_t *ch_info)
 		//tc_end();
 #endif
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
-		do_stream(decbuf, n_dec, !param_nodec);
+		do_stream(decbuf, n_dec, encrypted);
 
 		//tc_start("bufcopy");
 		if ( single_mode ) { /* 単一書き出しモード */
@@ -360,7 +359,7 @@ void load_ini()
 
 int wmain(int argc, WCHAR* argv[])
 {
-	HMODULE hB25dll = NULL;
+	//HMODULE hB25dll = NULL;
 
 	int ret=0;
 
@@ -401,7 +400,8 @@ int wmain(int argc, WCHAR* argv[])
 	}
 
 	void *decoder_stat = NULL;
-	const WCHAR *sd_msg = do_stream_decoder_open(&decoder_stat);
+	int encrypted;
+	const WCHAR *sd_msg = do_stream_decoder_open(&decoder_stat, &encrypted);
 
 	if (sd_msg) {
 		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", sd_msg);
@@ -447,11 +447,7 @@ int wmain(int argc, WCHAR* argv[])
 	}
 #endif
 
-	main_loop(generator_stat, decoder_stat, &ch_info);
-
-/*	if (!param_nodec) {
-		pB25Decoder2->Release();
-	}*/
+	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
 	printf("正常終了\n");
 
@@ -468,9 +464,9 @@ END:
 
 	free_modules();
 
-	if (!param_nodec && hB25dll) {
+	/*if (!param_nodec && hB25dll) {
 		FreeLibrary(hB25dll);
-	}
+	}*/
 	if( ret ) { getchar(); }
 	return ret;
 }
@@ -479,12 +475,6 @@ static const WCHAR* set_dir(const WCHAR *param)
 {
 	wcsncpy(param_base_dir, param, MAX_PATH_LEN);
 	PathAddBackslash(param_base_dir);
-	return NULL;
-}
-
-static const WCHAR* set_nodec(const WCHAR *)
-{
-	param_nodec = 1;
 	return NULL;
 }
 
@@ -531,10 +521,9 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ L"-dir", L"出力先ディレクトリ *", 1, set_dir },
-	{ L"-nodec", L"MULTI2のデコードを行わない", 0, set_nodec },
-	{ L"-sv", L"サービス番号(複数指定可能)", 1, set_sv },
-	{ L"-nowait", L"バッファフル時にあふれたデータは捨てる", 0, set_nowait },
+	{ L"--dir", L"出力先ディレクトリ *", 1, set_dir },
+	{ L"--sv", L"サービス番号(複数指定可能)", 1, set_sv },
+	{ L"--nowait", L"バッファフル時にあふれたデータは捨てる", 0, set_nowait },
 	NULL,
 };
 

@@ -163,8 +163,8 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ L"-pipe", L"パイプ実行コマンド (複数指定可)", 1, set_pipe },
-	{ L"-pwmin", L"パイプ実行コマンドのウィンドウを最小化する", 0, set_min },
+	{ L"--pipe", L"パイプ実行コマンド (複数指定可)", 1, set_pipe },
+	{ L"--pwmin", L"パイプ実行コマンドのウィンドウを最小化する", 0, set_min },
 	NULL,
 };
 

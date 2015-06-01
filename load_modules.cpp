@@ -311,10 +311,12 @@ void do_stream_generator_close(void *param)
 	}
 }
 
-const WCHAR* do_stream_decoder_open(void **param)
+const WCHAR* do_stream_decoder_open(void **param, int *encrypted)
 {
 	if (hooks_stream_decoder) {
-		return hooks_stream_decoder->open_handler(param);
+		return hooks_stream_decoder->open_handler(param, encrypted);
+	} else {
+		*encrypted = 1;
 	}
 	return NULL;
 }
