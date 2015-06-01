@@ -1,3 +1,4 @@
+void print_cmd_usage();
 int init_modules(int argc, WCHAR* argv[]);
 int load_modules();
 void free_modules();

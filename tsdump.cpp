@@ -435,6 +435,7 @@ int wmain(int argc, WCHAR* argv[])
 	/* モジュールを初期化 */
 	if ( !init_modules(argc, argv) ) {
 		fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
+		print_cmd_usage();
 		ret = 1;
 		goto END;
 	}

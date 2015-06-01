@@ -335,7 +335,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
-	if ( mod->mod_ver != TSDUMP_MODULE_V1 ) {
+	if ( mod->mod_ver > TSDUMP_MODULE_V2 ) {
 		fwprintf(stderr, L"Invalid module version: %s\n", mod->modname);
 		return 0;
 	}
@@ -455,19 +455,6 @@ static int get_cmd_params( int argc, WCHAR* argv[] )
 	return 1;
 }
 
-static void print_cmd_usage()
-{
-	int i;
-	wprintf(L"\n<使用法>\n");
-	for (i = 0; i < n_modulecmds; i++) {
-		wprintf(L"%s: %s\n",
-			modulecmds[i].cmd_def->cmd_name,
-			modulecmds[i].cmd_def->cmd_description
-		);
-	}
-	wprintf(L"* は必須オプション\n");
-}
-
 int init_modules(int argc, WCHAR* argv[])
 {
 	int i;
@@ -486,7 +473,6 @@ int init_modules(int argc, WCHAR* argv[])
 
 	/* モジュールの引数を処理 */
 	if (!get_cmd_params(argc, argv)) {
-		print_cmd_usage();
 		return 0;
 	}
 
@@ -499,7 +485,6 @@ int init_modules(int argc, WCHAR* argv[])
 
 	/* postconfigフックを呼び出し */
 	if (!do_postconfig()) {
-		print_cmd_usage();
 		return 0;
 	}
 
@@ -529,4 +514,17 @@ void free_modules()
 			FreeLibrary(modules[i].hdll);
 		}
 	}
+}
+
+void print_cmd_usage()
+{
+	int i;
+	wprintf(L"\n----------------------\n<使用法>\n");
+	for (i = 0; i < n_modulecmds; i++) {
+		wprintf(L"%s: %s\n",
+			modulecmds[i].cmd_def->cmd_name,
+			modulecmds[i].cmd_def->cmd_description
+		);
+	}
+	wprintf(L"* は必須オプション\n");
 }
