@@ -104,7 +104,7 @@ typedef void(*hook_encrypted_stream_t)(const unsigned char*, const size_t);
 typedef void(*hook_stream_t)(const unsigned char*, const size_t, const int);
 typedef void(*hook_close_stream_t)();
 typedef void(*hook_stream_generator_t)(void *, unsigned char **, int *);
-typedef void* (*hook_stream_generator_open_t)(ch_info_t*);
+typedef const WCHAR* (*hook_stream_generator_open_t)(void**, ch_info_t*);
 typedef double(*hook_stream_generator_siglevel_t)(void *);
 typedef void(*hook_stream_generator_close_t)(void *);
 

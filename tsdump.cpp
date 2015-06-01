@@ -448,7 +448,13 @@ int wmain(int argc, WCHAR* argv[])
 
 	ch_info_t ch_info;
 	void *generator_stat;
-	generator_stat = do_stream_generator_open(&ch_info);
+	const WCHAR *sg_msg = do_stream_generator_open(&generator_stat, &ch_info);
+
+	if (sg_msg) {
+		fwprintf(stderr, L"ストリームジェネレーターを開けませんでした: %s\n", sg_msg);
+		ret = 1;
+		goto END;
+	}
 
 	Sleep(500);
 
