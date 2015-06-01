@@ -65,9 +65,6 @@ static const unsigned __int32 crc32tab[256] = {
 	0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4,
 };
 
-extern int64_t ts_n_drops;
-extern int ts_counter[0x2000];
-
 static inline unsigned __int32 crc32(unsigned char *buf, int len)
 {
 	unsigned __int32 crc = 0xffffffff;
@@ -119,39 +116,6 @@ static inline int ts_get_section_length(unsigned char *p)
 {
 	int pos = ts_get_payload_pos(p);
 	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
-}
-
-static inline const int64_t ts_drop_counter(unsigned char *packet)
-{
-	if (packet[0] != 0x47) {
-		ts_n_drops++;
-		goto END;
-	}
-
-	unsigned int pid = ts_get_pid(packet);
-	unsigned int counter = ts_get_continuity_counter(packet);
-	unsigned int counter_should_be;
-
-	if (pid == 0x1fff) { /* null packet */
-		goto END;
-	}
-
-	if (ts_counter[pid] != 0) { /* == 0 : initialized */
-		if (ts_have_payload(packet)) {
-			counter_should_be = (ts_counter[pid] + 1) % 16;
-		} else {
-			counter_should_be = ts_counter[pid] % 16;
-		}
-
-		if (counter_should_be != counter ) {
-			ts_n_drops++;
-		}
-	}
-
-	ts_counter[pid] = counter + 16; /* offset 16 */
-
-END:
-	return ts_n_drops;
 }
 
 typedef enum {

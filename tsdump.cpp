@@ -13,8 +13,6 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
-#include "IB25Decoder.h"
-
 #include "modules_def.h"
 #include "tsdump.h"
 #include "ts_parser.h"
@@ -59,62 +57,6 @@ FILE *logfp;
 	_stprintf_s(fn, MAX_PATH_LEN - 1, _T("%s%s.log"), param_base_dir, bon_ch_name);
 	*fp = _tfopen(fn, _T("a+"));
 }*/
-
-int decode_dummy(BYTE *buf, DWORD n_buf, BYTE **decbuf, DWORD *n_decbuf)
-{
-	static BYTE *tmpbuf = NULL;
-	static DWORD n_tmpbuf = 0;
-	static BYTE rem[188];
-	static DWORD n_rem = 0;
-
-	//*decbuf = buf;
-	//*n_decbuf = n_buf;
-	//return 1;
-
-	//n_rem = 0;
-
-	DWORD n = n_rem + n_buf;
-
-	if (n > n_tmpbuf) {
-		if (tmpbuf != NULL) {
-			free(tmpbuf);
-		}
-		tmpbuf = (BYTE*)malloc(n);
-		n_tmpbuf = n;
-	}
-
-	memcpy(tmpbuf, rem, n_rem);
-	memcpy(&tmpbuf[n_rem], buf, n_buf);
-
-	DWORD i = 0;
-	while (tmpbuf[i] != 0x47 && i < n && i < 188) {
-		i++;
-	}
-
-	DWORD n_dec = (n - i) / 188 * 188;
-
-	n_rem = n - i - n_dec;
-	memcpy(rem, &tmpbuf[i + n_dec], n_rem);
-
-	*decbuf = &tmpbuf[i];
-	*n_decbuf = n_dec;
-
-	if (i != 0) {
-		printf("[WARN] skipped %d bytes\n", i);
-	}
-
-	/* DROP数をカウント */
-	int c;
-	for (c = 0; c < (int)n_dec; c += 188) {
-		ts_drop_counter(&(*decbuf)[c]);
-	}
-
-//	if (n_rem != 0) {
-		//printf("n=%d rem=%d\n", n, n_rem);
-//	}
-
-	return 1;
-}
 
 void print_buf(ts_output_stat_t *tos, int n_tos)
 {
@@ -416,8 +358,6 @@ void load_ini()
 		bufsize, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 }
 
-typedef IB25Decoder2* (pCreateB25Decoder2_t)(void);
-
 int wmain(int argc, WCHAR* argv[])
 {
 	HMODULE hB25dll = NULL;
@@ -447,9 +387,6 @@ int wmain(int argc, WCHAR* argv[])
 		goto END;
 	}
 
-	//pCreateB25Decoder2_t *pCreateB25Decoder2;
-	//IB25Decoder2 *pB25Decoder2;
-
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
@@ -469,7 +406,7 @@ int wmain(int argc, WCHAR* argv[])
 	if (sd_msg) {
 		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", sd_msg);
 		ret = 1;
-		goto END;
+		goto END1;
 	}
 
 	Sleep(500);
@@ -517,6 +454,8 @@ int wmain(int argc, WCHAR* argv[])
 	}*/
 
 	printf("正常終了\n");
+
+	do_stream_decoder_close(decoder_stat);
 
 END1:
 

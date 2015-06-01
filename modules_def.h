@@ -108,8 +108,8 @@ typedef double(*hook_stream_generator_siglevel_t)(void *);
 typedef void(*hook_stream_generator_close_t)(void *);
 
 typedef struct {
-	hook_stream_generator_t handler;
 	hook_stream_generator_open_t open_handler;
+	hook_stream_generator_t handler;
 	hook_stream_generator_siglevel_t siglevel_handler;
 	hook_stream_generator_close_t close_handler;
 } hooks_stream_generator_t;
@@ -127,8 +127,8 @@ typedef void(*hook_stream_decoder_stats_t)(void*, decoder_stats_t*);
 typedef void(*hook_stream_decoder_close_t)(void*);
 
 typedef struct {
-	hook_stream_decoder_t handler;
 	hook_stream_decoder_open_t open_handler;
+	hook_stream_decoder_t handler;
 	hook_stream_decoder_stats_t stats_handler;
 	hook_stream_decoder_close_t close_handler;
 } hooks_stream_decoder_t;

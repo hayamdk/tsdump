@@ -12,7 +12,7 @@ typedef struct {
 	IBonDriver2 *pBon2;
 } bondriver_stat_t;
 
-WCHAR errmsg[1024];
+static WCHAR errmsg[1024];
 
 static const WCHAR *bon_dll_name = NULL;
 static int sp_num = -1;
@@ -37,7 +37,7 @@ LPWSTR lasterr_msg()
 	return msg;
 }
 
-const WCHAR* hook_postconfig()
+static const WCHAR* hook_postconfig()
 {
 	if (bon_dll_name == NULL) {
 		return NULL;
@@ -125,8 +125,8 @@ static void hook_stream_generator_close(void*)
 }
 
 static hooks_stream_generator_t hooks_stream_generator = {
-	hook_stream_generator,
 	hook_stream_generator_open,
+	hook_stream_generator,
 	hook_stream_generator_siglevel,
 	hook_stream_generator_close
 };

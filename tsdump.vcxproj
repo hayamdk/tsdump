@@ -79,7 +79,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="convtounicode.cpp" />
+    <ClCompile Include="default_decoder.cpp" />
     <ClCompile Include="load_modules.cpp" />
+    <ClCompile Include="mod_b25decoder.cpp" />
     <ClCompile Include="mod_bondriver.cpp" />
     <ClCompile Include="mod_cmdexec_win.cpp" />
     <ClCompile Include="mod_fileoutput_stdio.cpp" />
@@ -95,6 +97,7 @@
   <ItemGroup>
     <ClInclude Include="charsize1table.h" />
     <ClInclude Include="convtounicode.h" />
+    <ClInclude Include="default_decoder.h" />
     <ClInclude Include="hankaku1table.h" />
     <ClInclude Include="hiragana1table.h" />
     <ClInclude Include="IB25Decoder.h" />

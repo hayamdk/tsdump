@@ -11,6 +11,7 @@
 #include "tsdump.h"
 #include "load_modules.h"
 #include "modules.h"
+#include "default_decoder.h"
 
 #define MAX_HOOKS_NUM 256
 
@@ -141,7 +142,7 @@ const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 	return NULL;
 }
 
-const WCHAR* register_hook_stream_decoder(hooks_stream_decoder_t *handlers)
+const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 {
 	if (hooks_stream_decoder == NULL) {
 		hooks_stream_decoder = handlers;
@@ -310,13 +311,6 @@ void do_stream_generator_close(void *param)
 	}
 }
 
-void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size)
-{
-	if (hooks_stream_decoder) {
-		hooks_stream_decoder->handler(param, dst_buf, dst_size, src_buf, src_size);
-	}
-}
-
 const WCHAR* do_stream_decoder_open(void **param)
 {
 	if (hooks_stream_decoder) {
@@ -325,10 +319,24 @@ const WCHAR* do_stream_decoder_open(void **param)
 	return NULL;
 }
 
+void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, const unsigned char *src_buf, int src_size)
+{
+	if (hooks_stream_decoder) {
+		hooks_stream_decoder->handler(param, dst_buf, dst_size, src_buf, src_size);
+	}else {
+		default_decoder(dst_buf, dst_size, src_buf, src_size);
+	}
+}
+
 void do_stream_decoder_stats(void *param, decoder_stats_t *stats)
 {
 	if (hooks_stream_decoder) {
 		hooks_stream_decoder->stats_handler(param, stats);
+	} else {
+		stats->n_dropped = ts_n_drops;
+		stats->n_input = ts_n_total;
+		stats->n_scrambled = 0;
+		stats->n_output = ts_n_total;
 	}
 }
 

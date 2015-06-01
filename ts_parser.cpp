@@ -5,9 +5,6 @@
 
 #include "ts_parser.h"
 
-int64_t ts_n_drops = 0;
-int ts_counter[0x2000] = {};
-
 static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps)
 {
 	int pos, remain;
