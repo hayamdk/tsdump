@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/timeb.h>
+#include <inttypes.h>
 
 #include <shlwapi.h>
 

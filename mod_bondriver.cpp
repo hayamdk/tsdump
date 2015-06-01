@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "modules_def.h"
 #include "IBonDriver2.h"

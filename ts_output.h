@@ -4,14 +4,14 @@ typedef struct
 	int delay_remain;
 	int close_remain;
 	int close_flag;
-	__int64 closetime;
+	int64_t closetime;
 	void **modulestats;
 	ProgInfo final_pi;
 } pgoutput_stat_t;
 
 typedef struct
 {
-	__int64 time;
+	int64_t time;
 	int bytes;
 } transfer_history_t;
 
@@ -39,11 +39,11 @@ typedef struct
 void init_tos(ts_output_stat_t *tos);
 void close_tos(ts_output_stat_t *tos);
 void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf);
-void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime, ch_info_t *ch_info);
+void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info);
 void ts_minimize_buf(ts_output_stat_t *tos);
 void ts_require_buf(ts_output_stat_t *tos, int require);
-void ts_copy_backward(ts_output_stat_t *tos, __int64 nowtime);
-void ts_output(ts_output_stat_t *tos, __int64 nowtime, int);
+void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime);
+void ts_output(ts_output_stat_t *tos, int64_t nowtime, int);
 int ts_wait_pgoutput(ts_output_stat_t *tos);
 void ts_check_pgoutput(ts_output_stat_t *tos);
 int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps);
@@ -72,7 +72,7 @@ static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_parse_stat_t 
 	return found * 2 + my;
 }
 
-static inline void ts_update_transfer_history(ts_output_stat_t *tos, __int64 nowtime, int bytes)
+static inline void ts_update_transfer_history(ts_output_stat_t *tos, int64_t nowtime, int bytes)
 {
 	int i;
 	if (nowtime / CHECK_INTERVAL != tos->th[0].time / CHECK_INTERVAL)

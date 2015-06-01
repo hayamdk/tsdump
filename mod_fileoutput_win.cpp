@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <sys/timeb.h>
+#include <inttypes.h>
 
 #include <shlwapi.h>
 
@@ -21,13 +22,13 @@ typedef struct {
 	ProgInfo initial_pi;
 } file_output_stat_t;
 
-static inline __int64 gettime()
+static inline int64_t gettime()
 {
-	__int64 result;
+	int64_t result;
 	_timeb tv;
 
 	_ftime64_s(&tv);
-	result = (__int64)tv.time * 1000;
+	result = (int64_t)tv.time * 1000;
 	result += tv.millitm;
 
 	return result;
@@ -88,10 +89,10 @@ static void create_new_proginfo_file(const WCHAR *fname_ts, const WCHAR *fname_p
 
 static int check_io_status(file_output_stat_t *fos, BOOL wait_mode)
 {
-	static __int64 last = 0;
+	static int64_t last = 0;
 	static DWORD errnum_last = 0;
 	DWORD errnum;
-	__int64 now;
+	int64_t now;
 
 	if (!fos->write_busy) {
 		return 0;

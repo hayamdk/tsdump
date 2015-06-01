@@ -11,6 +11,7 @@
 #include <shlwapi.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
+#include <inttypes.h>
 
 #include "IB25Decoder.h"
 
@@ -30,9 +31,9 @@ int MAX_PGOVERLAP = MAX_PGOVERLAP_DEFAULT;
 
 int termflag = 0;
 
-const WCHAR *bon_ch_name = NULL;
-const WCHAR *bon_sp_name = NULL;
-const WCHAR *bon_tuner_name = NULL;
+//const WCHAR *bon_ch_name = NULL;
+//const WCHAR *bon_sp_name = NULL;
+//const WCHAR *bon_tuner_name = NULL;
 
 const WCHAR *param_bon_dll_name = NULL;
 int param_sp_num = -1;
@@ -52,12 +53,12 @@ void signal_handler(int)
 
 FILE *logfp;
 
-void open_log(FILE **fp)
+/*void open_log(FILE **fp)
 {
 	TCHAR fn[MAX_PATH_LEN];
 	_stprintf_s(fn, MAX_PATH_LEN - 1, _T("%s%s.log"), param_base_dir, bon_ch_name);
 	*fp = _tfopen(fn, _T("a+"));
-}
+}*/
 
 int decode_dummy(BYTE *buf, DWORD n_buf, BYTE **decbuf, DWORD *n_decbuf)
 {
@@ -179,10 +180,10 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 
 	int n_recv, n_dec;
 
-	__int64 total = 0;
-	__int64 subtotal = 0;
+	int64_t total = 0;
+	int64_t subtotal = 0;
 
-	__int64 nowtime, lasttime;
+	int64_t nowtime, lasttime;
 
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
@@ -245,7 +246,7 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 		}
 		//tc_end();
 #endif
-		do_stream_decoder(&decbuf, &n_dec, recvbuf, n_recv);
+		//do_stream_decoder(&decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, !param_nodec);
 
 		//tc_start("bufcopy");
@@ -318,7 +319,7 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 
 			TCHAR title[256];
 
-			__int64 n_drops, n_srmbs;
+			int64_t n_drops, n_srmbs;
 
 			if (param_nodec) {
 				n_drops = ts_n_drops;
@@ -328,10 +329,12 @@ void main_loop(void *generator_stat, ch_info_t *ch_info, IB25Decoder2 *pB25Decod
 				n_srmbs = pB25Decoder2->GetScramblePacketNum();
 			}
 
-			/*_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
-				bon_tuner_name, bon_sp_name, bon_ch_name, pBon2->GetSignalLevel(), Mbps,
+			double siglevel = do_stream_generator_siglevel(generator_stat);
+
+			_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
+				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel, Mbps,
 				n_drops, n_srmbs,
-				(double)total / 1024 / 1024 / 1024 );*/
+				(double)total / 1024 / 1024 / 1024 );
 			SetConsoleTitle(title);
 
 			lasttime = nowtime;

@@ -16,21 +16,21 @@ extern int MAX_PGOVERLAP;
 #define MAX_WRITE_SIZE			188*16*1024
 #define MIN_CLEAR_RATIO			0.05
 
-static inline __int64 gettime()
+static inline int64_t gettime()
 {
-	__int64 result;
+	int64_t result;
 	_timeb tv;
 
 	_ftime64_s(&tv);
-	result = (__int64)tv.time * 1000;
+	result = (int64_t)tv.time * 1000;
 	result += tv.millitm;
 
 	return result;
 }
 
-static inline __int64 timenum_end(ProgInfo *pi)
+static inline int64_t timenum_end(ProgInfo *pi)
 {
-	__int64 tn;
+	int64_t tn;
 	struct tm t, te;
 	time_t tt;
 	int sec, min, hour, day_diff;
@@ -80,9 +80,9 @@ static inline __int64 timenum_end(ProgInfo *pi)
 	return tn;
 }
 
-static inline __int64 timenum_start(ProgInfo *pi)
+static inline int64_t timenum_start(ProgInfo *pi)
 {
-	__int64 tn;
+	int64_t tn;
 	tn = pi->recyear;
 	tn *= 100;
 	tn += pi->recmonth;
@@ -97,9 +97,9 @@ static inline __int64 timenum_start(ProgInfo *pi)
 	return tn;
 }
 
-static inline __int64 timenumtt(time_t t)
+static inline int64_t timenumtt(time_t t)
 {
-	__int64 tn;
+	int64_t tn;
 	struct tm lt;
 	
 	localtime_s(&lt, &t);
@@ -116,7 +116,7 @@ static inline __int64 timenumtt(time_t t)
 	return tn;
 }
 
-static inline __int64 timenumnow()
+static inline int64_t timenumnow()
 {
 	time_t t = time(NULL);
 	return timenumtt(t);

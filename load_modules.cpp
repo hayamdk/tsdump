@@ -5,6 +5,7 @@
 #include <time.h>
 #include <sys/timeb.h>
 #include <shlwapi.h>
+#include <inttypes.h>
 
 #include "modules_def.h"
 #include "tsdump.h"
@@ -294,6 +295,14 @@ void do_stream_generator(void *param, unsigned char **buf, int *size)
 	}
 }
 
+double do_stream_generator_siglevel(void *param)
+{
+	if (hooks_stream_generator) {
+		return hooks_stream_generator->siglevel_handler(param);
+	}
+	return 0.0;
+}
+
 void do_stream_generator_close(void *param)
 {
 	if (hooks_stream_generator) {
@@ -301,10 +310,10 @@ void do_stream_generator_close(void *param)
 	}
 }
 
-void do_stream_decoder(unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size)
+void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size)
 {
 	if (hook_stream_decoder) {
-		hook_stream_decoder(dst_buf, dst_size, src_buf, src_size);
+		hook_stream_decoder(param, dst_buf, dst_size, src_buf, src_size);
 	}
 }
 

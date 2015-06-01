@@ -65,7 +65,7 @@ static const unsigned __int32 crc32tab[256] = {
 	0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4,
 };
 
-extern __int64 ts_n_drops;
+extern int64_t ts_n_drops;
 extern int ts_counter[0x2000];
 
 static inline unsigned __int32 crc32(unsigned char *buf, int len)
@@ -121,7 +121,7 @@ static inline int ts_get_section_length(unsigned char *p)
 	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
 }
 
-static inline const __int64 ts_drop_counter(unsigned char *packet)
+static inline const int64_t ts_drop_counter(unsigned char *packet)
 {
 	if (packet[0] != 0x47) {
 		ts_n_drops++;

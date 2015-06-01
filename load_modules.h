@@ -16,5 +16,6 @@ void do_stream(unsigned char *buf, size_t size, int encrypted);
 void do_close_stream();
 const WCHAR* do_stream_generator_open(void **param, ch_info_t *chinfo);
 void do_stream_generator(void *param, unsigned char **buf, int *size);
+double do_stream_generator_siglevel(void *param);
 void do_stream_generator_close(void *param);
-void do_stream_decoder(unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size);
+void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, unsigned char *src_buf, int src_size);

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <shlwapi.h>
 

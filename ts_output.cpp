@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <shlwapi.h>
+#include <inttypes.h>
 
 #include "modules_def.h"
 #include "rplsinfo.h"
@@ -92,7 +93,7 @@ void normalize_fname(WCHAR *fname)
 
 void get_fname(WCHAR* fname, ts_output_stat_t *tos, WCHAR *ext)
 {
-	__int64 tn;
+	int64_t tn;
 	int i;
 
 	ProgInfo *pi = &(tos->pi);
@@ -247,7 +248,7 @@ void close_tos(ts_output_stat_t *tos)
 	//free(tos);
 }
 
-void ts_copy_backward(ts_output_stat_t *tos, __int64 nowtime)
+void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime)
 {
 	int backward_size, start_pos;
 	int i;
@@ -316,7 +317,7 @@ void ts_close_oldest_pg(ts_output_stat_t *tos)
 	tos->n_pgos--;
 }
 
-void ts_output(ts_output_stat_t *tos, __int64 nowtime, int force_write)
+void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 {
 	int i, write_size, diff;
 
@@ -473,11 +474,11 @@ void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf)
 	tos->pos_filled += n_buf;
 }
 
-void ts_check_pi(ts_output_stat_t *tos, __int64 nowtime, ch_info_t *ch_info)
+void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0;
 	pgoutput_stat_t *pgos;
-	__int64 starttime, endtime, starttime_last, endtime_last;
+	int64_t starttime, endtime, starttime_last, endtime_last;
 
 	//tc_start("getpi");
 	memset(&tos->pi, 0, sizeof(ProgInfo));

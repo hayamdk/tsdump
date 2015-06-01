@@ -40,10 +40,10 @@ int				parsePat(unsigned char*);
 void			parsePmt(unsigned char*, int*, int*, int*, int*, BOOL, BOOL);
 unsigned int	calc_crc32(unsigned char*, int);
 BOOL			isPcrData(unsigned char*);
-__int64			getPcrValue(unsigned char*);
+int64_t			getPcrValue(unsigned char*);
 
 void			initTsFileRead(TsReadProcess*, HANDLE, int);
-void			setPointerTsFileRead(TsReadProcess*, __int64);
+void			setPointerTsFileRead(TsReadProcess*, int64_t);
 void			setPosTsFileRead(TsReadProcess*, int);
 void			showErrorTsFileRead(TsReadProcess*, BOOL);
 unsigned char*	getPacketTsFileRead(TsReadProcess*);

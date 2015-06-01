@@ -22,10 +22,9 @@
 	#endif
 #endif
 
-// 番組情報構造体
-
 #define		CONVBUFSIZE				65536
 
+// 番組情報構造体
 typedef struct {
 	int		recyear;
 	int		recmonth;
@@ -115,7 +114,25 @@ typedef struct {
 	hook_stream_generator_close_t close_handler;
 } hooks_stream_generator_t;
 
-typedef void(*hook_stream_decoder_t)(unsigned char **, int *, const unsigned char *, int);
+typedef struct {
+	uint64_t n_input;
+	uint64_t n_output;
+	uint64_t n_dropped;
+	uint64_t n_scrambled;
+} decoder_stat_t;
+
+typedef const WCHAR* (*hook_stream_decoder_open_t)(void**);
+typedef void(*hook_stream_decoder_t)(void*, unsigned char **, int *, const unsigned char *, int);
+typedef void(*hook_stream_decoder_stat_t)(void*, decoder_stat_t*);
+typedef void(*hook_stream_decoder_close_t)(void*);
+
+typedef struct {
+	hook_stream_decoder_t handler;
+	hook_stream_decoder_open_t open_handler;
+	hook_stream_decoder_stat_t stat_handler;
+	hook_stream_decoder_close_t close_handler;
+} hooks_stream_decoder_t;
+
 //typedef void(*hook_stream_splitter)();
 
 MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);

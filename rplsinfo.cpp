@@ -4,6 +4,7 @@
 #include <new.h>
 #include <locale.h>
 #include <tchar.h>
+#include <inttypes.h>
 
 #include "modules_def.h"
 

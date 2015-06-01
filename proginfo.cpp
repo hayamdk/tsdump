@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
+#include <inttypes.h>
 
 #include "modules_def.h"
 

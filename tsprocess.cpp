@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <tchar.h>
+#include <inttypes.h>
 
 #include "tsprocess.h"
 
@@ -205,16 +206,16 @@ BOOL isPcrData(unsigned char *buf)
 }
 
 
-__int64 getPcrValue(unsigned char *buf)
+int64_t getPcrValue(unsigned char *buf)
 {
 	// buf‚ª0x47‚ÌˆÊ’u
 
 	unsigned char	*pcr = buf + 6;				// pcr_clock_reference_base‚Ìæ“ª
 
-	__int64		pcr_base = ((__int64)pcr[0x00] << 25) + ((__int64)pcr[0x01] << 17) + ((__int64)pcr[0x02] << 9) + ((__int64)pcr[0x03] << 1) + (((__int64)pcr[0x04] & 0x80) >> 7);
-	__int64		pcr_ext  = (((__int64)pcr[0x04] & 0x01) << 8) + (__int64)pcr[0x05];
+	int64_t		pcr_base = ((int64_t)pcr[0x00] << 25) + ((int64_t)pcr[0x01] << 17) + ((int64_t)pcr[0x02] << 9) + ((int64_t)pcr[0x03] << 1) + (((int64_t)pcr[0x04] & 0x80) >> 7);
+	int64_t		pcr_ext  = (((int64_t)pcr[0x04] & 0x01) << 8) + (int64_t)pcr[0x05];
 
-	__int64		pcr_value  = pcr_base * 300 + pcr_ext;
+	int64_t		pcr_value  = pcr_base * 300 + pcr_ext;
 
 	return pcr_value;
 }
