@@ -16,10 +16,6 @@
 
 //#include "timecalc.h"
 
-const TCHAR *def_chname = NULL;
-const TCHAR *def_spname = NULL;
-const TCHAR *def_tuname = NULL;
-
 static inline int pi_endtime_unknown(ProgInfo *pi)
 {
 	if (pi->durhour == 0 && pi->durmin == 0 && pi->dursec == 0) {
@@ -91,7 +87,7 @@ void normalize_fname(WCHAR *fname)
 	}
 }
 
-void get_fname(WCHAR* fname, ts_output_stat_t *tos, WCHAR *ext)
+void get_fname(WCHAR* fname, ts_output_stat_t *tos, ch_info_t *ch_info, WCHAR *ext)
 {
 	int64_t tn;
 	int i;
@@ -104,7 +100,7 @@ void get_fname(WCHAR* fname, ts_output_stat_t *tos, WCHAR *ext)
 		pname = pi->pname;
 	} else {
 		tn = timenumnow();
-		chname = def_chname;
+		chname = ch_info->ch_str;
 		pname = L"番組情報なし";
 	}
 
@@ -528,14 +524,9 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			printf("[INFO] 番組の切り替わりを短時間に連続して検出しました\n");
 		} else {
 			pgos = &(tos->pgos[tos->n_pgos]);
-			//ch_info.sp_num = param_sp_num;
-			//ch_info.ch_num = param_ch_num;
 			ch_info->service_id = tos->service_id;
-			//ch_info.sp_str = def_spname;
-			//ch_info.ch_str = def_chname;
-			//ch_info.tuner_name = def_tuname;
 
-			get_fname(pgos->fn, tos, L".ts");
+			get_fname(pgos->fn, tos, ch_info, L".ts");
 			pgos->modulestats = do_pgoutput_create(pgos->fn, &tos->pi, ch_info);
 			pgos->closetime = -1;
 			pgos->close_flag = 0;
