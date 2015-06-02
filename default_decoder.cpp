@@ -44,6 +44,8 @@ static inline const int64_t ts_drop_counter(unsigned char *packet)
 END:
 	return ts_n_drops;
 }
+
+/* 188バイトアラインではないストリームを送ってくるBonDriver（たとえばFriio）に対応するためのダミーデコーダ */
 void default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char *buf, int n_buf)
 {
 	static unsigned char *tmpbuf = NULL;

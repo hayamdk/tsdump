@@ -107,7 +107,7 @@ static void register_hooks()
 	register_hook_postconfig(hook_postconfig);
 }
 
-static const WCHAR *set_b25dll(const WCHAR* param)
+static const WCHAR *set_b25dll(const WCHAR*)
 {
 	use_b25dll = 1;
 	return NULL;

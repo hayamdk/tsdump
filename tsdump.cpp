@@ -29,10 +29,6 @@ int MAX_PGOVERLAP = MAX_PGOVERLAP_DEFAULT;
 
 int termflag = 0;
 
-//const WCHAR *bon_ch_name = NULL;
-//const WCHAR *bon_sp_name = NULL;
-//const WCHAR *bon_tuner_name = NULL;
-
 int param_sp_num = -1;
 int param_ch_num = -1;
 WCHAR param_base_dir[MAX_PATH_LEN];
@@ -116,7 +112,6 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
 	BYTE *recvbuf, *decbuf;
-	//DWORD n_recv=0, n_dec, rem_recv;
 
 	int n_recv, n_dec;
 
@@ -128,6 +123,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
 	ts_parse_stat_t tps = {};
+
+	TCHAR title[256];
+	decoder_stats_t stats;
 
 	lasttime = nowtime = gettime();
 
@@ -151,41 +149,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	while ( !termflag ) {
 		nowtime = gettime();
 
-#ifdef AAA
-		/* 前回空取得だった場合少し待ってみる */
-		if (n_recv == 0) {
-			pBon2->WaitTsStream(100);
-		}
-		/* tsをチューナーから取得 */
-		pBon2->GetTsStream(&recvbuf, &n_recv, &rem_recv);
-		gettscount++;
-#endif
 		do_stream_generator(generator_stat, &recvbuf, &n_recv);
 		do_encrypted_stream(recvbuf, n_recv);
 
-#ifdef AAA
-		/* tsをデコード */
-		//tc_start("decode");
-		if(n_recv > 0) {
-			int ret;
-			if (param_nodec) {
-				ret = decode_dummy(recvbuf, n_recv, &decbuf, &n_dec);
-			} else {
-				ret = pB25Decoder2->Decode(recvbuf, n_recv, &decbuf, &n_dec);
-			}
-
-			if (ret == 0 || n_dec == 0) {
-				//fprintf(logfp, "[INFO] ret=%d n_dec=%d\n", ret, n_dec);
-				if (ret == 0) {
-					printf("[ERROR] Decoder returns 0\n");
-				}
-			}
-		} else {
-			n_dec = 0;
-			decbuf = recvbuf;
-		}
-		//tc_end();
-#endif
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, encrypted);
 
@@ -257,21 +223,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			tdiff = (double)(nowtime - lasttime) / 1000;
 			Mbps = (double)subtotal * 8 / 1024 / 1024 / tdiff;
 
-			TCHAR title[256];
 
-			//int64_t n_drops, n_srmbs;
-
-			decoder_stats_t stats;
 
 			do_stream_decoder_stats(decoder_stat, &stats);
-
-			/*if (param_nodec) {
-				n_drops = ts_n_drops;
-				n_srmbs = 0;
-			} else {
-				//n_drops = pB25Decoder2->GetContinuityErrNum();
-				//n_srmbs = pB25Decoder2->GetScramblePacketNum();
-			}*/
 
 			double siglevel = do_stream_generator_siglevel(generator_stat);
 
@@ -358,9 +312,12 @@ void load_ini()
 
 int wmain(int argc, WCHAR* argv[])
 {
-	//HMODULE hB25dll = NULL;
-
 	int ret=0;
+	ch_info_t ch_info;
+	void *generator_stat = NULL;
+	void *decoder_stat = NULL;
+	int encrypted;
+	const WCHAR *err_msg;
 
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
 
@@ -388,64 +345,24 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	ch_info_t ch_info;
-	void *generator_stat = NULL;
-	const WCHAR *sg_msg = do_stream_generator_open(&generator_stat, &ch_info);
-
-	if (sg_msg) {
-		fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", sg_msg);
+	err_msg = do_stream_generator_open(&generator_stat, &ch_info);
+	if (err_msg) {
+		fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
 		ret = 1;
 		goto END;
 	}
 
-	void *decoder_stat = NULL;
-	int encrypted;
-	const WCHAR *sd_msg = do_stream_decoder_open(&decoder_stat, &encrypted);
 
-	if (sd_msg) {
-		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", sd_msg);
+	err_msg = do_stream_decoder_open(&decoder_stat, &encrypted);
+	if (err_msg) {
+		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
 		ret = 1;
 		goto END1;
 	}
 
 	Sleep(500);
 
-#ifdef AAA
-	if ( !param_nodec ) {
-		hB25dll = LoadLibrary(_T("B25Decoder.dll"));
-		if (hB25dll == NULL) {
-			fprintf(stderr, "B25Decoder.dllをロードできませんでした: ");
-			print_err(_T("LoadLibrary"), GetLastError());
-			ret = 1;
-			goto END1;
-		}
-
-		pCreateB25Decoder2 = (pCreateB25Decoder2_t*)GetProcAddress(hB25dll, "CreateB25Decoder2");
-		if (pCreateB25Decoder2 == NULL) {
-			fprintf(stderr, "CreateB25Decoder2()のポインタを取得できませんでした: ");
-			print_err(_T("GetProcAddress"), GetLastError());
-			ret = 1;
-			goto END1;
-		}
-
-		pB25Decoder2 = pCreateB25Decoder2();
-
-		if ( pB25Decoder2 == NULL ) {
-			fprintf(stderr, "CreateB25Decoder2()に失敗\n");
-			ret = 1;
-			goto END1;
-		}
-
-		if ( ! pB25Decoder2->Initialize() ) {
-			fprintf(stderr, "pB25Decoder2->Initialize()に失敗\n");
-			ret = 1;
-			goto END1;
-		}
-	} else {
-		pB25Decoder2 = NULL;
-	}
-#endif
-
+	/* 処理の本体 */
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
 	printf("正常終了\n");
@@ -453,9 +370,7 @@ int wmain(int argc, WCHAR* argv[])
 	do_stream_decoder_close(decoder_stat);
 
 END1:
-
 	do_stream_generator_close(generator_stat);
-
 	//fclose(fp);
 
 END:
@@ -463,9 +378,6 @@ END:
 
 	free_modules();
 
-	/*if (!param_nodec && hB25dll) {
-		FreeLibrary(hB25dll);
-	}*/
 	if( ret ) {
 		printf("何かキーを押してください");
 		getchar();
