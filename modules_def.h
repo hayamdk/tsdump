@@ -133,10 +133,22 @@ typedef struct {
 	hook_stream_decoder_close_t close_handler;
 } hooks_stream_decoder_t;
 
+typedef enum {
+	MSG_NONE = 0,
+	MSG_WARNING = 1,
+	MSG_ERROR = 2
+} message_type_t;
+
+typedef void(*hook_message_t)(const WCHAR*, message_type_t, const WCHAR *);
+
 //typedef void(*hook_stream_splitter)();
 
 MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);
 MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
+
+#define output_message(type, fmt, ...) output_message_f( __FILE__ , type, fmt, __VA_ARGS__)
+
+MODULE_EXPORT_FUNC void output_message_f(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
 
 MODULE_EXPORT_FUNC void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
 MODULE_EXPORT_FUNC void register_hook_pgoutput(hook_pgoutput_t handler);
@@ -152,3 +164,4 @@ MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
 MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers);
 MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
+MODULE_EXPORT_FUNC void register_hook_message(hook_message_t handler);

@@ -52,6 +52,29 @@ FILE *logfp;
 	*fp = _tfopen(fn, _T("a+"));
 }*/
 
+void output_message_f(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...)
+{
+	va_list list;
+	va_start(list, fmt);
+	WCHAR modname[128], msg[2048], *wcp;
+	const char *cp;
+	int len;
+
+	vswprintf(msg, 2048 - 1, fmt, list);
+
+	if (strcmp(fname, "mod_") == 0) {
+		/* 拡張子を除いたファイル名=モジュール名をコピー */
+		for (wcp = modname, cp = fname; *cp != '\0' && *cp != '.' && wcp < &modname[128]; cp += len, wcp++) {
+			len = mbtowc(wcp, cp, MB_CUR_MAX);
+		}
+		do_message(modname, msgtype, msg);
+	} else {
+		do_message(NULL, msgtype, msg);
+	}
+
+	va_end(list);
+}
+
 void print_buf(ts_output_stat_t *tos, int n_tos)
 {
 	int n, i, j, backward_size, console_width, width;
@@ -345,6 +368,8 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
+	output_message(MSG_ERROR, L"%s", L"ERROR test!!");
+
 	err_msg = do_stream_generator_open(&generator_stat, &ch_info);
 	if (err_msg) {
 		fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
@@ -429,9 +454,26 @@ static const WCHAR *hook_postconfig()
 	return NULL;
 }
 
+static void hook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
+{
+	const WCHAR *msgtype_str = L"";
+	if (msgtype == MSG_WARNING) {
+		msgtype_str = L"[WARNING] ";
+	} else if (msgtype == MSG_ERROR) {
+		msgtype_str = L"[ERROR] ";
+	}
+
+	if (modname) {
+		wprintf(L"%s%s: %s\n", msgtype_str, modname, msg);
+	} else {
+		wprintf(L"%s%s\n", msgtype_str, msg);
+	}
+}
+
 static void register_hooks()
 {
 	register_hook_postconfig(hook_postconfig);
+	register_hook_message(hook_message);
 }
 
 static cmd_def_t cmds[] = {

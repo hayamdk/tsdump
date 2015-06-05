@@ -28,6 +28,7 @@ typedef struct {
 	hook_encrypted_stream_t hook_encrypted_stream;
 	hook_stream_t hook_stream;
 	hook_close_stream_t hook_close_stream;
+	hook_message_t hook_message;
 } module_hooks_t;
 
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
@@ -151,6 +152,11 @@ const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 		return L"ストリームデコーダは既に登録されています";
 	}
 	return NULL;
+}
+
+void register_hook_message(hook_message_t handler)
+{
+	module_hooks_current->hook_message = handler;
 }
 
 void **do_pgoutput_create(WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
@@ -346,6 +352,16 @@ void do_stream_decoder_close(void *param)
 {
 	if (hooks_stream_decoder) {
 		hooks_stream_decoder->close_handler(param);
+	}
+}
+
+void do_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_message) {
+			modules[i].hooks.hook_message(modname, msgtype, msg);
+		}
 	}
 }
 

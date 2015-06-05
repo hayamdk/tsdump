@@ -22,3 +22,4 @@ void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, cons
 const WCHAR* do_stream_decoder_open(void **param, int *);
 void do_stream_decoder_stats(void *param, decoder_stats_t *stats);
 void do_stream_decoder_close(void *param);
+void do_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg);
