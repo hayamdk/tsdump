@@ -428,14 +428,16 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 void ts_require_buf(ts_output_stat_t *tos, int require_size)
 {
 
-	printf("[WARN] バッファが足りません。バッファの空き容量が増えるのを待機します。\n");
-	printf("[INFO] 書き込み完了を待機...");
+	//printf("[WARN] バッファが足りません。バッファの空き容量が増えるのを待機します。\n");
+	//printf("[INFO] 書き込み完了を待機...");
+	output_message(MSG_WARNING, L"バッファが足りません。バッファの空き容量が増えるのを待機します。");
 	ts_wait_pgoutput(tos);
 	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
 		ts_output(tos, gettime(), 1);
 		ts_wait_pgoutput(tos);
 	}
-	printf("完了\n");
+	//printf("完了\n");
+	output_message(MSG_WARNING, L"待機完了");
 
 	int move_size = tos->pos_write;
 
@@ -521,7 +523,8 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 		/* split! */
 		if (tos->n_pgos >= MAX_PGOVERLAP) {
-			printf("[INFO] 番組の切り替わりを短時間に連続して検出しました\n");
+			//printf("[INFO] 番組の切り替わりを短時間に連続して検出しました\n");
+			output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
 		} else {
 			pgos = &(tos->pgos[tos->n_pgos]);
 			ch_info->service_id = tos->service_id;

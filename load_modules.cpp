@@ -358,6 +358,10 @@ void do_stream_decoder_close(void *param)
 void do_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
 {
 	int i;
+
+	/* モジュールロード前でもこのフックだけは呼ぶ */
+	ghook_message(modname, msgtype, msg);
+
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_message) {
 			modules[i].hooks.hook_message(modname, msgtype, msg);

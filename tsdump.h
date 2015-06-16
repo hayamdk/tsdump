@@ -19,7 +19,7 @@ extern int MAX_PGOVERLAP;
 static inline int64_t gettime()
 {
 	int64_t result;
-	_timeb tv;
+	struct _timeb tv;
 
 	_ftime64_s(&tv);
 	result = (int64_t)tv.time * 1000;
@@ -127,3 +127,5 @@ extern int param_all_services;
 extern int param_services[MAX_SERVICES];
 extern int param_n_services;
 extern int param_nowait;
+
+void ghook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg);

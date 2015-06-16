@@ -136,7 +136,8 @@ typedef struct {
 typedef enum {
 	MSG_NONE = 0,
 	MSG_WARNING = 1,
-	MSG_ERROR = 2
+	MSG_ERROR = 2,
+	MSG_NOTIFY = 3
 } message_type_t;
 
 typedef void(*hook_message_t)(const WCHAR*, message_type_t, const WCHAR *);

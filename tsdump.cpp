@@ -351,7 +351,8 @@ int wmain(int argc, WCHAR* argv[])
 
 	/* モジュールをロード */
 	if (load_modules() < 0) {
-		fwprintf(stderr, L"[ERROR] モジュールのロード時にエラーが発生しました!");
+		//fwprintf(stderr, L"[ERROR] モジュールのロード時にエラーが発生しました!");
+		output_message(MSG_ERROR, L"[ERROR] モジュールのロード時にエラーが発生しました!");
 		ret = 1;
 		goto END;
 	}
@@ -359,7 +360,8 @@ int wmain(int argc, WCHAR* argv[])
 
 	/* モジュールを初期化 */
 	if ( !init_modules(argc, argv) ) {
-		fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
+		//fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
+		output_message(MSG_ERROR, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
 		print_cmd_usage();
 		ret = 1;
 		goto END;
@@ -368,11 +370,10 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	output_message(MSG_ERROR, L"%s", L"ERROR test!!");
-
 	err_msg = do_stream_generator_open(&generator_stat, &ch_info);
 	if (err_msg) {
-		fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
+		//fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
+		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
 		ret = 1;
 		goto END;
 	}
@@ -380,7 +381,8 @@ int wmain(int argc, WCHAR* argv[])
 
 	err_msg = do_stream_decoder_open(&decoder_stat, &encrypted);
 	if (err_msg) {
-		fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
+		//fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
+		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
 		ret = 1;
 		goto END1;
 	}
@@ -390,7 +392,8 @@ int wmain(int argc, WCHAR* argv[])
 	/* 処理の本体 */
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
-	printf("正常終了\n");
+	//printf("正常終了\n");
+	output_message(MSG_NONE, L"正常終了\n");
 
 	do_stream_decoder_close(decoder_stat);
 
@@ -454,26 +457,30 @@ static const WCHAR *hook_postconfig()
 	return NULL;
 }
 
-static void hook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
+void ghook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
 {
 	const WCHAR *msgtype_str = L"";
+	FILE *fp = stdout;
+
 	if (msgtype == MSG_WARNING) {
 		msgtype_str = L"[WARNING] ";
+		fp = stderr;
 	} else if (msgtype == MSG_ERROR) {
 		msgtype_str = L"[ERROR] ";
+		fp = stderr;
 	}
 
 	if (modname) {
-		wprintf(L"%s%s: %s\n", msgtype_str, modname, msg);
+		fwprintf(fp, L"%s%s: %s\n", msgtype_str, modname, msg);
 	} else {
-		wprintf(L"%s%s\n", msgtype_str, msg);
+		fwprintf(fp, L"%s%s\n", msgtype_str, msg);
 	}
 }
 
 static void register_hooks()
 {
 	register_hook_postconfig(hook_postconfig);
-	register_hook_message(hook_message);
+	//register_hook_message(hook_message);
 }
 
 static cmd_def_t cmds[] = {
