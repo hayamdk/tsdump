@@ -103,12 +103,12 @@ static int check_io_status(file_output_stat_t *fos, BOOL wait_mode)
 		if ((errnum = GetLastError()) == ERROR_IO_INCOMPLETE) {
 			/* do nothing */
 			return 0;
-		}
-		else {
+		} else {
 			/* IOエラー発生時 */
 			now = gettime();
 			if (now - last > 1000 || errnum_last != errnum) {
-				print_err(L"[ERROR] GetOverlappedResult()", errnum);
+				//print_err(L"[ERROR] GetOverlappedResult()", errnum);
+				output_message(MSG_SYSERROR, L"IOエラー(GetOverlappedResult)");
 				errnum_last = errnum;
 				last = now;
 			}
@@ -151,8 +151,9 @@ static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const 
 	);
 
 	if (fh == INVALID_HANDLE_VALUE) {
-		print_err(L"[ERROR] CreateFile()", GetLastError());
-		fwprintf(stderr, L"[ERROR] tsファイルをオープンできません: %s\n", fname);
+		//print_err(L"[ERROR] CreateFile()", GetLastError());
+		//fwprintf(stderr, L"[ERROR] tsファイルをオープンできません: %s\n", fname);
+		output_message(MSG_SYSERROR, L"ファイルをオープンできません(CreateFile): %s", fname);
 		return NULL;
 	}
 

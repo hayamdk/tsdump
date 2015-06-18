@@ -128,4 +128,4 @@ extern int param_services[MAX_SERVICES];
 extern int param_n_services;
 extern int param_nowait;
 
-void ghook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg);
+void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg);

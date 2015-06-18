@@ -96,14 +96,14 @@ typedef const int(*hook_pgoutput_check_t)(void*);
 typedef const int(*hook_pgoutput_wait_t)(void*);
 typedef void(*hook_pgoutput_close_t)(void*, const ProgInfo*);
 typedef void(*hook_pgoutput_postclose_t)(void*);
-typedef const WCHAR* (*hook_postconfig_t)();
+typedef int (*hook_postconfig_t)();
 typedef void(*hook_close_module_t)();
 typedef void(*hook_open_stream_t)();
 typedef void(*hook_encrypted_stream_t)(const unsigned char*, const size_t);
 typedef void(*hook_stream_t)(const unsigned char*, const size_t, const int);
 typedef void(*hook_close_stream_t)();
 typedef void(*hook_stream_generator_t)(void *, unsigned char **, int *);
-typedef const WCHAR* (*hook_stream_generator_open_t)(void**, ch_info_t*);
+typedef int (*hook_stream_generator_open_t)(void**, ch_info_t*);
 typedef double(*hook_stream_generator_siglevel_t)(void *);
 typedef void(*hook_stream_generator_close_t)(void *);
 
@@ -121,7 +121,7 @@ typedef struct {
 	int64_t n_scrambled;
 } decoder_stats_t;
 
-typedef const WCHAR* (*hook_stream_decoder_open_t)(void**, int *);
+typedef int (*hook_stream_decoder_open_t)(void**, int *);
 typedef void(*hook_stream_decoder_t)(void*, unsigned char **, int *, const unsigned char *, int);
 typedef void(*hook_stream_decoder_stats_t)(void*, decoder_stats_t*);
 typedef void(*hook_stream_decoder_close_t)(void*);
@@ -137,19 +137,19 @@ typedef enum {
 	MSG_NONE = 0,
 	MSG_WARNING = 1,
 	MSG_ERROR = 2,
-	MSG_NOTIFY = 3
+	MSG_SYSERROR = 3,
+	MSG_NOTIFY = 4
 } message_type_t;
 
-typedef void(*hook_message_t)(const WCHAR*, message_type_t, const WCHAR *);
+typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
 
 //typedef void(*hook_stream_splitter)();
 
-MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);
+//MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);
 MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
 
-#define output_message(type, fmt, ...) output_message_f( __FILE__ , type, fmt, __VA_ARGS__)
-
-MODULE_EXPORT_FUNC void output_message_f(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
+#define output_message(type, fmt, ...) _output_message( __FILE__ , type, fmt, __VA_ARGS__)
+MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
 
 MODULE_EXPORT_FUNC void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
 MODULE_EXPORT_FUNC void register_hook_pgoutput(hook_pgoutput_t handler);
@@ -163,6 +163,6 @@ MODULE_EXPORT_FUNC void register_hook_open_stream(hook_open_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_crypted_stream(hook_encrypted_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
-MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers);
-MODULE_EXPORT_FUNC const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
+MODULE_EXPORT_FUNC int register_hooks_stream_generator(hooks_stream_generator_t *handlers);
+MODULE_EXPORT_FUNC int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
 MODULE_EXPORT_FUNC void register_hook_message(hook_message_t handler);

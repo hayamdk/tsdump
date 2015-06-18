@@ -55,7 +55,7 @@ static int n_modules = 0;
 static cmd_load_t modulecmds[MAX_MODULECMDS];
 static int n_modulecmds = 0;
 
-void print_err(WCHAR* name, int err)
+/*void print_err(WCHAR* name, int err)
 {
 	LPWSTR pMsgBuf;
 	FormatMessage(
@@ -71,7 +71,7 @@ void print_err(WCHAR* name, int err)
 	);
 	fwprintf( stderr, L"%s: (0x%X) %s", name, err, pMsgBuf );
 	LocalFree(pMsgBuf);
-}
+}*/
 
 void register_hook_pgoutput_create(hook_pgoutput_create_t handler)
 {
@@ -133,25 +133,30 @@ void register_hook_close_stream(hook_close_stream_t handler)
 	module_hooks_current->hook_close_stream = handler;
 }
 
-const WCHAR* register_hooks_stream_generator(hooks_stream_generator_t *handlers)
+int register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 {
 	if (hooks_stream_generator == NULL) {
 		hooks_stream_generator = handlers;
 	} else {
-		return L"ストリームジェネレータは既に登録されています";
+		//return L"ストリームジェネレータは既に登録されています";
+		output_message(MSG_ERROR, L"ストリームジェネレータは既に登録されています");
+		return 0;
 	}
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
-const WCHAR* register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
+int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 {
 	if (hooks_stream_decoder == NULL) {
 		hooks_stream_decoder = handlers;
+	} else {
+		//return L"ストリームデコーダは既に登録されています";
+		output_message(MSG_ERROR, L"ストリームデコーダは既に登録されています");
+		return 0;
 	}
-	else {
-		return L"ストリームデコーダは既に登録されています";
-	}
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
 void register_hook_message(hook_message_t handler)
@@ -224,12 +229,13 @@ void do_pgoutput_close(void **modulestats, ProgInfo *pi)
 int do_postconfig()
 {
 	int i;
-	const WCHAR *msg;
+	//const WCHAR *msg;
+	int ret;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_postconfig) {
-			msg = modules[i].hooks.hook_postconfig();
-			if ( msg ) {
-				fwprintf(stderr, L"%s\n", msg );
+			ret = modules[i].hooks.hook_postconfig();
+			if (!ret) {
+				//fwprintf(stderr, L"%s\n", msg );
 				return 0;
 			}
 		}
@@ -287,12 +293,14 @@ void do_close_stream()
 	}
 }
 
-const WCHAR* do_stream_generator_open(void **param, ch_info_t *chinfo)
+int do_stream_generator_open(void **param, ch_info_t *chinfo)
 {
 	if (hooks_stream_generator) {
 		return hooks_stream_generator->open_handler(param, chinfo);
 	}
-	return L"ストリームジェネレータが一つも登録されていません";
+	output_message(MSG_ERROR, L"ストリームジェネレータが一つも登録されていません");
+	return 0;
+	//return L"ストリームジェネレータが一つも登録されていません";
 }
 
 void do_stream_generator(void *param, unsigned char **buf, int *size)
@@ -317,14 +325,15 @@ void do_stream_generator_close(void *param)
 	}
 }
 
-const WCHAR* do_stream_decoder_open(void **param, int *encrypted)
+int do_stream_decoder_open(void **param, int *encrypted)
 {
 	if (hooks_stream_decoder) {
 		return hooks_stream_decoder->open_handler(param, encrypted);
 	} else {
 		*encrypted = 1;
 	}
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
 void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, const unsigned char *src_buf, int src_size)
@@ -355,16 +364,16 @@ void do_stream_decoder_close(void *param)
 	}
 }
 
-void do_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
+void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg)
 {
 	int i;
 
 	/* モジュールロード前でもこのフックだけは呼ぶ */
-	ghook_message(modname, msgtype, msg);
+	ghook_message(modname, msgtype, err, msg);
 
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_message) {
-			modules[i].hooks.hook_message(modname, msgtype, msg);
+			modules[i].hooks.hook_message(modname, msgtype, err, msg);
 		}
 	}
 }
@@ -463,8 +472,9 @@ static int load_dll_modules()
 			}
 			hdll = LoadLibrary(dllname);
 			if (hdll == NULL) {
-				print_err( L"LoadLibrary()", GetLastError() );
-				fwprintf(stderr, L"DLLモジュールをロードできませんでした: %s\n", dllname);
+				//print_err( L"LoadLibrary()", GetLastError() );
+				//fwprintf(stderr, L"DLLモジュールをロードできませんでした: %s\n", dllname);
+				output_message(MSG_SYSERROR, L"DLLモジュールをロードできませんでした(LoadLibrary)");
 				fclose(fp);
 				return 0;
 			}
@@ -472,8 +482,9 @@ static int load_dll_modules()
 			PathRemoveExtensionA(modname);
 			mod = (module_def_t*)GetProcAddress(hdll, modname);
 			if (mod == NULL) {
-				print_err(L"GetProcAddress", GetLastError());
-				fprintf(stderr, "モジュールポインタを取得できませんでした: %s\n", modname);
+				//print_err(L"GetProcAddress", GetLastError());
+				//fprintf(stderr, "モジュールポインタを取得できませんでした: %s\n", modname);
+				output_message(MSG_SYSERROR, L"モジュールポインタを取得できませんでした(GetProcAddress)");
 				FreeLibrary(hdll);
 				fclose(fp);
 				return 0;
@@ -486,7 +497,8 @@ static int load_dll_modules()
 		}
 		fclose(fp);
 	} else {
-		fwprintf(stderr, L"modules.confを開けないのでDLLモジュールをロードしません\n");
+		//fwprintf(stderr, L"modules.confを開けないのでDLLモジュールをロードしません\n");
+		output_message(MSG_WARNING, L"modules.confを開けないのでDLLモジュールをロードしません");
 	}
 	return 1;
 }

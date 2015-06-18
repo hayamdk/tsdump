@@ -13,13 +13,14 @@ typedef struct {
 	DWORD n_rem;
 } bondriver_stat_t;
 
-static WCHAR errmsg[1024];
+//static WCHAR errmsg[1024];
 
 static const WCHAR *bon_dll_name = NULL;
 static int sp_num = -1;
 static int ch_num = -1;
 
-static const WCHAR *reg_hook_msg;
+//static const WCHAR *reg_hook_msg;
+static int reg_hook = 0;
 
 LPWSTR lasterr_msg()
 {
@@ -38,25 +39,33 @@ LPWSTR lasterr_msg()
 	return msg;
 }
 
-static const WCHAR* hook_postconfig()
+static int hook_postconfig()
 {
 	if (bon_dll_name == NULL) {
 		return NULL;
 	}
 
-	if (reg_hook_msg != NULL) {
-		_snwprintf_s(errmsg, 1024 - 1, L"generatorフックの登録に失敗しました: %s", reg_hook_msg);
-		return errmsg;
+	//if (reg_hook_msg != NULL) {
+	if (!reg_hook) {
+		//_snwprintf_s(errmsg, 1024 - 1, L"generatorフックの登録に失敗しました: %s", reg_hook_msg);
+		//return errmsg;
+		output_message(MSG_ERROR, L"generatorフックの登録に失敗しました");
+		return 0;
 	}
 
 	if (ch_num < 0) {
-		return L"チャンネルが指定されていないか、または不正です";
+		//return L"チャンネルが指定されていないか、または不正です";
+		output_message(MSG_ERROR, L"チャンネルが指定されていないか、または不正です");
+		return 0;
 	}
 	if (sp_num < 0) {
-		return L"チューナー空間が指定されていないか、または不正です";
+		//return L"チューナー空間が指定されていないか、または不正です";
+		output_message(MSG_ERROR, L"チューナー空間が指定されていないか、または不正です");
+		return 0;
 	}
 
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
 static void hook_stream_generator(void *param, unsigned char **buf, int *size)
@@ -73,35 +82,43 @@ static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 	*size = n_recv;
 }
 
-static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
+static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 {
 	bondriver_stat_t *pstat, stat;
 	ch_info_t ci;
 
 	stat.hdll = LoadLibrary(bon_dll_name);
 	if (stat.hdll == NULL) {
-		print_err(L"LoadLibrary", GetLastError());
-		return L"BonDriverをロードできませんでした";
+		//print_err(L"LoadLibrary", GetLastError());
+		//return L"BonDriverをロードできませんでした";
+		output_message(MSG_SYSERROR, L"BonDriverをロードできませんでした(LoadLibrary)");
+		return 0;
 	}
 
 	stat.pCreateBonDriver = (pCreateBonDriver_t*)GetProcAddress(stat.hdll, "CreateBonDriver");
 	if (stat.pCreateBonDriver == NULL) {
-		print_err(L"GetProcAddress", GetLastError());
+		//print_err(L"GetProcAddress", GetLastError());
 		FreeLibrary(stat.hdll);
-		return L"CreateBonDriver()のポインタを取得できませんでした";
+		//return L"CreateBonDriver()のポインタを取得できませんでした";
+		output_message(MSG_SYSERROR, L"CreateBonDriver()のポインタを取得できませんでした(GetProcAddress)");
+		return 0;
 	}
 
 	stat.pBon = stat.pCreateBonDriver();
 	if (stat.pBon == NULL) {
 		FreeLibrary(stat.hdll);
-		return L"CreateBonDriver() returns NULL";
+		//return L"CreateBonDriver() returns NULL";
+		output_message(MSG_ERROR, L"CreateBonDriver()に失敗しました");
+		return 0;
 	}
 
 	stat.pBon2 = dynamic_cast<IBonDriver2 *>(stat.pBon);
 
 	if (! stat.pBon2->OpenTuner()) {
 		FreeLibrary(stat.hdll);
-		return L"OpenTuner() returns FALSE";
+		//return L"OpenTuner() returns FALSE";
+		output_message(MSG_ERROR, L"OpenTuner()に失敗しました");
+		return 0;
 	}
 
 	ci.ch_str = stat.pBon2->EnumChannelName(sp_num, ch_num);
@@ -116,7 +133,9 @@ static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (!stat.pBon2->SetChannel(sp_num, ch_num)) {
 		stat.pBon2->CloseTuner();
 		FreeLibrary(stat.hdll);
-		return L"SetChannel() returns FALSE";
+		//return L"SetChannel() returns FALSE";
+		output_message(MSG_ERROR, L"SetChannel()に失敗しました");
+		return 0;
 	}
 
 	stat.n_rem = 1;
@@ -125,7 +144,8 @@ static const WCHAR* hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	pstat = (bondriver_stat_t*)malloc(sizeof(bondriver_stat_t));
 	*pstat = stat;
 	*param = pstat;
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
 static double hook_stream_generator_siglevel(void *param)
@@ -151,7 +171,7 @@ static hooks_stream_generator_t hooks_stream_generator = {
 static void register_hooks()
 {
 	if (bon_dll_name) {
-		reg_hook_msg = register_hooks_stream_generator(&hooks_stream_generator);
+		reg_hook = register_hooks_stream_generator(&hooks_stream_generator);
 	}
 	register_hook_postconfig(hook_postconfig);
 }

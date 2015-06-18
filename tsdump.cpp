@@ -52,24 +52,30 @@ FILE *logfp;
 	*fp = _tfopen(fn, _T("a+"));
 }*/
 
-void output_message_f(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...)
+void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
+	DWORD lasterr, *plasterr = NULL;
 	WCHAR modname[128], msg[2048], *wcp;
 	const char *cp;
 	int len;
 
 	vswprintf(msg, 2048 - 1, fmt, list);
 
+	if (msgtype == MSG_SYSERROR) {
+		lasterr = GetLastError();
+		plasterr = &lasterr;
+	}
+
 	if (strcmp(fname, "mod_") == 0) {
 		/* 拡張子を除いたファイル名=モジュール名をコピー */
 		for (wcp = modname, cp = fname; *cp != '\0' && *cp != '.' && wcp < &modname[128]; cp += len, wcp++) {
 			len = mbtowc(wcp, cp, MB_CUR_MAX);
 		}
-		do_message(modname, msgtype, msg);
+		do_message(modname, msgtype, plasterr, msg);
 	} else {
-		do_message(NULL, msgtype, msg);
+		do_message(NULL, msgtype, plasterr, msg);
 	}
 
 	va_end(list);
@@ -340,7 +346,7 @@ int wmain(int argc, WCHAR* argv[])
 	void *generator_stat = NULL;
 	void *decoder_stat = NULL;
 	int encrypted;
-	const WCHAR *err_msg;
+	//const WCHAR *err_msg;
 
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
 
@@ -370,19 +376,16 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	err_msg = do_stream_generator_open(&generator_stat, &ch_info);
-	if (err_msg) {
+	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
 		//fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
-		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
+		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした\n");
 		ret = 1;
 		goto END;
 	}
 
-
-	err_msg = do_stream_decoder_open(&decoder_stat, &encrypted);
-	if (err_msg) {
+	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
 		//fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
-		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
+		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした\n");
 		ret = 1;
 		goto END1;
 	}
@@ -449,18 +452,22 @@ static const WCHAR* set_sv(const WCHAR *param)
 	return NULL;
 }
 
-static const WCHAR *hook_postconfig()
+static int hook_postconfig()
 {
 	if ( ! param_base_dir ) {
-		return L"出力ディレクトリが指定されていないか、または不正です";
+		//return L"出力ディレクトリが指定されていないか、または不正です";
+		output_message(MSG_ERROR, L"出力ディレクトリが指定されていないか、または不正です");
+		return 0;
 	}
-	return NULL;
+	//return NULL;
+	return 1;
 }
 
-void ghook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *msg)
+void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg)
 {
 	const WCHAR *msgtype_str = L"";
 	FILE *fp = stdout;
+	LPWSTR pMsgBuf;
 
 	if (msgtype == MSG_WARNING) {
 		msgtype_str = L"[WARNING] ";
@@ -470,10 +477,31 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, const WCHAR *ms
 		fp = stderr;
 	}
 
-	if (modname) {
-		fwprintf(fp, L"%s%s: %s\n", msgtype_str, modname, msg);
+	if (msgtype == MSG_SYSERROR) {
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			*err,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPWSTR)(&pMsgBuf),
+			0,
+			NULL
+		);
+
+		if (modname) {
+			fwprintf(fp, L"%s%s: %s <%x:%s>\n", msgtype_str, modname, msg, *err, pMsgBuf);
+		} else {
+			fwprintf(fp, L"%s%s <%x:%s>\n", msgtype_str, msg, *err, pMsgBuf);
+		}
+		LocalFree(pMsgBuf);
 	} else {
-		fwprintf(fp, L"%s%s\n", msgtype_str, msg);
+		if (modname) {
+			fwprintf(fp, L"%s%s: %s\n", msgtype_str, modname, msg);
+		} else {
+			fwprintf(fp, L"%s%s\n", msgtype_str, msg);
+		}
 	}
 }
 
