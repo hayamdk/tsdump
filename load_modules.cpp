@@ -405,7 +405,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
-	if ( mod->mod_ver > TSDUMP_MODULE_V2 ) {
+	if ( mod->mod_ver != TSDUMP_MODULE_V2 ) {
 		fwprintf(stderr, L"Invalid module version: %s\n", mod->modname);
 		return 0;
 	}
@@ -431,17 +431,31 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 	//memset(module_hooks_current, 0, sizeof(module_hooks_t));
 	//mod->register_hooks();
 
-	if (hdll) {
+	/*if (hdll) {
 		wprintf(L"Module loaded(dll): %s\n", mod->modname);
 	} else {
 		wprintf(L"Module loaded: %s\n", mod->modname);
-	}
+	}*/
 
 	modules[n_modules].def = mod;
 	memset(&modules[n_modules].hooks, 0, sizeof(module_hooks_t));
 	modules[n_modules].hdll = hdll;
 	n_modules++;
 	return 1;
+}
+
+static int unload_module(const WCHAR *modname)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if ( wcscmp(modules[i].def->modname, modname) == 0 ) {
+			memmove( &modules[i], &modules[i+1], sizeof(module_load_t)*(n_modules-i-1) );
+			n_modules--;
+			return 1;
+		}
+	}
+	output_message(MSG_ERROR, L"モジュール%sはロードされていません", modname);
+	return 0;
 }
 
 static int load_dll_modules()
@@ -467,14 +481,24 @@ static int load_dll_modules()
 					dllname[len - 1] = L'\0'; /* 末尾の改行を削除 */
 				}
 			}
-			if (dllname[0] == L'#') { /* #から始まる行は無視する */
+
+			if (dllname[0] == L'#') {
+				/* #から始まる行は無視する */
+				continue;
+			} else if (dllname[0] == L'!') {
+				/* !から始まる行はモジュールを取り消す */
+				if (!unload_module(&dllname[1])) {
+					fclose(fp);
+					return 0;
+				}
 				continue;
 			}
+
 			hdll = LoadLibrary(dllname);
 			if (hdll == NULL) {
 				//print_err( L"LoadLibrary()", GetLastError() );
 				//fwprintf(stderr, L"DLLモジュールをロードできませんでした: %s\n", dllname);
-				output_message(MSG_SYSERROR, L"DLLモジュールをロードできませんでした(LoadLibrary)");
+				output_message(MSG_SYSERROR, L"DLLモジュールをロードできませんでした: %s (LoadLibrary)", dllname);
 				fclose(fp);
 				return 0;
 			}
@@ -484,7 +508,7 @@ static int load_dll_modules()
 			if (mod == NULL) {
 				//print_err(L"GetProcAddress", GetLastError());
 				//fprintf(stderr, "モジュールポインタを取得できませんでした: %s\n", modname);
-				output_message(MSG_SYSERROR, L"モジュールポインタを取得できませんでした(GetProcAddress)");
+				output_message(MSG_SYSERROR, L"モジュールポインタを取得できませんでした: %s (GetProcAddress)", dllname);
 				FreeLibrary(hdll);
 				fclose(fp);
 				return 0;
@@ -498,7 +522,7 @@ static int load_dll_modules()
 		fclose(fp);
 	} else {
 		//fwprintf(stderr, L"modules.confを開けないのでDLLモジュールをロードしません\n");
-		output_message(MSG_WARNING, L"modules.confを開けないのでDLLモジュールをロードしません");
+		output_message(MSG_NOTIFY, L"modules.confを開けないのでDLLモジュールをロードしません");
 	}
 	return 1;
 }
@@ -534,6 +558,15 @@ int init_modules(int argc, WCHAR* argv[])
 {
 	int i;
 	cmd_def_t *cmd;
+
+	/* list */
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hdll) {
+			output_message(MSG_NOTIFY, L"module(dll): %s", modules[i].def->modname);
+		} else {
+			output_message(MSG_NOTIFY, L"module: %s", modules[i].def->modname);
+		}
+	}
 
 	/* cmds */
 	for (i = 0; i < n_modules; i++) {

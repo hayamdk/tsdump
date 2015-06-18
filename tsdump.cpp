@@ -358,16 +358,15 @@ int wmain(int argc, WCHAR* argv[])
 	/* モジュールをロード */
 	if (load_modules() < 0) {
 		//fwprintf(stderr, L"[ERROR] モジュールのロード時にエラーが発生しました!");
-		output_message(MSG_ERROR, L"[ERROR] モジュールのロード時にエラーが発生しました!");
+		output_message(MSG_ERROR, L"モジュールのロード時にエラーが発生しました!");
 		ret = 1;
 		goto END;
 	}
-	printf("\n");
 
 	/* モジュールを初期化 */
 	if ( !init_modules(argc, argv) ) {
 		//fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
-		output_message(MSG_ERROR, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
+		output_message(MSG_ERROR, L"モジュールの初期化時にエラーが発生しました!");
 		print_cmd_usage();
 		ret = 1;
 		goto END;

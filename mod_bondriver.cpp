@@ -42,7 +42,7 @@ LPWSTR lasterr_msg()
 static int hook_postconfig()
 {
 	if (bon_dll_name == NULL) {
-		return NULL;
+		return 1;
 	}
 
 	//if (reg_hook_msg != NULL) {

@@ -99,7 +99,7 @@ static hooks_stream_decoder_t hooks_stream_decoder = {
 static int hook_postconfig()
 {
 	if (!use_b25dll) {
-		return NULL;
+		return 1;
 	}
 
 	if (!reg_hook) {
