@@ -91,7 +91,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (stat.hdll == NULL) {
 		//print_err(L"LoadLibrary", GetLastError());
 		//return L"BonDriverをロードできませんでした";
-		output_message(MSG_SYSERROR, L"BonDriverをロードできませんでした(LoadLibrary)");
+		output_message(MSG_SYSERROR, L"BonDriverをロードできませんでした(LoadLibrary): %s", bon_dll_name);
 		return 0;
 	}
 
@@ -100,7 +100,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		//print_err(L"GetProcAddress", GetLastError());
 		FreeLibrary(stat.hdll);
 		//return L"CreateBonDriver()のポインタを取得できませんでした";
-		output_message(MSG_SYSERROR, L"CreateBonDriver()のポインタを取得できませんでした(GetProcAddress)");
+		output_message(MSG_SYSERROR, L"CreateBonDriver()のポインタを取得できませんでした(GetProcAddress): %s", bon_dll_name);
 		return 0;
 	}
 
@@ -108,7 +108,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (stat.pBon == NULL) {
 		FreeLibrary(stat.hdll);
 		//return L"CreateBonDriver() returns NULL";
-		output_message(MSG_ERROR, L"CreateBonDriver()に失敗しました");
+		output_message(MSG_ERROR, L"CreateBonDriver()に失敗しました: %s", bon_dll_name);
 		return 0;
 	}
 

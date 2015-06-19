@@ -82,26 +82,40 @@ void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt
 	va_end(list);
 }
 
-void print_buf(ts_output_stat_t *tos, int n_tos)
+void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 {
-	int n, i, j, backward_size, console_width, width;
-	char line[256];
+	int n, i, j, backward_size, console_width, width, multiline;
+	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
 	HANDLE hc;
 	CONSOLE_SCREEN_BUFFER_INFO ci;
+	COORD new_pos;
+	double rate;
 
 	if(!tos) {
 		return;
 	}
 
-	console_width = 80;
+	multiline = 0;
 	hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hc != INVALID_HANDLE_VALUE) {
 		if ( GetConsoleScreenBufferInfo(hc, &ci) != 0 ) {
-			console_width = ci.dwSize.X;
+			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINEだとこれを取得できない(0がセットされる) */
+				console_width = ci.dwSize.X;
+				new_pos.X = 0;
+				new_pos.Y = ci.dwCursorPosition.Y;
+				multiline = 1;
+			}
 		}
 	}
+
+	if (!multiline) {
+		rate = 100.0 * tos->pos_filled / BUFSIZE;
+		wprintf(L"%s buf:%.1f%% \r", stat, rate);
+		return;
+	}
+
 	if (console_width >= 256) {
 		console_width = 255;
 	}
@@ -136,8 +150,13 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 		}
 	}
 	*p = '\0';
-	//printf("buf: %s\r", line);
-	output_message(MSG_DISP, L"%s\r", line);
+
+	memset(hor, '-', console_width - 1);
+	hor[console_width - 1] = '\0';
+
+	wprintf(L"%S\n%s\n", hor, stat);
+	wprintf(L"buf: %S", line);
+	SetConsoleCursorPosition(hc, new_pos);
 }
 
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
@@ -155,7 +174,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	int n_tos = 0;
 	ts_parse_stat_t tps = {};
 
-	TCHAR title[256];
+	WCHAR title[256];
 	decoder_stats_t stats;
 
 	lasttime = nowtime = gettime();
@@ -277,7 +296,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			//tc_start("printbuf");
-			print_buf(tos, n_tos);
+			print_stat(tos, n_tos, title);
 			//tc_end();
 
 			/* 溢れたバイト数を表示 */
@@ -315,7 +334,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		while (tos[i].pos_filled - tos[i].pos_write > 0 && !err) {
 			ts_output(&tos[i], gettime(), 1);
 			err = ts_wait_pgoutput(&tos[i]);
-			print_buf(&tos[i], n_tos-i);
+			print_stat(&tos[i], n_tos-i, L"");
 		}
 		close_tos(&tos[i]);
 	}
@@ -413,7 +432,7 @@ END:
 
 	if( ret ) {
 		//wprintf(L"何かキーを押してください");
-		output_message(MSG_NOTIFY, L"\n何かキーを押してください");
+		output_message(MSG_NOTIFY, L"\nエンターキーを押すと終了します");
 		getchar();
 	}
 	return ret;
@@ -470,35 +489,40 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 {
 	const WCHAR *msgtype_str = L"";
 	FILE *fp = stdout;
-	LPWSTR pMsgBuf;
+	WCHAR msgbuf[256];
 
 	if (msgtype == MSG_WARNING) {
 		msgtype_str = L"[WARNING] ";
 		fp = stderr;
-	} else if (msgtype == MSG_ERROR) {
+	} else if (msgtype == MSG_ERROR || msgtype == MSG_SYSERROR) {
 		msgtype_str = L"[ERROR] ";
 		fp = stderr;
 	}
 
 	if (msgtype == MSG_SYSERROR) {
 		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			/*FORMAT_MESSAGE_ALLOCATE_BUFFER |*/
 			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
+			FORMAT_MESSAGE_IGNORE_INSERTS |
+			FORMAT_MESSAGE_MAX_WIDTH_MASK,
 			NULL,
 			*err,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			(LPWSTR)(&pMsgBuf),
-			0,
+			msgbuf,
+			256,
 			NULL
 		);
 
-		if (modname) {
-			fwprintf(fp, L"%s%s: %s <%x:%s>\n", msgtype_str, modname, msg, *err, pMsgBuf);
-		} else {
-			fwprintf(fp, L"%s%s <%x:%s>\n", msgtype_str, msg, *err, pMsgBuf);
+		if (msgbuf[wcslen(msgbuf)-1] == L' ') {
+			msgbuf[wcslen(msgbuf)-1] = L'\0';
 		}
-		LocalFree(pMsgBuf);
+
+		if (modname) {
+			fwprintf(fp, L"%s%s: %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
+		} else {
+			fwprintf(fp, L"%s%s <0x%x:%s>\n", msgtype_str, msg, *err, msgbuf);
+		}
+		//LocalFree(msgbuf);
 	} else {
 		if (modname) {
 			fwprintf(fp, L"%s%s: %s\n", msgtype_str, modname, msg);

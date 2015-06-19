@@ -28,7 +28,7 @@ static inline int64_t gettime()
 	return result;
 }
 
-static inline int64_t timenum_end(ProgInfo *pi)
+static inline int64_t timenum_end_sec(ProgInfo *pi, int *psec)
 {
 	int64_t tn;
 	struct tm t, te;
@@ -77,7 +77,23 @@ static inline int64_t timenum_end(ProgInfo *pi)
 	tn += min;
 	//tn *= 100;
 	//tn += sec;
+	if (psec) {
+		*psec = sec;
+	}
 	return tn;
+}
+
+static inline int64_t timenum_end(ProgInfo *pi)
+{
+	return timenum_end_sec(pi, NULL);
+}
+
+static inline int64_t timenum_end14(ProgInfo *pi)
+{
+	int64_t t;
+	int sec;
+	t = timenum_end_sec(pi, &sec);
+	return t * 100 + sec;
 }
 
 static inline int64_t timenum_start(ProgInfo *pi)

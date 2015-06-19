@@ -39,7 +39,7 @@ void printpi(ProgInfo *pi)
 			pi->pextend
 		);
 	} else {
-		endtime = timenum_end(pi);
+		endtime = timenum_end14(pi);
 		endhour = (endtime/10000) % 100;
 		endmin = (endtime/100) % 100;
 		endsec = endtime % 100;
