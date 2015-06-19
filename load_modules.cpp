@@ -393,7 +393,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 {
 	cmd_load_t *cmd_load = get_cmddef(cmd->cmd_name);
 	if ( cmd_load != NULL ) {
-		fwprintf(stderr, L"%s: コマンドオプション %s は既にモジュール %s によって登録されています\n",
+		output_message(MSG_ERROR, L"%s: コマンドオプション %s は既にモジュール %s によって登録されています",
 			mod->modname, cmd->cmd_name, cmd_load->cmd_module->modname );
 		return 0;
 	}
@@ -406,12 +406,12 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
 	if ( mod->mod_ver != TSDUMP_MODULE_V2 ) {
-		fwprintf(stderr, L"Invalid module version: %s\n", mod->modname);
+		output_message(MSG_ERROR, L"互換性の無いモジュールです: %s", mod->modname);
 		return 0;
 	}
 
 	if (n_modules >= MAX_MODULES) {
-		fwprintf(stderr, L"Too many modules ( > %d) !\n", MAX_MODULES);
+		output_message(MSG_ERROR, L"これ以上モジュールをロードできません(最大数:%d)", MAX_MODULES);
 		return 0;
 	}
 
@@ -535,13 +535,13 @@ static int get_cmd_params( int argc, WCHAR* argv[] )
 	for ( i = 1; i < argc; i++ ) {
 		cmd_load = get_cmddef(argv[i]);
 		if ( ! cmd_load ) {
-			fwprintf(stderr, L"不明なコマンドオプション %s が指定されました\n", argv[i]);
+			output_message(MSG_ERROR, L"不明なコマンドオプション %s が指定されました", argv[i]);
 			return 0;
 		}
 		cmd_def = cmd_load->cmd_def;
 		if ( cmd_def->have_option ) {
 			if ( i == argc-1 ) {
-				fwprintf(stderr, L"コマンドオプション %s に値を指定してください\n", argv[i]);
+				output_message(MSG_ERROR, L"コマンドオプション %s に値を指定してください", argv[i]);
 				return 1;
 			} else {
 				cmd_def->cmd_handler(argv[i+1]);

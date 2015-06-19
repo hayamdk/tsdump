@@ -127,9 +127,11 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	ci.ch_num = ch_num;
 	ci.sp_num = sp_num;
 
-	wprintf(L"BonTuner: %s\n", ci.tuner_name);
-	wprintf(L"Space: %s\n", ci.sp_str);
-	wprintf(L"Channel: %s\n", ci.ch_str);
+	//wprintf(L"BonTuner: %s\n", ci.tuner_name);
+	//wprintf(L"Space: %s\n", ci.sp_str);
+	//wprintf(L"Channel: %s\n", ci.ch_str);
+	output_message(MSG_NOTIFY, L"BonTuner: %s\nSpace: %s\nChannel: %s",
+		ci.tuner_name, ci.sp_str, ci.ch_str);
 	if (!stat.pBon2->SetChannel(sp_num, ch_num)) {
 		stat.pBon2->CloseTuner();
 		FreeLibrary(stat.hdll);

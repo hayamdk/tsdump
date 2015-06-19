@@ -40,7 +40,8 @@ int param_nowait = 0;
 void signal_handler(int)
 {
 	termflag = 1;
-	printf("\n終了シグナルをキャッチ\n");
+	output_message(MSG_NOTIFY, L"\n終了シグナルをキャッチ");
+	//printf("\n終了シグナルをキャッチ\n");
 }
 
 FILE *logfp;
@@ -135,7 +136,8 @@ void print_buf(ts_output_stat_t *tos, int n_tos)
 		}
 	}
 	*p = '\0';
-	printf("buf: %s\r", line);
+	//printf("buf: %s\r", line);
+	output_message(MSG_DISP, L"%s\r", line);
 }
 
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
@@ -282,9 +284,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			for (i = 0; i < n_tos; i++) {
 				if (tos[i].dropped_bytes > 0) {
 					if ( tos[i].service_id != -1 ) {
-						fprintf(stderr, "[WARN] バッファフルのためデータが溢れました(サービス%d, %dバイト)\n", tos[i].service_id, tos[i].dropped_bytes);
+						output_message(MSG_ERROR, L"[WARN] バッファフルのためデータが溢れました(サービス%d, %dバイト)", tos[i].service_id, tos[i].dropped_bytes);
 					} else {
-						fprintf(stderr, "[WARN] バッファフルのためデータが溢れました(%dバイト)\n", tos[i].dropped_bytes);
+						output_message(MSG_ERROR, L"[WARN] バッファフルのためデータが溢れました(%dバイト)", tos[i].dropped_bytes);
 					}
 					tos[i].dropped_bytes = 0;
 				}
@@ -305,7 +307,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int err;
 	/* 終了処理 */
-	printf("まだ書き出していないバッファを書き出ています\n");
+	//printf("まだ書き出していないバッファを書き出ています\n");
+	output_message(MSG_NOTIFY, L"まだ書き出していないバッファを書き出ています");
 	for (i = 0; i < n_tos; i++) {
 		/* まだ書き出していないバッファを書き出し */
 		err = ts_wait_pgoutput(&tos[i]);
@@ -335,7 +338,7 @@ void load_ini()
 	CHECK_INTERVAL = check_interval;
 	MAX_PGOVERLAP = max_pgoverlap;
 
-	printf("BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n\n",
+	output_message(MSG_NONE, L"BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n",
 		bufsize, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 }
 
@@ -350,7 +353,7 @@ int wmain(int argc, WCHAR* argv[])
 
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
 
-	printf("tsdump ver%s (%s)\n\n", VERSION_STR, DATE_STR);
+	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
 
 	/* iniファイルをロード */
 	load_ini();
@@ -377,14 +380,14 @@ int wmain(int argc, WCHAR* argv[])
 
 	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
 		//fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
-		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした\n");
+		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした");
 		ret = 1;
 		goto END;
 	}
 
 	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
 		//fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
-		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした\n");
+		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした");
 		ret = 1;
 		goto END1;
 	}
@@ -395,7 +398,7 @@ int wmain(int argc, WCHAR* argv[])
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
 	//printf("正常終了\n");
-	output_message(MSG_NONE, L"正常終了\n");
+	output_message(MSG_NONE, L"正常終了");
 
 	do_stream_decoder_close(decoder_stat);
 
@@ -409,7 +412,8 @@ END:
 	free_modules();
 
 	if( ret ) {
-		printf("何かキーを押してください");
+		//wprintf(L"何かキーを押してください");
+		output_message(MSG_NOTIFY, L"\n何かキーを押してください");
 		getchar();
 	}
 	return ret;

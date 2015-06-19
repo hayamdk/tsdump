@@ -26,35 +26,33 @@ static inline int pi_endtime_unknown(ProgInfo *pi)
 
 void printpi(ProgInfo *pi)
 {
+	int64_t endtime;
+	int endhour, endmin, endsec;
 	if ( pi_endtime_unknown(pi) ) {
-		_tprintf(_T("<<<----------prog info------------\n")
-			_T("[%d/%02d/%02d %02d:%02d:%02d～ +未定]\n%s:%s\n「%s」\n")
-			_T("------------------------------->>>\n"),
-			pi->recyear,
-			pi->recmonth,
-			pi->recday,
-			pi->rechour,
-			pi->recmin,
-			pi->recsec,
+		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
+			L"[%d/%02d/%02d %02d:%02d:%02d～ +未定]\n%s:%s\n「%s」\n"
+			L"---------------------------------- >>>",
+			pi->recyear, pi->recmonth, pi->recday,
+			pi->rechour, pi->recmin, pi->recsec,
 			pi->chname,
 			pi->pname,
-			pi->pextend);
+			pi->pextend
+		);
 	} else {
-		_tprintf(_T("<<<----------prog info------------\n")
-			_T("[%d/%02d/%02d %02d:%02d:%02d～ +%02d:%02d:%02d]\n%s:%s\n「%s」\n")
-			_T("------------------------------->>>\n"),
-			pi->recyear,
-			pi->recmonth,
-			pi->recday,
-			pi->rechour,
-			pi->recmin,
-			pi->recsec,
-			pi->durhour,
-			pi->durmin,
-			pi->dursec,
+		endtime = timenum_end(pi);
+		endhour = (endtime/10000) % 100;
+		endmin = (endtime/100) % 100;
+		endsec = endtime % 100;
+		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
+			L"[%d/%02d/%02d %02d:%02d:%02d～%02d:%02d:%02d]\n%s:%s\n「%s」\n"
+			L"---------------------------------- >>>",
+			pi->recyear, pi->recmonth, pi->recday,
+			pi->rechour, pi->recmin, pi->recsec,
+			endhour, endmin, endsec,
 			pi->chname,
 			pi->pname,
-			pi->pextend);
+			pi->pextend
+		);
 	}
 }
 
@@ -477,6 +475,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	int changed = 0;
 	pgoutput_stat_t *pgos;
 	int64_t starttime, endtime, starttime_last, endtime_last;
+	WCHAR msg1[64], msg2[64];
 
 	//tc_start("getpi");
 	memset(&tos->pi, 0, sizeof(ProgInfo));
@@ -548,30 +547,36 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		/* 番組の時間が途中で変更された場合 */
 		if ( starttime != starttime_last ) {
 			if (tos->service_id == -1) {
-				printf("番組開始時間の変更: ");
+				//printf("番組開始時間の変更: ");
+				wcscpy_s(msg1, L"番組開始時間の変更");
 			} else {
-				printf("番組開始時間の変更(サービス%d): ", tos->service_id);
+				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->service_id);
 			}
 
-			printf("%02I64d:%02I64d → %02I64d:%02I64d\n", 
-				starttime_last/100%100, starttime_last%100,
-				starttime/100%100, starttime%100 );
+			output_message( MSG_NOTIFY, L"%s: %02d:%02d → %02d:%02d", msg1,
+				(int)(starttime_last/100%100), (int)(starttime_last%100),
+				(int)(starttime/100%100), (int)(starttime%100) );
 		} else if ( endtime != endtime_last ) {
 			if (tos->service_id == -1) {
-				printf("番組終了時間の変更: ");
+				//printf("番組終了時間の変更: ");
+				wcscpy_s(msg1, L"番組終了時間の変更");
 			} else {
-				printf("番組終了時間の変更(サービス%d): ", tos->service_id);
+				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->service_id);
 			}
 
 			if ( pi_endtime_unknown(&tos->pi_last) ) {
-				printf("未定 → ");
+				//printf("未定 → ");
+				wcscpy_s(msg2, L"未定 → ");
 			} else {
-				printf("%02I64d:%02I64d → ", endtime_last / 100 % 100, endtime_last % 100);
+				wsprintf( msg2, L"%02d:%02d → ", (int)(endtime_last / 100 % 100), (int)(endtime_last % 100) );
 			}
+
 			if ( pi_endtime_unknown(&tos->pi) ) {
-				printf("未定\n");
+				output_message(MSG_NOTIFY, L"%s: %s未定", msg1, msg2);
 			} else {
-				printf("%02I64d:%02I64d\n", endtime / 100 % 100, endtime % 100);
+				//printf("%02I64d:%02I64d\n", endtime / 100 % 100, endtime % 100);
+				output_message( MSG_NOTIFY, L"%s: %s%02d:%02d",
+					msg1, msg2, (int)(endtime / 100 % 100), (int)(endtime % 100) );
 			}
 		}
 		tos->pi_last = tos->pi;

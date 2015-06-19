@@ -42,7 +42,8 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 	errno_t err;
 
 	if (!pi->isok) {
-		fprintf(stderr, "[WARN] 番組情報が取得できなかったので番組情報ファイルを生成しません\n");
+		//fprintf(stderr, "[WARN] 番組情報が取得できなかったので番組情報ファイルを生成しません\n");
+		output_message(MSG_WARNING, L"番組情報が取得できなかったので番組情報ファイルを生成しません");
 		return NULL;
 	}
 
@@ -51,7 +52,8 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 	PathAddExtension(fname, L".txt");
 	err = _wfopen_s(&fp, fname, L"wt, ccs=UTF-8");
 	if (err) {
-		fwprintf(stderr, L"[ERROR] 番組情報ファイルを保存できません: %s\n", fname);
+		//fwprintf(stderr, L"[ERROR] 番組情報ファイルを保存できません: %s\n", fname);
+		output_message(MSG_ERROR, L"番組情報ファイルを保存できません: %s", fname);
 		return NULL;
 	}
 
@@ -168,7 +170,8 @@ static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const 
 
 	create_proginfo_file(fname, pi);
 
-	wprintf(L"[START] %s\n", fos->fn);
+	//wprintf(L"[START] %s\n", fos->fn);
+	output_message(MSG_NOTIFY, L"[録画開始]: %s", fos->fn);
 	return fos;
 }
 
@@ -181,7 +184,8 @@ static void hook_pgoutput(void *pstat, const unsigned char *buf, const size_t si
 	}
 
 	if (fos->write_busy) {
-		fprintf(stderr, "[ERROR] 以前のファイルIOが完了しないうちに次のファイルIOを発行しました\n");
+		//fprintf(stderr, "[ERROR] 以前のファイルIOが完了しないうちに次のファイルIOを発行しました\n");
+		output_message(MSG_ERROR, L"以前のファイルIOが完了しないうちに次のファイルIOを発行しました");
 		return;
 	}
 
@@ -227,7 +231,8 @@ static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
 	}
 
 	if (fos->write_busy) {
-		fprintf(stderr, "[ERROR] IOが完了しないうちにファイルを閉じようとしました\n");
+		//fprintf(stderr, "[ERROR] IOが完了しないうちにファイルを閉じようとしました\n");
+		output_message(MSG_ERROR, L"IOが完了しないうちにファイルを閉じようとしました");
 		*((char*)NULL) = 0; /* segfault */
 	}
 	CloseHandle(fos->fh);
@@ -245,7 +250,8 @@ static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
 		free(fos->fn_pi);
 	}
 
-	wprintf(L"[FINISHED] %s\n", fos->fn);
+	//wprintf(L"[FINISHED] %s\n", fos->fn);
+	output_message(MSG_NOTIFY, L"[録画終了] %s", fos->fn);
 
 	free(fos->fn);
 	free(fos);

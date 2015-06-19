@@ -32,7 +32,8 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 	ps->used = 0;
 
 	if (!CreatePipe(&hReadTemp, &hWrite, NULL, 0)) {
-		fprintf(stderr, "[ERROR] パイプの作成に失敗\n");
+		//fprintf(stderr, "[ERROR] パイプの作成に失敗\n");
+		output_message(MSG_SYSERROR, L"パイプの作成に失敗");
 		return;
 	}
 	if (!DuplicateHandle(
@@ -43,7 +44,8 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 		0,
 		TRUE,
 		DUPLICATE_SAME_ACCESS)) {
-		fprintf(stderr, "[ERROR] DuplicateHandle()に失敗\n");
+		//fprintf(stderr, "[ERROR] DuplicateHandle()に失敗\n");
+		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
 		CloseHandle(hWrite);
 		CloseHandle(hReadTemp);
 		return;
@@ -64,10 +66,12 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 
 	swprintf(cmdarg, 2048-1, L"\"%s\" \"%s\"", cmdname, fname);
 
-	wprintf(L"[PIPE] exec: %s\n", cmdarg);
+	//wprintf(L"[PIPE] exec: %s\n", cmdarg);
+	output_message(MSG_NOTIFY, L"パイプコマンド実行: %s\n", cmdarg);
 
 	if (!CreateProcess(cmdname, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-		fprintf(stderr, "[ERROR] 子プロセスの生成に失敗\n");
+		//fprintf(stderr, "[ERROR] 子プロセスの生成に失敗\n");
+		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess)");
 		CloseHandle(hWrite);
 		CloseHandle(hRead);
 		return;
@@ -109,7 +113,8 @@ static void hook_pgoutput(void *pstat, const unsigned char *buf, const size_t si
 		while (written_total < (DWORD)size) {
 			ret = WriteFile(ps[i].write_pipe, &buf[written_total], size - written_total, &written, NULL);
 			if (!ret) {
-				fprintf(stderr, "[ERROR] Broken pipe(close pipe)\n");
+				//fprintf(stderr, "[ERROR] Broken pipe(close pipe)\n");
+				output_message(MSG_SYSERROR, L"パイプが壊れています(WriteFile)");
 				CloseHandle(ps[i].write_pipe);
 				CloseHandle(ps[i].child_process);
 				ps[i].used = 0;

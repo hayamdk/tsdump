@@ -86,7 +86,8 @@ int get_proginfo( ProgInfo *proginfo, BYTE *buf, int size )
 		}
 	}
 	if(sfiletype != FILE_188TS) {
-		fprintf(stderr, "\n正常なtsストリームではありません\n");
+		//fprintf(stderr, "\n正常なtsストリームではありません\n");
+		output_message(MSG_ERROR, L"正常なtsストリームではありません");
 		return 0;
 	}
 

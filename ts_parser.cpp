@@ -3,6 +3,11 @@
 #include <string.h>
 #include <inttypes.h>
 
+typedef wchar_t			WCHAR;
+typedef long			BOOL;
+typedef unsigned long	DWORD;
+
+#include "modules_def.h"
 #include "ts_parser.h"
 
 static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps)
@@ -52,7 +57,8 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 		unsigned __int32 crc = crc32(ps->payload, ps->n_payload - 4);
 		if (ps->crc32 != crc) {
 			ps->stat = PAYLOAD_STAT_INIT;
-			printf("Payload CRC32 mismatch!\n");
+			//printf("Payload CRC32 mismatch!\n");
+			output_message(MSG_ERROR, L"Payload CRC32 mismatch!");
 		}
 	}
 }
@@ -75,8 +81,8 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 			int pos = 12 + payload[11];
 			n_pids = 0;
 			if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) { /* CRCが前回と違ったときのみ表示 */
-				printf("<<<-------------PMT---------------\n"
-					"program_number: %d(0x%X), payload crc32: 0x%08X\n",
+				output_message(MSG_DISP, L"<<< ------------- PMT ---------------\n"
+					L"program_number: %d(0x%X), payload crc32: 0x%08X",
 					tps->programs[i].service_id, tps->programs[i].service_id, tps->payload_PMTs[i].crc32);
 			}
 			while (pos < tps->payload_PMTs[i].n_payload - 4/*crc32*/) {
@@ -85,12 +91,12 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 				pos += (payload[pos + 3] & 0x0f) * 256 + payload[pos + 4] + 5;
 				n_pids++;
 				if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) { /* CRCが前回と違ったときのみ表示 */
-					printf("stream_type:0x%x(%s), elementary_PID:%d(0x%X)\n",
+					output_message(MSG_DISP, L"stream_type:0x%x(%s), elementary_PID:%d(0x%X)",
 						stype, get_stream_type_str(stype), pid, pid);
 				}
 			}
 			if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) {
-				printf("------------------------------->>>\n");
+				output_message(MSG_DISP, L"---------------------------------- >>>");
 			}
 			tps->programs[i].payload_crc32 = tps->payload_PMTs[i].crc32;
 			tps->payload_PMTs[i].stat = PAYLOAD_STAT_INIT;
@@ -119,18 +125,18 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 		int n = (tps->payload_PAT.n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
 		int pn, pid, n_progs = 0;
 		unsigned char *payload = &(tps->payload_PAT.payload[8]);
-		printf("<<<-------------PAT---------------\n");
+		output_message(MSG_DISP, L"<<< ------------- PAT ---------------");
 		for (i = 0; i < n; i++) {
 			pn = payload[i * 4] * 256 + payload[i * 4 + 1];
 			pid = (payload[i * 4 + 2] & 0x1f) * 256 + payload[i * 4 + 3];
 			if (pn == 0) {
-				printf("network_PID:%d(0x%X)\n", pid, pid);
+				output_message(MSG_DISP, L"network_PID:%d(0x%X)", pid, pid);
 			} else {
 				n_progs++;
-				printf("program_number:%d(0x%X), program_map_PID:%d(0x%X)\n", pn, pn, pid, pid);
+				output_message(MSG_DISP, L"program_number:%d(0x%X), program_map_PID:%d(0x%X)", pn, pn, pid, pid);
 			}
 		}
-		printf("------------------------------->>>\n");
+		output_message(MSG_DISP, L"---------------------------------- >>>");
 		tps->n_programs = n_progs;
 		tps->payload_PMTs = (payload_procstat_t*)malloc(n_progs*sizeof(payload_procstat_t));
 		tps->programs = (program_pid_info_t*)malloc(n_progs*sizeof(program_pid_info_t));
