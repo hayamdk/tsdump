@@ -21,7 +21,6 @@ typedef struct{
 	int err;
 	DWORD errcode;
 	const WCHAR *errmsg;
-	int busycount;
 } my_nonblockio_t;
 
 typedef struct{
@@ -46,16 +45,16 @@ static unsigned int __stdcall my_nonblockio_worker(void *param)
 	for (;;) {
 		ret = WaitForSingleObject(nbio->master_event, INFINITE);
 		if (ret == WAIT_OBJECT_0) {
-			if (nbio->endflag < 0) {
+			if (nbio->endflag) {
 				nbio->err = 0;
-				PulseEvent(nbio->slave_event);
+				SetEvent(nbio->slave_event);
 				return 0;
 			}
 		} else {
 			nbio->err = 1;
 			nbio->errcode = GetLastError();
 			nbio->errmsg = L"スレッドのWaitForSingleObject()が失敗しました";
-			PulseEvent(nbio->slave_event);
+			SetEvent(nbio->slave_event);
 			return 1;
 		}
 
@@ -67,19 +66,19 @@ static unsigned int __stdcall my_nonblockio_worker(void *param)
 					&written,
 					NULL);
 			if (!ret) {
-				if (nbio->endflag < 0) {
+				if (nbio->endflag) {
 					/* masterからの指示でエラーになった */
 					break;
 				}
 				nbio->err = 1;
 				nbio->errcode = GetLastError();
 				nbio->errmsg = L"WriteFile()が失敗しました";
-				PulseEvent(nbio->slave_event);
+				SetEvent(nbio->slave_event);
 				return 1;
 			}
 			written_total += written;
 		}
-		PulseEvent(nbio->slave_event);
+		SetEvent(nbio->slave_event);
 	}
 }
 
@@ -92,7 +91,7 @@ static int my_nonblockio_create(my_nonblockio_t *nbio, HANDLE fh)
 		nbio->errmsg = L"イベントの生成が失敗しました(CreateEvent)";
 		return 0;
 	}
-	nbio->slave_event = CreateEvent(NULL, FALSE, TRUE, NULL);
+	nbio->slave_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	if (nbio->slave_event == NULL) {
 		nbio->err = 1;
 		nbio->errcode = GetLastError();
@@ -110,11 +109,9 @@ static int my_nonblockio_create(my_nonblockio_t *nbio, HANDLE fh)
 		return 0;
 	}
 	nbio->fh = fh;
-	nbio->busy = 0;
 	nbio->endflag = 0;
 	nbio->err = 0;
 	nbio->busy = 0;
-	nbio->busycount = 0;
 	return 1;
 }
 
@@ -144,6 +141,7 @@ static int my_nonblockio_check(my_nonblockio_t *nbio, DWORD wait_ms)
 static int my_nonblockio_write(my_nonblockio_t *nbio, const uint8_t *buf, int size)
 {
 	while (nbio->busy) {
+		//printf("ここには来ない！\n");
 		my_nonblockio_check(nbio, INFINITE);
 	}
 	if (nbio->err) {
@@ -154,14 +152,14 @@ static int my_nonblockio_write(my_nonblockio_t *nbio, const uint8_t *buf, int si
 		nbio->write_size = size;
 		nbio->write_buf = buf;
 		nbio->busy = 1;
-		PulseEvent(nbio->master_event);
+		SetEvent(nbio->master_event);
 	}
 	return 1;
 }
 
 static void my_nonblockio_setendflag(my_nonblockio_t *nbio)
 {
-	nbio->endflag= -1;
+	nbio->endflag= 1;
 }
 
 static void my_nonblockio_close(my_nonblockio_t *nbio)
@@ -169,7 +167,7 @@ static void my_nonblockio_close(my_nonblockio_t *nbio)
 	DWORD ret;
 
 	my_nonblockio_setendflag(nbio);
-	PulseEvent(nbio->master_event);
+	SetEvent(nbio->master_event);
 	ret = WaitForSingleObject(nbio->h_thread, 500);
 	if (ret != WAIT_OBJECT_0) {
 		output_message(MSG_SYSERROR, L"スレッドが応答しないので強制終了します(WaitForSingleObject)");
@@ -298,12 +296,11 @@ static void hook_pgoutput(void *stat, const unsigned char *buf, const size_t siz
 {
 	//DWORD /*written_total, written,*/ ret;
 	//BOOL ret;
-	int ret, error;
+	pipestat_t *ps = (pipestat_t*)stat;
+	int i, ret, error;
 	const WCHAR *errmsg;
 	DWORD errcode;
 
-	pipestat_t *ps = (pipestat_t*)stat;
-	int i;
 	for (i = 0; i < n_pipecmds; i++) {
 		if (!ps[i].used) {
 			continue;
