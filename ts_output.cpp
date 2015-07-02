@@ -4,7 +4,6 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
-#include <shlwapi.h>
 #include <inttypes.h>
 
 #include "modules_def.h"
@@ -56,103 +55,13 @@ void printpi(ProgInfo *pi)
 	}
 }
 
-void normalize_fname(WCHAR *fname)
-{
-	WCHAR *p = fname;
-	WCHAR c;
-
-	while ((c = *p) != L'\0') {
-		if (c == L'\\') {
-			*p = L'￥';
-		} else if (c == L'/') {
-			*p = L'／';
-		} else if (c == L'*') {
-			*p = L'*';
-		} else if (c == L'?') {
-			*p = L'？';
-		} else if (c == L'"') {
-			*p = L'”';
-		} else if (c == L'<') {
-			*p = L'＜';
-		} else if (c == L'>') {
-			*p = L'＞';
-		} else if (c == L'|') {
-			*p = L'｜';
-		} else if (c == L':') {
-			*p = L'：';
-		}
-		p++;
-	}
-}
-
-void get_fname(WCHAR* fname, ts_output_stat_t *tos, ch_info_t *ch_info, WCHAR *ext)
-{
-	int64_t tn;
-	int i;
-
-	ProgInfo *pi = &(tos->pi);
-	const WCHAR *chname, *pname;
-	if (pi->isok) {
-		tn = timenum_start(pi);
-		chname = pi->chname;
-		pname = pi->pname;
-	} else {
-		tn = timenumnow();
-		chname = ch_info->ch_str;
-		pname = L"番組情報なし";
-	}
-
-	WCHAR *pname_n = _wcsdup(pname);
-	WCHAR *chname_n = _wcsdup(chname);
-
-	normalize_fname(pname_n);
-	normalize_fname(chname_n);
-
-	/* tnは番組情報の開始時刻 */
-	if (!pi->isok && param_n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, tos->service_id, pname_n, ext);
-	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
-	}
-	if (!PathFileExists(fname)) {
-		goto END;
-	}
-	/* ファイルが既に存在したらtnを現在時刻に */
-	tn = timenumnow();
-	if (!pi->isok && param_n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, tos->service_id, pname_n, ext);
-	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
-	}
-	if (!PathFileExists(fname)) {
-		goto END;
-	}
-
-	/* それでも存在したらsuffixをつける */
-	for (i = 2;; i++) {
-		if (!pi->isok && param_n_services > 1) {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s_%d%s", param_base_dir, tn, chname_n, tos->service_id, pname_n, i, ext);
-		} else {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s_%d%s", param_base_dir, tn, chname_n, pname_n, i, ext);
-		}
-		if (!PathFileExists(fname)) {
-			goto END;
-		}
-	}
-
-END:
-	free(pname_n);
-	free(chname_n);
-	return;
-}
-
-int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps)
+int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_info_t *ch_info)
 {
 	int i, j, k;
 	int n_tos;
 	ts_output_stat_t *tos;
 
-	if (param_all_services) {
+	if (ch_info->mode_all_services) {
 		n_tos = tps->n_programs;
 		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
 		for (i = 0; i < n_tos; i++) {
@@ -163,9 +72,9 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps)
 	}
 	else {
 		n_tos = 0;
-		for (i = 0; i < param_n_services; i++) {
+		for (i = 0; i < ch_info->n_services; i++) {
 			for (j = 0; j < tps->n_programs; j++) {
-				if (param_services[i] == tps->programs[j].service_id) {
+				if (ch_info->services[i] == tps->programs[j].service_id) {
 					n_tos++;
 					break;
 				}
@@ -173,9 +82,9 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps)
 		}
 		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
 		k = 0;
-		for (i = 0; i < param_n_services; i++) {
+		for (i = 0; i < ch_info->n_services; i++) {
 			for (j = 0; j < tps->n_programs; j++) {
-				if (param_services[i] == tps->programs[j].service_id) {
+				if (ch_info->services[i] == tps->programs[j].service_id) {
 					init_tos(&tos[k]);
 					tos[k].tps_index = j;
 					tos[k].service_id = tps->programs[j].service_id;
@@ -233,7 +142,7 @@ void close_tos(ts_output_stat_t *tos)
 	}
 
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
-		free(tos->pgos[i].fn);
+		free((WCHAR*)tos->pgos[i].fn);
 	}
 	free(tos->pgos);
 
@@ -528,7 +437,8 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			pgos = &(tos->pgos[tos->n_pgos]);
 			ch_info->service_id = tos->service_id;
 
-			get_fname(pgos->fn, tos, ch_info, L".ts");
+			//get_fname(pgos->fn, tos, ch_info, L".ts");
+			pgos->fn = do_path_resolver(&tos->pi, ch_info);
 			pgos->modulestats = do_pgoutput_create(pgos->fn, &tos->pi, ch_info);
 			pgos->closetime = -1;
 			pgos->close_flag = 0;

@@ -28,7 +28,7 @@ static inline int64_t gettime()
 	return result;
 }
 
-static inline int64_t timenum_end_sec(ProgInfo *pi, int *psec)
+static inline int64_t timenum_end_sec(const ProgInfo *pi, int *psec)
 {
 	int64_t tn;
 	struct tm t, te;
@@ -83,12 +83,12 @@ static inline int64_t timenum_end_sec(ProgInfo *pi, int *psec)
 	return tn;
 }
 
-static inline int64_t timenum_end(ProgInfo *pi)
+static inline int64_t timenum_end(const ProgInfo *pi)
 {
 	return timenum_end_sec(pi, NULL);
 }
 
-static inline int64_t timenum_end14(ProgInfo *pi)
+static inline int64_t timenum_end14(const ProgInfo *pi)
 {
 	int64_t t;
 	int sec;
@@ -96,7 +96,7 @@ static inline int64_t timenum_end14(ProgInfo *pi)
 	return t * 100 + sec;
 }
 
-static inline int64_t timenum_start(ProgInfo *pi)
+static inline int64_t timenum_start(const ProgInfo *pi)
 {
 	int64_t tn;
 	tn = pi->recyear;
@@ -138,10 +138,10 @@ static inline int64_t timenumnow()
 	return timenumtt(t);
 }
 
-extern WCHAR param_base_dir[MAX_PATH_LEN];
-extern int param_all_services;
-extern int param_services[MAX_SERVICES];
-extern int param_n_services;
+//extern WCHAR param_base_dir[MAX_PATH_LEN];
+//extern int param_all_services;
+//extern int param_services[MAX_SERVICES];
+//extern int param_n_services;
 extern int param_nowait;
 
 void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg);

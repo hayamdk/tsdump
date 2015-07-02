@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+//#define _CRT_SECURE_NO_WARNINGS
 
 #pragma comment(lib, "shlwapi.lib")
 
@@ -31,7 +31,7 @@ int termflag = 0;
 
 int param_sp_num = -1;
 int param_ch_num = -1;
-WCHAR param_base_dir[MAX_PATH_LEN];
+//WCHAR param_base_dir[MAX_PATH_LEN];
 int param_all_services;
 int param_services[MAX_SERVICES];
 int param_n_services = 0;
@@ -233,7 +233,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 				/* tosを生成 */
 				if ( ! tos && tps.payload_PAT.stat == PAYLOAD_STAT_FINISH ) {
-					n_tos = param_n_services = create_tos_per_service(&tos, &tps);
+					n_tos = param_n_services = create_tos_per_service(&tos, &tps, ch_info);
 				}
 
 				/* サービスごとにパケットをバッファにコピー */
@@ -438,13 +438,6 @@ END:
 	return ret;
 }
 
-static const WCHAR* set_dir(const WCHAR *param)
-{
-	wcsncpy(param_base_dir, param, MAX_PATH_LEN);
-	PathAddBackslash(param_base_dir);
-	return NULL;
-}
-
 static const WCHAR *set_nowait(const WCHAR *)
 {
 	param_nowait = 1;
@@ -472,17 +465,6 @@ static const WCHAR* set_sv(const WCHAR *param)
 		}
 	}
 	return NULL;
-}
-
-static int hook_postconfig()
-{
-	if ( ! param_base_dir ) {
-		//return L"出力ディレクトリが指定されていないか、または不正です";
-		output_message(MSG_ERROR, L"出力ディレクトリが指定されていないか、または不正です");
-		return 0;
-	}
-	//return NULL;
-	return 1;
 }
 
 void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg)
@@ -534,12 +516,10 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 
 static void register_hooks()
 {
-	register_hook_postconfig(hook_postconfig);
 	//register_hook_message(hook_message);
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--dir", L"出力先ディレクトリ *", 1, set_dir },
 	{ L"--sv", L"サービス番号(複数指定可能)", 1, set_sv },
 	{ L"--nowait", L"バッファフル時にあふれたデータは捨てる", 0, set_nowait },
 	NULL,

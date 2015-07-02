@@ -85,6 +85,9 @@ typedef struct{
 	int sp_num;
 	int ch_num;
 	int service_id;
+	int n_services;
+	int *services;
+	int mode_all_services;
 	const WCHAR *tuner_name;
 	const WCHAR *sp_str;
 	const WCHAR *ch_str;
@@ -143,6 +146,7 @@ typedef enum {
 } message_type_t;
 
 typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
+typedef const WCHAR *(*hook_path_resolver_t)(const ProgInfo*, const ch_info_t*);
 
 //typedef void(*hook_stream_splitter)();
 
@@ -167,3 +171,4 @@ MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
 MODULE_EXPORT_FUNC int register_hooks_stream_generator(hooks_stream_generator_t *handlers);
 MODULE_EXPORT_FUNC int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
 MODULE_EXPORT_FUNC void register_hook_message(hook_message_t handler);
+MODULE_EXPORT_FUNC int register_hook_path_resolver(hook_path_resolver_t handler);

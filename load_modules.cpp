@@ -6,6 +6,7 @@
 #include <sys/timeb.h>
 #include <shlwapi.h>
 #include <inttypes.h>
+#include <process.h>
 
 #include "modules_def.h"
 #include "tsdump.h"
@@ -33,6 +34,7 @@ typedef struct {
 
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
 static hooks_stream_decoder_t *hooks_stream_decoder = NULL;
+static hook_path_resolver_t hook_path_resolver = NULL;
 
 typedef struct {
 	module_def_t *def;
@@ -54,24 +56,6 @@ static int n_modules = 0;
 
 static cmd_load_t modulecmds[MAX_MODULECMDS];
 static int n_modulecmds = 0;
-
-/*void print_err(WCHAR* name, int err)
-{
-	LPWSTR pMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |
-		FORMAT_MESSAGE_FROM_SYSTEM |
-		FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL,
-		err,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPWSTR)(&pMsgBuf),
-		0,
-		NULL
-	);
-	fwprintf( stderr, L"%s: (0x%X) %s", name, err, pMsgBuf );
-	LocalFree(pMsgBuf);
-}*/
 
 void register_hook_pgoutput_create(hook_pgoutput_create_t handler)
 {
@@ -138,11 +122,9 @@ int register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 	if (hooks_stream_generator == NULL) {
 		hooks_stream_generator = handlers;
 	} else {
-		//return L"ストリームジェネレータは既に登録されています";
 		output_message(MSG_ERROR, L"ストリームジェネレータは既に登録されています");
 		return 0;
 	}
-	//return NULL;
 	return 1;
 }
 
@@ -151,11 +133,9 @@ int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 	if (hooks_stream_decoder == NULL) {
 		hooks_stream_decoder = handlers;
 	} else {
-		//return L"ストリームデコーダは既に登録されています";
 		output_message(MSG_ERROR, L"ストリームデコーダは既に登録されています");
 		return 0;
 	}
-	//return NULL;
 	return 1;
 }
 
@@ -164,7 +144,18 @@ void register_hook_message(hook_message_t handler)
 	module_hooks_current->hook_message = handler;
 }
 
-void **do_pgoutput_create(WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
+int register_hook_path_resolver(hook_path_resolver_t handler)
+{
+	if (hook_path_resolver == NULL) {
+		hook_path_resolver = handler;
+	} else {
+		output_message(MSG_ERROR, L"パスリゾルバは既に登録されています");
+		return 0;
+	}
+	return 1;
+}
+
+void **do_pgoutput_create(const WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
 {
 	int i;
 	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
@@ -375,6 +366,22 @@ void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const 
 		if (modules[i].hooks.hook_message) {
 			modules[i].hooks.hook_message(modname, msgtype, err, msg);
 		}
+	}
+}
+
+const WCHAR *default_path_resolver(const ProgInfo *, const ch_info_t *ch_info)
+{
+	WCHAR *fname = (WCHAR*)malloc(sizeof(WCHAR)*MAX_PATH_LEN);
+	swprintf(fname, MAX_PATH_LEN-1, L"%I64d_%s_%s_%d.ts", gettime(), ch_info->tuner_name, ch_info->ch_str, _getpid());
+	return fname;
+}
+
+const WCHAR *do_path_resolver(const ProgInfo *proginfo, const ch_info_t *ch_info)
+{
+	if (hook_path_resolver) {
+		return hook_path_resolver(proginfo, ch_info);
+	} else {
+		return default_path_resolver(proginfo, ch_info);
 	}
 }
 

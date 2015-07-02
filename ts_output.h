@@ -1,6 +1,6 @@
 typedef struct
 {
-	WCHAR *fn;
+	const WCHAR *fn;
 	int delay_remain;
 	int close_remain;
 	int close_flag;
@@ -46,7 +46,7 @@ void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime);
 void ts_output(ts_output_stat_t *tos, int64_t nowtime, int);
 int ts_wait_pgoutput(ts_output_stat_t *tos);
 void ts_check_pgoutput(ts_output_stat_t *tos);
-int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps);
+int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_info_t *ch_info);
 
 static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_parse_stat_t *tps)
 {
