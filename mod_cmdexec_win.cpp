@@ -67,7 +67,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_cmdexec = {
-	TSDUMP_MODULE_V1,
+	TSDUMP_MODULE_V2,
 	L"mod_cmdexec_win",
 	register_hooks,
 	cmds

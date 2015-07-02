@@ -526,7 +526,7 @@ static cmd_def_t cmds[] = {
 };
 
 module_def_t mod_core = {
-	TSDUMP_MODULE_V1,
+	TSDUMP_MODULE_V2,
 	L"mod_core",
 	register_hooks,
 	cmds

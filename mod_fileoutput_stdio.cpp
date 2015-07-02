@@ -139,7 +139,7 @@ static void register_hooks()
 }
 
 MODULE_DEF module_def_t mod_fileoutput_stdio = {
-	TSDUMP_MODULE_V1,
+	TSDUMP_MODULE_V2,
 	L"mod_fileoutput_stdio",
 	register_hooks,
 	NULL
