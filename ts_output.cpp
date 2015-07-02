@@ -69,8 +69,7 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_inf
 			tos[i].tps_index = i;
 			tos[i].service_id = tps->programs[i].service_id;
 		}
-	}
-	else {
+	} else {
 		n_tos = 0;
 		for (i = 0; i < ch_info->n_services; i++) {
 			for (j = 0; j < tps->n_programs; j++) {
@@ -93,6 +92,12 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_inf
 			}
 		}
 	}
+
+	ch_info->services = (int*)malloc(n_tos*sizeof(int));
+	for (i = 0; i < n_tos; i++) {
+		ch_info->services[i] = tos[i].service_id;
+	}
+	ch_info->n_services = n_tos;
 
 	*ptos = tos;
 	return n_tos;
@@ -435,11 +440,11 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
 		} else {
 			pgos = &(tos->pgos[tos->n_pgos]);
-			ch_info->service_id = tos->service_id;
+			ch_info->service_id = tos->service_id; /* ここでch_infoの中身を書き換えている */
 
 			//get_fname(pgos->fn, tos, ch_info, L".ts");
-			pgos->fn = do_path_resolver(&tos->pi, ch_info);
-			pgos->modulestats = do_pgoutput_create(pgos->fn, &tos->pi, ch_info);
+			pgos->fn = do_path_resolver(&tos->pi, ch_info); /* ここでch_infoにアクセス */
+			pgos->modulestats = do_pgoutput_create(pgos->fn, &tos->pi, ch_info); /* ここでch_infoにアクセス */
 			pgos->closetime = -1;
 			pgos->close_flag = 0;
 			pgos->close_remain = 0;

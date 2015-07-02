@@ -233,7 +233,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 				/* tosを生成 */
 				if ( ! tos && tps.payload_PAT.stat == PAYLOAD_STAT_FINISH ) {
-					n_tos = param_n_services = create_tos_per_service(&tos, &tps, ch_info);
+					n_tos = create_tos_per_service(&tos, &tps, ch_info);
 				}
 
 				/* サービスごとにパケットをバッファにコピー */
@@ -403,6 +403,10 @@ int wmain(int argc, WCHAR* argv[])
 		ret = 1;
 		goto END;
 	}
+
+	ch_info.mode_all_services = param_all_services;
+	ch_info.n_services = param_n_services;
+	ch_info.services = param_services;
 
 	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
 		//fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
