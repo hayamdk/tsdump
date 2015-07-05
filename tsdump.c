@@ -1,6 +1,7 @@
 //#define _CRT_SECURE_NO_WARNINGS
 
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "Ws2_32.lib")
 
 #include <stdio.h>
 #include <windows.h>
@@ -59,28 +60,36 @@ void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt
 	va_list list;
 	va_start(list, fmt);
 	DWORD lasterr, *plasterr = NULL;
-	WCHAR modname[128], msg[2048], *wcp;
+	WCHAR modpath[MAX_PATH_LEN], msg[2048], *wcp, *modname;
 	const char *cp;
 	int len;
-
-	vswprintf(msg, 2048 - 1, fmt, list);
 
 	if (msgtype == MSG_SYSERROR) {
 		lasterr = GetLastError();
 		plasterr = &lasterr;
+	} else if (msgtype == MSG_WINSOCKERROR) {
+		lasterr = WSAGetLastError();
+		plasterr = &lasterr;
 	}
 
-	if (strcmp(fname, "mod_") == 0) {
-		/* 拡張子を除いたファイル名=モジュール名をコピー */
-		for (wcp = modname, cp = fname; *cp != '\0' && *cp != '.' && wcp < &modname[128]; cp += len, wcp++) {
-			len = mbtowc(wcp, cp, MB_CUR_MAX);
-		}
+	vswprintf(msg, 2048 - 1, fmt, list);
+	va_end(list);
+
+	/* 拡張子を除いたファイル名=モジュール名をコピー */
+	for (	wcp = modpath, cp = fname;
+			*cp != '\0' && *cp != '.' && wcp < &modpath[MAX_PATH_LEN];
+			cp += len, wcp++) {
+		len = mbtowc(wcp, cp, MB_CUR_MAX);
+	}
+	*wcp = L'\0';
+	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
+	modname = PathFindFileName(modpath);
+
+	if ( wcsncmp(modname, L"mod_", 4) == 0 ) {
 		do_message(modname, msgtype, plasterr, msg);
 	} else {
 		do_message(NULL, msgtype, plasterr, msg);
 	}
-
-	va_end(list);
 }
 
 void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
@@ -478,16 +487,19 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 	const WCHAR *msgtype_str = L"";
 	FILE *fp = stdout;
 	WCHAR msgbuf[256];
+	int errtype = 0;
 
 	if (msgtype == MSG_WARNING) {
 		msgtype_str = L"[WARNING] ";
 		fp = stderr;
-	} else if (msgtype == MSG_ERROR || msgtype == MSG_SYSERROR) {
+		errtype = 1;
+	} else if (msgtype == MSG_ERROR || msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
 		msgtype_str = L"[ERROR] ";
 		fp = stderr;
+		errtype = 1;
 	}
 
-	if (msgtype == MSG_SYSERROR) {
+	if ( msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
 		FormatMessage(
 			/*FORMAT_MESSAGE_ALLOCATE_BUFFER |*/
 			FORMAT_MESSAGE_FROM_SYSTEM |
@@ -505,15 +517,15 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 			msgbuf[wcslen(msgbuf)-1] = L'\0';
 		}
 
-		if (modname) {
-			fwprintf(fp, L"%s%s: %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
+		if (modname && errtype) {
+			fwprintf(fp, L"%s(%s): %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
 		} else {
 			fwprintf(fp, L"%s%s <0x%x:%s>\n", msgtype_str, msg, *err, msgbuf);
 		}
 		//LocalFree(msgbuf);
 	} else {
-		if (modname) {
-			fwprintf(fp, L"%s%s: %s\n", msgtype_str, modname, msg);
+		if (modname && errtype) {
+			fwprintf(fp, L"%s(%s): %s\n", msgtype_str, modname, msg);
 		} else {
 			fwprintf(fp, L"%s%s\n", msgtype_str, msg);
 		}

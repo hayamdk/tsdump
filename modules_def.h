@@ -149,8 +149,9 @@ typedef enum {
 	MSG_WARNING = 1,
 	MSG_ERROR = 2,
 	MSG_SYSERROR = 3,
-	MSG_NOTIFY = 4,
-	MSG_DISP = 5
+	MSG_WINSOCKERROR = 4,
+	MSG_NOTIFY = 5,
+	MSG_DISP = 6
 } message_type_t;
 
 typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
