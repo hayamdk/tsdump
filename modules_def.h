@@ -14,7 +14,7 @@
 	#ifdef __cplusplus
 		#define MODULE_EXPORT_FUNC		extern "C" __declspec(dllexport)
 		#define MODULE_EXPORT_VAR		extern "C" __declspec(dllexport)
-		#define MODULE_DEF
+		#define MODULE_DEF				extern "C"
 	#else
 		#define MODULE_EXPORT_FUNC		__declspec(dllexport)
 		#define MODULE_EXPORT_VAR		__declspec(dllexport)
@@ -22,7 +22,15 @@
 	#endif
 #endif
 
-#define		CONVBUFSIZE				65536
+#ifdef _MSC_VER
+	#ifndef __cplusplus
+		#define inline __inline
+	#endif
+#endif
+
+#define			UNREF_ARG(x)			(x)
+
+#define			CONVBUFSIZE				65536
 
 // î‘ëgèÓïÒç\ë¢ëÃ
 typedef struct {

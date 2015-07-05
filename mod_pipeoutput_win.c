@@ -188,8 +188,8 @@ static const WCHAR* my_nonblockio_errinfo(my_nonblockio_t *nbio, DWORD *errcode)
 static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname)
 {
 	HANDLE hRead, hWrite, hReadTemp;
-	STARTUPINFO si = {};
-	PROCESS_INFORMATION pi = {};
+	STARTUPINFO si = {0};
+	PROCESS_INFORMATION pi = {0};
 
 	WCHAR cmdarg[2048];
 
@@ -261,9 +261,11 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 	return;
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *, const ch_info_t*)
+static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t *ch_info_t)
 {
 	int i;
+	UNREF_ARG(pi);
+	UNREF_ARG(ch_info_t);
 	pipestat_t *ps = (pipestat_t*)malloc( sizeof(pipestat_t) * n_pipecmds );
 	for (i = 0; i < n_pipecmds; i++) {
 		create_pipe(&ps[i], pipecmds[i], fname);
@@ -342,9 +344,10 @@ static void hook_pgoutput(void *stat, const unsigned char *buf, const size_t siz
 	}
 }
 
-static void hook_pgoutput_close(void *pstat, const ProgInfo *)
+static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
 {
 	pipestat_t *ps = (pipestat_t*)pstat;
+	UNREF_ARG(pi);
 	int i;
 	for (i = 0; i < n_pipecmds; i++) {
 		close_pipe(&ps[i]);
@@ -365,8 +368,9 @@ static const WCHAR* set_pipe(const WCHAR *param)
 	return NULL;
 }
 
-static const WCHAR *set_min(const WCHAR*)
+static const WCHAR *set_min(const WCHAR* param)
 {
+	UNREF_ARG(param);
 	pcwindow_min = 1;
 	return NULL;
 }

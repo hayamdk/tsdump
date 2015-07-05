@@ -9,6 +9,7 @@
 #include <shlwapi.h>
 
 #include "modules_def.h"
+#include "strfuncs.h"
 
 typedef struct {
 	WCHAR *fn;
@@ -65,17 +66,21 @@ static void create_new_proginfo_file(const WCHAR *fname_ts, const WCHAR *fname_p
 
 	if (fname_pi_init) {
 		wcscpy_s(fname, MAX_PATH_LEN - 1, fname_ts);
+		tsd_strncpy(fname, fname_ts, MAX_PATH_LEN);
 		PathRemoveExtension(fname);
-		wcsncat_s(fname, L"_init.txt", MAX_PATH_LEN - 1);
+		//wcsncat_s(fname, L"_init.txt", MAX_PATH_LEN - 1);
+		tsd_strlcat(fname, MAX_PATH_LEN, TSD_TEXT("_init.txt"));
 		MoveFile(fname_pi_init, fname);
 	}
 	create_proginfo_file(fname_ts, pi);
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t*)
+static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t *ch_info)
 {
 	FILE *fp = NULL;
 	errno_t err;
+
+	UNREF_ARG(ch_info);
 	
 	err = _wfopen_s(&fp, fname, L"wb");
 	if (err) {

@@ -3,12 +3,14 @@
 #include <windows.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
 
 #include <shlwapi.h>
 
 #include "modules_def.h"
+#include "strfuncs.h"
 
 typedef struct {
 	WCHAR *fn;
@@ -25,7 +27,7 @@ typedef struct {
 static inline int64_t gettime()
 {
 	int64_t result;
-	_timeb tv;
+	struct _timeb tv;
 
 	_ftime64_s(&tv);
 	result = (int64_t)tv.time * 1000;
@@ -82,8 +84,10 @@ static void create_new_proginfo_file(const WCHAR *fname_ts, const WCHAR *fname_p
 
 	if (fname_pi_init) {
 		wcscpy_s(fname, MAX_PATH_LEN - 1, fname_ts);
+		tsd_strncpy(fname, fname_ts, MAX_PATH_LEN);
 		PathRemoveExtension(fname);
-		wcsncat_s(fname, L"_init.txt", MAX_PATH_LEN - 1);
+		//wcsncat_s(fname, L"_init.txt", MAX_PATH_LEN - 1);
+		tsd_strlcat(fname, MAX_PATH_LEN, TSD_TEXT("_init.txt"));
 		MoveFile(fname_pi_init, fname);
 	}
 	create_proginfo_file(fname_ts, pi);
@@ -140,8 +144,10 @@ static int check_io_status(file_output_stat_t *fos, BOOL wait_mode)
 	return 0;
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t*)
+static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t *ch_info)
 {
+	UNREF_ARG(ch_info);
+
 	HANDLE fh = CreateFile(
 		fname,
 		GENERIC_WRITE,

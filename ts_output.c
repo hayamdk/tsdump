@@ -12,6 +12,7 @@
 #include "ts_parser.h"
 #include "ts_output.h"
 #include "load_modules.h"
+#include "strfuncs.h"
 
 //#include "timecalc.h"
 
@@ -463,7 +464,8 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		if ( starttime != starttime_last ) {
 			if (tos->service_id == -1) {
 				//printf("番組開始時間の変更: ");
-				wcscpy_s(msg1, L"番組開始時間の変更");
+				//wcscpy_s(msg1, L"番組開始時間の変更");
+				tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
 			} else {
 				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->service_id);
 			}
@@ -474,14 +476,16 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		} else if ( endtime != endtime_last ) {
 			if (tos->service_id == -1) {
 				//printf("番組終了時間の変更: ");
-				wcscpy_s(msg1, L"番組終了時間の変更");
+				//wcscpy_s(msg1, L"番組終了時間の変更");
+				tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
 			} else {
 				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->service_id);
 			}
 
 			if ( pi_endtime_unknown(&tos->pi_last) ) {
 				//printf("未定 → ");
-				wcscpy_s(msg2, L"未定 → ");
+				//wcscpy_s(msg2, L"未定 → ");
+				tsd_strcpy(msg2, TSD_TEXT("未定 → "));
 			} else {
 				wsprintf( msg2, L"%02d:%02d → ", (int)(endtime_last / 100 % 100), (int)(endtime_last % 100) );
 			}

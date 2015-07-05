@@ -14,9 +14,11 @@ static int n_execcmds = 0;
 static WCHAR *execcmds[MAX_EXECCMDS];
 static int cwindow_min = 0;
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo*, const ch_info_t*)
+static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo* pi, const ch_info_t *ch_info)
 {
 	WCHAR *fname_dup = _wcsdup(fname);
+	UNREF_ARG(ch_info);
+	UNREF_ARG(pi);
 	return (void*)fname_dup;
 }
 
@@ -48,9 +50,10 @@ static const WCHAR* set_cmd(const WCHAR *param)
 	return NULL;
 }
 
-static const WCHAR *set_min(const WCHAR*)
+static const WCHAR *set_min(const WCHAR* param)
 {
 	cwindow_min = 1;
+	UNREF_ARG(param);
 	return NULL;
 }
 
@@ -66,7 +69,7 @@ static cmd_def_t cmds[] = {
 	NULL,
 };
 
-MODULE_DEF module_def_t mod_cmdexec = {
+MODULE_DEF module_def_t mod_cmdexec_win = {
 	TSDUMP_MODULE_V2,
 	L"mod_cmdexec_win",
 	register_hooks,

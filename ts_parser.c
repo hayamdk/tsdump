@@ -91,7 +91,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 				pos += (payload[pos + 3] & 0x0f) * 256 + payload[pos + 4] + 5;
 				n_pids++;
 				if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) { /* CRC‚ª‘O‰ñ‚Æˆá‚Á‚½‚Æ‚«‚Ì‚Ý•\Ž¦ */
-					output_message(MSG_DISP, L"stream_type:0x%x(%s), elementary_PID:%d(0x%X)",
+					output_message(MSG_DISP, L"stream_type:0x%x(%S), elementary_PID:%d(0x%X)",
 						stype, get_stream_type_str(stype), pid, pid);
 				}
 			}

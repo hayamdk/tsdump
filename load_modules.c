@@ -11,8 +11,11 @@
 #include "modules_def.h"
 #include "tsdump.h"
 #include "load_modules.h"
-#include "modules.h"
 #include "default_decoder.h"
+
+//extern "C" {
+#include "modules.h"
+//}
 
 #define MAX_HOOKS_NUM 256
 
@@ -369,8 +372,10 @@ void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const 
 	}
 }
 
-const WCHAR *default_path_resolver(const ProgInfo *, const ch_info_t *ch_info)
+const WCHAR *default_path_resolver(const ProgInfo *pi, const ch_info_t *ch_info)
 {
+	UNREF_ARG(pi);
+	UNREF_ARG(ch_info);
 	WCHAR *fname = (WCHAR*)malloc(sizeof(WCHAR)*MAX_PATH_LEN);
 	swprintf(fname, MAX_PATH_LEN-1, L"%I64d_%s_%s_%d.ts", gettime(), ch_info->tuner_name, ch_info->ch_str, _getpid());
 	return fname;
@@ -511,7 +516,10 @@ static int load_dll_modules()
 			}
 			wcstombs_s(&len, modname, MAX_PATH_LEN-1, dllname, MAX_PATH_LEN);
 			PathRemoveExtensionA(modname);
+#pragma warning(push)
+#pragma warning(disable:4054)
 			mod = (module_def_t*)GetProcAddress(hdll, modname);
+#pragma warning(pop)
 			if (mod == NULL) {
 				//print_err(L"GetProcAddress", GetLastError());
 				//fprintf(stderr, "モジュールポインタを取得できませんでした: %s\n", modname);

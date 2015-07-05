@@ -15,40 +15,40 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="convtounicode.cpp">
+    <ClCompile Include="convtounicode.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="proginfo.cpp">
+    <ClCompile Include="proginfo.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="rplsinfo.cpp">
+    <ClCompile Include="rplsinfo.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="ts_output.cpp">
+    <ClCompile Include="ts_output.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="ts_parser.cpp">
+    <ClCompile Include="ts_parser.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="tsdump.cpp">
+    <ClCompile Include="tsdump.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="tsprocess.cpp">
+    <ClCompile Include="tsprocess.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="load_modules.cpp">
+    <ClCompile Include="load_modules.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_pipeoutput_win.cpp">
+    <ClCompile Include="mod_pipeoutput_win.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_cmdexec_win.cpp">
+    <ClCompile Include="mod_cmdexec_win.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_fileoutput_stdio.cpp">
+    <ClCompile Include="mod_fileoutput_stdio.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_fileoutput_win.cpp">
+    <ClCompile Include="mod_fileoutput_win.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="mod_bondriver.cpp">
@@ -57,10 +57,13 @@
     <ClCompile Include="mod_b25decoder.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="default_decoder.cpp">
+    <ClCompile Include="default_decoder.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_path_resolver.cpp">
+    <ClCompile Include="mod_path_resolver.c">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="strfuncs.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -141,6 +144,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="default_decoder.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="strfuncs.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

@@ -37,8 +37,9 @@ int param_services[MAX_SERVICES];
 int param_n_services = 0;
 int param_nowait = 0;
 
-void signal_handler(int)
+void signal_handler(int sig)
 {
+	UNREF_ARG(sig);
 	termflag = 1;
 	output_message(MSG_NOTIFY, L"\n終了シグナルをキャッチ");
 	//printf("\n終了シグナルをキャッチ\n");
@@ -128,7 +129,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 		}
 
 		for (n = 0; n < width; n++) {
-			int pos = int( (double)BUFSIZE / width * (n+0.5) );
+			int pos = (int)( (double)BUFSIZE / width * (n+0.5) );
 			if (pos < tos[i].pos_write) {
 				*p = '-';
 			} else if (pos < tos[i].pos_filled) {
@@ -172,7 +173,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
-	ts_parse_stat_t tps = {};
+	ts_parse_stat_t tps = {0};
 
 	WCHAR title[256];
 	decoder_stats_t stats;
@@ -442,8 +443,9 @@ END:
 	return ret;
 }
 
-static const WCHAR *set_nowait(const WCHAR *)
+static const WCHAR *set_nowait(const WCHAR *param)
 {
+	UNREF_ARG(param);
 	param_nowait = 1;
 	return NULL;
 }
@@ -529,7 +531,7 @@ static cmd_def_t cmds[] = {
 	NULL,
 };
 
-module_def_t mod_core = {
+MODULE_DEF module_def_t mod_core = {
 	TSDUMP_MODULE_V2,
 	L"mod_core",
 	register_hooks,

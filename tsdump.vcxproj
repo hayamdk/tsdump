@@ -78,21 +78,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="convtounicode.cpp" />
-    <ClCompile Include="default_decoder.cpp" />
-    <ClCompile Include="load_modules.cpp" />
+    <ClCompile Include="convtounicode.c" />
+    <ClCompile Include="default_decoder.c" />
+    <ClCompile Include="load_modules.c" />
     <ClCompile Include="mod_b25decoder.cpp" />
     <ClCompile Include="mod_bondriver.cpp" />
-    <ClCompile Include="mod_cmdexec_win.cpp" />
-    <ClCompile Include="mod_fileoutput_stdio.cpp" />
-    <ClCompile Include="mod_fileoutput_win.cpp" />
-    <ClCompile Include="mod_pipeoutput_win.cpp" />
-    <ClCompile Include="proginfo.cpp" />
-    <ClCompile Include="rplsinfo.cpp" />
-    <ClCompile Include="tsdump.cpp" />
-    <ClCompile Include="tsprocess.cpp" />
-    <ClCompile Include="ts_output.cpp" />
-    <ClCompile Include="ts_parser.cpp" />
+    <ClCompile Include="mod_cmdexec_win.c" />
+    <ClCompile Include="mod_fileoutput_stdio.c" />
+    <ClCompile Include="mod_fileoutput_win.c" />
+    <ClCompile Include="mod_path_resolver.c" />
+    <ClCompile Include="mod_pipeoutput_win.c" />
+    <ClCompile Include="proginfo.c" />
+    <ClCompile Include="rplsinfo.c" />
+    <ClCompile Include="strfuncs.c" />
+    <ClCompile Include="tsdump.c" />
+    <ClCompile Include="tsprocess.c" />
+    <ClCompile Include="ts_output.c" />
+    <ClCompile Include="ts_parser.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="charsize1table.h" />
@@ -115,6 +117,7 @@
     <ClInclude Include="modules_def.h" />
     <ClInclude Include="proginfo.h" />
     <ClInclude Include="rplsinfo.h" />
+    <ClInclude Include="strfuncs.h" />
     <ClInclude Include="tsdump.h" />
     <ClInclude Include="tsprocess.h" />
     <ClInclude Include="ts_output.h" />

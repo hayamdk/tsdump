@@ -8,6 +8,7 @@
 
 #include "modules_def.h"
 #include "tsdump.h"
+#include "strfuncs.h"
 
 WCHAR param_base_dir[MAX_PATH_LEN] = {L'\0'};
 
@@ -110,7 +111,8 @@ static const WCHAR* hook_path_resolver(const ProgInfo *pi, const ch_info_t *ch_i
 
 static const WCHAR* set_dir(const WCHAR *param)
 {
-	wcsncpy_s(param_base_dir, param, MAX_PATH_LEN);
+	//wcsncpy_s(param_base_dir, param, MAX_PATH_LEN);
+	tsd_strncpy(param_base_dir, param, MAX_PATH_LEN);
 	PathAddBackslash(param_base_dir);
 	return NULL;
 }
