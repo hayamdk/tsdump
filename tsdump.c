@@ -101,6 +101,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	HANDLE hc;
 	CONSOLE_SCREEN_BUFFER_INFO ci;
 	COORD new_pos;
+	DWORD written;
 	double rate;
 
 	if(!tos) {
@@ -118,11 +119,16 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 				multiline = 1;
 			}
 		}
+	} else {
+		fprintf(stderr, "console error\r");
+		return;
 	}
 
 	if (!multiline) {
 		rate = 100.0 * tos->pos_filled / BUFSIZE;
-		wprintf(L"%s buf:%.1f%% \r", stat, rate);
+		/* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
+		WriteConsole(hc, stat, wcslen(stat), &written, NULL);
+		wprintf(L" buf:%.1f%% \r", stat, rate);
 		return;
 	}
 
@@ -164,8 +170,10 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	memset(hor, '-', console_width - 1);
 	hor[console_width - 1] = '\0';
 
-	wprintf(L"%S\n%s\n", hor, stat);
-	wprintf(L"buf: %S", line);
+	wprintf(L"%S\n", hor);
+	/* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
+	WriteConsole(hc, stat, wcslen(stat), &written, NULL);
+	wprintf(L"\nbuf: %S", line);
 	SetConsoleCursorPosition(hc, new_pos);
 }
 
