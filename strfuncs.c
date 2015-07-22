@@ -20,6 +20,35 @@ size_t tsd_strlen(const WCHAR *str)
 	return wcslen(str);
 }
 
+/* WindowsƒRƒ“ƒ\[ƒ‹‚ÅWCHAR‚Ì“ú–{Œê‚ðprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ðŽg‚¤ */
+int tsd_fprintf(FILE *fp, const WCHAR *fmt, ...)
+{
+	int ret;
+	DWORD written;
+	WCHAR str[2048];
+	HANDLE hc = INVALID_HANDLE_VALUE;
+	va_list list;
+
+	va_start(list, fmt);
+	ret = vswprintf(str, 2048-1, fmt, list);
+	va_end(list);
+
+	if (fp == stderr) {
+		hc = GetStdHandle(STD_ERROR_HANDLE);
+	} else if( fp == stdout ) {
+		hc = GetStdHandle(STD_OUTPUT_HANDLE);
+	} else {
+		return _putws(str);
+	}
+
+	if (hc != INVALID_HANDLE_VALUE && ret >= 0) {
+		WriteConsole(hc, str, ret, &written, NULL);
+		return written;
+	} else {
+		return -1;
+	}
+}
+
 const WCHAR* tsd_strlcat(WCHAR *dst, size_t dst_buflen, const WCHAR *src)
 {
 	size_t dstlen = tsd_strlen(dst);

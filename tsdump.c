@@ -19,6 +19,7 @@
 #include "ts_parser.h"
 #include "ts_output.h"
 #include "load_modules.h"
+#include "strfuncs.h"
 
 //#define HAVE_TIMECALC_DECLARATION
 //#include "timecalc.h"
@@ -101,7 +102,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	HANDLE hc;
 	CONSOLE_SCREEN_BUFFER_INFO ci;
 	COORD new_pos;
-	DWORD written;
+	//DWORD written;
 	double rate;
 
 	if(!tos) {
@@ -126,9 +127,10 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 
 	if (!multiline) {
 		rate = 100.0 * tos->pos_filled / BUFSIZE;
-		/* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
-		WriteConsole(hc, stat, wcslen(stat), &written, NULL);
-		wprintf(L" buf:%.1f%% \r", stat, rate);
+		///* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
+		//WriteConsole(hc, stat, wcslen(stat), &written, NULL);
+		//wprintf(L" buf:%.1f%% \r", stat, rate);
+		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
 		return;
 	}
 
@@ -170,10 +172,11 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	memset(hor, '-', console_width - 1);
 	hor[console_width - 1] = '\0';
 
-	wprintf(L"%S\n", hor);
-	/* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
-	WriteConsole(hc, stat, wcslen(stat), &written, NULL);
-	wprintf(L"\nbuf: %S", line);
+	tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
+	//wprintf(L"%S\n", hor);
+	///* WCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
+	//WriteConsole(hc, stat, wcslen(stat), &written, NULL);
+	//wprintf(L"\nbuf: %S", line);
 	SetConsoleCursorPosition(hc, new_pos);
 }
 
@@ -526,16 +529,20 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 		}
 
 		if (modname && errtype) {
-			fwprintf(fp, L"%s(%s): %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
+			//fwprintf(fp, L"%s(%s): %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
+			tsd_fprintf(fp, TSD_TEXT("%s(%s): %s <0x%x:%s>\n"), msgtype_str, modname, msg, *err, msgbuf);
 		} else {
-			fwprintf(fp, L"%s%s <0x%x:%s>\n", msgtype_str, msg, *err, msgbuf);
+			//fwprintf(fp, L"%s%s <0x%x:%s>\n", msgtype_str, msg, *err, msgbuf);
+			tsd_fprintf(fp, TSD_TEXT("%s%s <0x%x:%s>\n"), msgtype_str, msg, *err, msgbuf);
 		}
 		//LocalFree(msgbuf);
 	} else {
 		if (modname && errtype) {
-			fwprintf(fp, L"%s(%s): %s\n", msgtype_str, modname, msg);
+			//fwprintf(fp, L"%s(%s): %s\n", msgtype_str, modname, msg);
+			tsd_fprintf(fp, TSD_TEXT("%s(%s): %s\n"), msgtype_str, modname, msg);
 		} else {
-			fwprintf(fp, L"%s%s\n", msgtype_str, msg);
+			//fwprintf(fp, L"%s%s\n", msgtype_str, msg);
+			tsd_fprintf(fp, TSD_TEXT("%s%s\n"), msgtype_str, msg);
 		}
 	}
 }
