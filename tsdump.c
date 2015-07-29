@@ -113,11 +113,14 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hc != INVALID_HANDLE_VALUE) {
 		if ( GetConsoleScreenBufferInfo(hc, &ci) != 0 ) {
-			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINEだとこれを取得できない(0がセットされる) */
+			if ( ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0 ) { /* WINEだとこれを取得できない(0がセットされる) */
+				multiline = 1;
 				console_width = ci.dwSize.X;
 				new_pos.X = 0;
 				new_pos.Y = ci.dwCursorPosition.Y;
-				multiline = 1;
+				if ( ci.dwCursorPosition.Y > ci.dwSize.Y - 3 ) { /* 3行分の余白が無ければ最後に行を戻す */
+					new_pos.Y = ci.dwSize.Y - 3;
+				}
 			}
 		}
 	} else {
