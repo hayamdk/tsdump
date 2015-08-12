@@ -86,13 +86,24 @@ static inline void ts_update_transfer_history(ts_output_stat_t *tos, int64_t now
 	tos->th[0].time = nowtime;
 }
 
-static inline void ts_simplify_PAT_packet(BYTE *packet, unsigned int target_sid, unsigned int continuity_counter)
+static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsigned int target_sid, unsigned int continuity_counter)
 {
-	int payload_pos = ts_get_payload_pos(packet);
-	int section_len = ts_get_section_length(packet);
-
-	int n = (section_len - 5 - 4 - 4) / 4;
+	int payload_pos = ts_get_payload_pos(old_packet);
 	int table_pos = payload_pos + 8 + 4;
+	int section_len = ts_get_section_length(old_packet);
+	int n = (section_len - 5 - 4 - 4) / 4;
+
+	/* 複数パケットにまたがるPATには未対応 */
+	if (!ts_get_payload_unit_start_indicator(old_packet)) {
+		return 0; /* pass */
+	}
+
+	/* 不正なパケットかどうかをチェック */
+	if ( table_pos + 8 > 188 || n <= 0 || table_pos + n*4 + 2 > 188 ) {
+		return 0; /* pass */
+	}
+
+	memcpy(new_packet, old_packet, 188);
 
 	int i;
 	unsigned int sid;
@@ -100,25 +111,27 @@ static inline void ts_simplify_PAT_packet(BYTE *packet, unsigned int target_sid,
 	unsigned __int32 crc32_set;
 
 	for (i = 0; i < n; i++) {
-		sid = packet[table_pos + i * 4] * 256 + packet[table_pos + i * 4 + 1];
+		sid = new_packet[table_pos + i * 4] * 256 + new_packet[table_pos + i * 4 + 1];
 		if (sid == target_sid) {
-			memmove(&packet[table_pos], &packet[table_pos + i * 4], 4);
+			memmove(&new_packet[table_pos], &new_packet[table_pos + i * 4], 4);
 			break;
 		}
 	}
 	/* set new section_length */
-	packet[payload_pos + 1] = packet[payload_pos + 1] & 0xf0;
-	packet[payload_pos + 2] = 5 + 8 + 4;
+	new_packet[payload_pos + 1] = new_packet[payload_pos + 1] & 0xf0;
+	new_packet[payload_pos + 2] = 5 + 8 + 4;
 
 	/* set new CRC32 */
-	crc32_set = crc32(&packet[payload_pos], 8 + 4 + 4);
-	packet[payload_pos + 8 + 4 + 4] = (crc32_set / 0x1000000) & 0xFF;
-	packet[payload_pos + 8 + 4 + 4 + 1] = (crc32_set / 0x10000) & 0xFF;
-	packet[payload_pos + 8 + 4 + 4 + 2] = (crc32_set / 0x100) & 0xFF;
-	packet[payload_pos + 8 + 4 + 4 + 3] = crc32_set & 0xFF;
+	crc32_set = crc32(&new_packet[payload_pos], 8 + 4 + 4);
+	new_packet[table_pos + 4] = (crc32_set / 0x1000000) & 0xFF;
+	new_packet[table_pos + 4 + 1] = (crc32_set / 0x10000) & 0xFF;
+	new_packet[table_pos + 4 + 2] = (crc32_set / 0x100) & 0xFF;
+	new_packet[table_pos + 4 + 3] = crc32_set & 0xFF;
 
 	/* set new continuity_counter */
-	packet[3] = (packet[3] & 0xF0) + (continuity_counter & 0x0F);
+	new_packet[3] = (new_packet[3] & 0xF0) + (continuity_counter & 0x0F);
+
+	return 1;
 }
 
 static inline void ts_giveup_pibuf(ts_output_stat_t *tos)
@@ -136,11 +149,9 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_parse_s
 	ismypid = ts_is_mypid(pid, tos, tps);
 	if (pid == 0) {
 		/* PATの内容を当該サービスだけにする */
-		if (!ts_get_payload_unit_start_indicator(packet)) {
-			return; /* ignore */
+		if ( !ts_simplify_PAT_packet(new_packet, packet, tps->programs[tos->tps_index].service_id, tos->PAT_packet_counter) ) {
+			return;
 		}
-		memcpy(new_packet, packet, 188);
-		ts_simplify_PAT_packet(new_packet, tps->programs[tos->tps_index].service_id, tos->PAT_packet_counter);
 		p = new_packet;
 		//memcpy(&(tos->buf[tos->pos_filled]), new_packet, 188);
 		//tos->pos_filled += 188;

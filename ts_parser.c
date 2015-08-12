@@ -19,6 +19,13 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 	}
 
 	pos = ts_get_payload_pos(packet);
+	/* 不正なパケットかどうかのチェック */
+	if (pos > 188) {
+		ps->n_payload = ps->recv_payload = 0;
+		ps->stat = PAYLOAD_STAT_INIT;
+		return;
+	}
+
 	if (ps->stat == PAYLOAD_STAT_INIT) {
 		if (!ts_get_payload_unit_start_indicator(packet)) {
 			return;
@@ -34,8 +41,7 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 		}
 		memcpy(ps->payload, &packet[pos], remain);
 		ps->recv_payload += remain;
-	}
-	else if (ps->stat == PAYLOAD_STAT_PROC) {
+	} else if (ps->stat == PAYLOAD_STAT_PROC) {
 		if ((ps->continuity_counter + 1) % 16 != ts_get_continuity_counter(packet)) {
 			/* drop! */
 			ps->n_payload = ps->recv_payload = 0;
@@ -72,7 +78,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 	}
 
 	get_PSI_payload(packet, &(tps->payload_PAT));
-	for (i = 0; i < tps->n_programs; i++) {
+	for (i = 0; i < tps->n_programs/* should be initialized to 0 */; i++) {
 		get_PSI_payload(packet, &(tps->payload_PMTs[i]));
 		if (tps->payload_PMTs[i].stat == PAYLOAD_STAT_FINISH) {
 			/* parse PMT */

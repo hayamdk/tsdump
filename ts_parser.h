@@ -75,32 +75,32 @@ static inline unsigned __int32 crc32(unsigned char *buf, int len)
 	return crc;
 }
 
-static inline unsigned int ts_get_pid(unsigned char *p)
+static inline unsigned int ts_get_pid(const uint8_t *p)
 {
 	return (p[1] & 0x1f) * 0x100 + p[2];
 }
 
-static inline int ts_get_payload_unit_start_indicator(unsigned char *p)
+static inline int ts_get_payload_unit_start_indicator(const uint8_t *p)
 {
 	return (p[1] / 0x40) & 0x01;
 }
 
-static inline unsigned int ts_get_continuity_counter(unsigned char *p)
+static inline unsigned int ts_get_continuity_counter(const uint8_t *p)
 {
 	return p[3] & 0x0F;
 }
 
-static inline int ts_have_adaptation_field(unsigned char *p)
+static inline int ts_have_adaptation_field(const uint8_t *p)
 {
 	return (p[3] & 0x20) / 0x20;
 }
 
-static inline int ts_have_payload(unsigned char *p)
+static inline int ts_have_payload(const uint8_t *p)
 {
 	return (p[3] & 0x10) / 0x10;
 }
 
-static inline int ts_get_payload_pos(unsigned char *p)
+static inline int ts_get_payload_pos(const uint8_t *p)
 {
 	int pos = 4;
 	if (ts_have_adaptation_field(p)) {
@@ -112,7 +112,7 @@ static inline int ts_get_payload_pos(unsigned char *p)
 	return pos;
 }
 
-static inline int ts_get_section_length(unsigned char *p)
+static inline int ts_get_section_length(const uint8_t *p)
 {
 	int pos = ts_get_payload_pos(p);
 	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
@@ -127,7 +127,7 @@ typedef enum {
 typedef struct{
 	unsigned int pid;
 	payload_stat_t stat;
-	unsigned char payload[4096];
+	unsigned char payload[4096+3];
 	int n_payload;
 	int recv_payload;
 	unsigned int continuity_counter;
