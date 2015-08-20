@@ -45,26 +45,20 @@ static int hook_postconfig()
 		return 1;
 	}
 
-	//if (reg_hook_msg != NULL) {
 	if (!reg_hook) {
-		//_snwprintf_s(errmsg, 1024 - 1, L"generatorフックの登録に失敗しました: %s", reg_hook_msg);
-		//return errmsg;
 		output_message(MSG_ERROR, L"generatorフックの登録に失敗しました");
 		return 0;
 	}
 
 	if (ch_num < 0) {
-		//return L"チャンネルが指定されていないか、または不正です";
 		output_message(MSG_ERROR, L"チャンネルが指定されていないか、または不正です");
 		return 0;
 	}
 	if (sp_num < 0) {
-		//return L"チューナー空間が指定されていないか、または不正です";
 		output_message(MSG_ERROR, L"チューナー空間が指定されていないか、または不正です");
 		return 0;
 	}
 
-	//return NULL;
 	return 1;
 }
 
@@ -89,17 +83,13 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	stat.hdll = LoadLibrary(bon_dll_name);
 	if (stat.hdll == NULL) {
-		//print_err(L"LoadLibrary", GetLastError());
-		//return L"BonDriverをロードできませんでした";
 		output_message(MSG_SYSERROR, L"BonDriverをロードできませんでした(LoadLibrary): %s", bon_dll_name);
 		return 0;
 	}
 
 	stat.pCreateBonDriver = (pCreateBonDriver_t*)GetProcAddress(stat.hdll, "CreateBonDriver");
 	if (stat.pCreateBonDriver == NULL) {
-		//print_err(L"GetProcAddress", GetLastError());
 		FreeLibrary(stat.hdll);
-		//return L"CreateBonDriver()のポインタを取得できませんでした";
 		output_message(MSG_SYSERROR, L"CreateBonDriver()のポインタを取得できませんでした(GetProcAddress): %s", bon_dll_name);
 		return 0;
 	}
@@ -107,7 +97,6 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	stat.pBon = stat.pCreateBonDriver();
 	if (stat.pBon == NULL) {
 		FreeLibrary(stat.hdll);
-		//return L"CreateBonDriver() returns NULL";
 		output_message(MSG_ERROR, L"CreateBonDriver()に失敗しました: %s", bon_dll_name);
 		return 0;
 	}
@@ -116,7 +105,6 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	if (! stat.pBon2->OpenTuner()) {
 		FreeLibrary(stat.hdll);
-		//return L"OpenTuner() returns FALSE";
 		output_message(MSG_ERROR, L"OpenTuner()に失敗しました");
 		return 0;
 	}
@@ -127,15 +115,11 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	ci.ch_num = ch_num;
 	ci.sp_num = sp_num;
 
-	//wprintf(L"BonTuner: %s\n", ci.tuner_name);
-	//wprintf(L"Space: %s\n", ci.sp_str);
-	//wprintf(L"Channel: %s\n", ci.ch_str);
 	output_message(MSG_NOTIFY, L"BonTuner: %s\nSpace: %s\nChannel: %s",
 		ci.tuner_name, ci.sp_str, ci.ch_str);
 	if (!stat.pBon2->SetChannel(sp_num, ch_num)) {
 		stat.pBon2->CloseTuner();
 		FreeLibrary(stat.hdll);
-		//return L"SetChannel() returns FALSE";
 		output_message(MSG_ERROR, L"SetChannel()に失敗しました");
 		return 0;
 	}
@@ -146,7 +130,6 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	pstat = (bondriver_stat_t*)malloc(sizeof(bondriver_stat_t));
 	*pstat = stat;
 	*param = pstat;
-	//return NULL;
 	return 1;
 }
 

@@ -12,10 +12,7 @@
 #include "tsdump.h"
 #include "load_modules.h"
 #include "default_decoder.h"
-
-//extern "C" {
 #include "modules.h"
-//}
 
 #define MAX_HOOKS_NUM 256
 
@@ -294,7 +291,6 @@ int do_stream_generator_open(void **param, ch_info_t *chinfo)
 	}
 	output_message(MSG_ERROR, L"ストリームジェネレータが一つも登録されていません");
 	return 0;
-	//return L"ストリームジェネレータが一つも登録されていません";
 }
 
 void do_stream_generator(void *param, unsigned char **buf, int *size)
@@ -326,7 +322,6 @@ int do_stream_decoder_open(void **param, int *encrypted)
 	} else {
 		*encrypted = 1;
 	}
-	//return NULL;
 	return 1;
 }
 
@@ -427,28 +422,6 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 		return 0;
 	}
 
-	/* cmds */
-	/*if ( mod->cmds ) {
-		for ( cmd = mod->cmds; cmd->cmd_name != NULL; cmd++ ) {
-			if ( ! load_module_cmd(mod, cmd) ) {
-				return  0;
-			}
-		}
-	}*/
-
-	//// TODO: ↓ これをモジュールロード後の実行にする
-
-	/* hooks */
-	//module_hooks_current = &module_hooks[n_modules];
-	//memset(module_hooks_current, 0, sizeof(module_hooks_t));
-	//mod->register_hooks();
-
-	/*if (hdll) {
-		wprintf(L"Module loaded(dll): %s\n", mod->modname);
-	} else {
-		wprintf(L"Module loaded: %s\n", mod->modname);
-	}*/
-
 	modules[n_modules].def = mod;
 	memset(&modules[n_modules].hooks, 0, sizeof(module_hooks_t));
 	modules[n_modules].hdll = hdll;
@@ -508,8 +481,6 @@ static int load_dll_modules()
 
 			hdll = LoadLibrary(dllname);
 			if (hdll == NULL) {
-				//print_err( L"LoadLibrary()", GetLastError() );
-				//fwprintf(stderr, L"DLLモジュールをロードできませんでした: %s\n", dllname);
 				output_message(MSG_SYSERROR, L"DLLモジュールをロードできませんでした: %s (LoadLibrary)", dllname);
 				fclose(fp);
 				return 0;
@@ -521,8 +492,6 @@ static int load_dll_modules()
 			mod = (module_def_t*)GetProcAddress(hdll, modname);
 #pragma warning(pop)
 			if (mod == NULL) {
-				//print_err(L"GetProcAddress", GetLastError());
-				//fprintf(stderr, "モジュールポインタを取得できませんでした: %s\n", modname);
 				output_message(MSG_SYSERROR, L"モジュールポインタを取得できませんでした: %s (GetProcAddress)", dllname);
 				FreeLibrary(hdll);
 				fclose(fp);
@@ -536,7 +505,6 @@ static int load_dll_modules()
 		}
 		fclose(fp);
 	} else {
-		//fwprintf(stderr, L"modules.confを開けないのでDLLモジュールをロードしません\n");
 		output_message(MSG_NOTIFY, L"modules.confを開けないのでDLLモジュールをロードしません");
 	}
 	return 1;

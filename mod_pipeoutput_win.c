@@ -208,7 +208,6 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 			0,
 			TRUE,
 			DUPLICATE_SAME_ACCESS) ) {
-		//fprintf(stderr, "[ERROR] DuplicateHandle()に失敗\n");
 		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
 		CloseHandle(hWrite);
 		CloseHandle(hReadTemp);
@@ -240,11 +239,9 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 
 	swprintf(cmdarg, 2048 - 1, L"\"%s\" \"%s\"", cmdname, fname);
 
-	//wprintf(L"[PIPE] exec: %s\n", cmdarg);
 	output_message(MSG_NOTIFY, L"パイプコマンド実行: %s", cmdarg);
 
 	if (!CreateProcess(cmdname, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-		//fprintf(stderr, "[ERROR] 子プロセスの生成に失敗\n");
 		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess)");
 		CloseHandle(hWrite);
 		CloseHandle(hRead);
@@ -379,8 +376,6 @@ static void register_hooks()
 {
 	register_hook_pgoutput_create(hook_pgoutput_create);
 	register_hook_pgoutput(hook_pgoutput);
-	//register_hook_pgoutput_check(hook_pgoutput_check);
-	//register_hook_pgoutput_wait(hook_pgoutput_wait);
 	register_hook_pgoutput_close(hook_pgoutput_close);
 }
 

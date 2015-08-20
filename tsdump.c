@@ -102,7 +102,6 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	HANDLE hc;
 	CONSOLE_SCREEN_BUFFER_INFO ci;
 	COORD new_pos;
-	//DWORD written;
 	double rate;
 
 	if(!tos) {
@@ -130,9 +129,6 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 
 	if (!multiline) {
 		rate = 100.0 * tos->pos_filled / BUFSIZE;
-		///* WCHARの日本語をprintfするとなぜか猛烈に遅い(数十ms～数百ms)のでWriteConsoleを使う */
-		//WriteConsole(hc, stat, wcslen(stat), &written, NULL);
-		//wprintf(L" buf:%.1f%% \r", stat, rate);
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
 		return;
 	}
@@ -176,10 +172,6 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	hor[console_width - 1] = '\0';
 
 	tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
-	//wprintf(L"%S\n", hor);
-	///* WCHARの日本語をprintfするとなぜか猛烈に遅い(数十ms～数百ms)のでWriteConsoleを使う */
-	//WriteConsole(hc, stat, wcslen(stat), &written, NULL);
-	//wprintf(L"\nbuf: %S", line);
 	SetConsoleCursorPosition(hc, new_pos);
 }
 
@@ -274,18 +266,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		//tc_end();
 
 		//tc_start("output");
-		/* バッファを出力 */
-		/* 100回に一回、または空取得だったとき書き出しを行う */
-		/*if(gettscount > 100 || n_recv == 0) {
-			for (i = 0; i < n_tos; i++) {
-				ts_output(&tos[i], nowtime);
-			}
-			gettscount = 0;
-		}*/
 		for (i = 0; i < n_tos; i++) {
-			//if ( tos[i].pos_filled - tos[i].pos_write > 1024*1024 ) {
-				ts_output(&tos[i], nowtime, 0);
-			//}
+			ts_output(&tos[i], nowtime, 0);
 		}
 		//tc_end();
 
@@ -459,8 +441,7 @@ END:
 	free_modules();
 
 	if( ret ) {
-		//wprintf(L"何かキーを押してください");
-		output_message(MSG_NOTIFY, L"\nエンターキーを押すと終了します");
+		output_message(MSG_NOTIFY, L"\n何かキーを押すと終了します");
 		getchar();
 	}
 	return ret;
@@ -532,19 +513,14 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 		}
 
 		if (modname && errtype) {
-			//fwprintf(fp, L"%s(%s): %s <0x%x:%s>\n", msgtype_str, modname, msg, *err, msgbuf);
 			tsd_fprintf(fp, TSD_TEXT("%s(%s): %s <0x%x:%s>\n"), msgtype_str, modname, msg, *err, msgbuf);
 		} else {
-			//fwprintf(fp, L"%s%s <0x%x:%s>\n", msgtype_str, msg, *err, msgbuf);
 			tsd_fprintf(fp, TSD_TEXT("%s%s <0x%x:%s>\n"), msgtype_str, msg, *err, msgbuf);
 		}
-		//LocalFree(msgbuf);
 	} else {
 		if (modname && errtype) {
-			//fwprintf(fp, L"%s(%s): %s\n", msgtype_str, modname, msg);
 			tsd_fprintf(fp, TSD_TEXT("%s(%s): %s\n"), msgtype_str, modname, msg);
 		} else {
-			//fwprintf(fp, L"%s%s\n", msgtype_str, msg);
 			tsd_fprintf(fp, TSD_TEXT("%s%s\n"), msgtype_str, msg);
 		}
 	}

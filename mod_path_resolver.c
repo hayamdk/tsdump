@@ -111,7 +111,6 @@ static const WCHAR* hook_path_resolver(const ProgInfo *pi, const ch_info_t *ch_i
 
 static const WCHAR* set_dir(const WCHAR *param)
 {
-	//wcsncpy_s(param_base_dir, param, MAX_PATH_LEN);
 	tsd_strncpy(param_base_dir, param, MAX_PATH_LEN);
 	PathAddBackslash(param_base_dir);
 	return NULL;

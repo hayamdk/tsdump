@@ -26,7 +26,6 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 	errno_t err;
 
 	if (!pi->isok) {
-		//fprintf(stderr, "[WARN] 番組情報が取得できなかったので番組情報ファイルを生成しません\n");
 		output_message(MSG_WARNING, L"番組情報が取得できなかったので番組情報ファイルを生成しません");
 		return NULL;
 	}
@@ -36,7 +35,6 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const ProgInfo *pi)
 	PathAddExtension(fname, L".txt");
 	err = _wfopen_s(&fp, fname, L"wt, ccs=UTF-8");
 	if (err != 0) {
-		//fwprintf(stderr, L"[ERROR] 番組情報ファイルを保存できません: %s\n", fname);
 		output_message(MSG_ERROR, L"番組情報ファイルを保存できません: %s", fname);
 		return NULL;
 	}
@@ -84,7 +82,6 @@ static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const 
 	
 	err = _wfopen_s(&fp, fname, L"wb");
 	if (err) {
-		//fwprintf(stderr, L"[ERROR] tsファイルをオープンできません: %s\n", fname);
 		output_message(MSG_ERROR, L"tsファイルをオープンできません: %s", fname);
 		return NULL;
 	}
@@ -95,7 +92,6 @@ static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const 
 	fos->initial_pi = *pi;
 	fos->fn_pi = create_proginfo_file(fname, pi);
 
-	//wprintf(L"[START] %s\n", fos->fn);
 	output_message(MSG_NOTIFY, L"[録画開始] %s", fos->fn);
 	return fos;
 }
@@ -130,7 +126,6 @@ static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
 		free(fos->fn_pi);
 	}
 
-	//wprintf(L"[FINISHED] %s\n", fos->fn);
 	output_message(MSG_NOTIFY, L"[録画終了] %s", fos->fn);
 	free(fos->fn);
 	free(fos);

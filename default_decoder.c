@@ -94,7 +94,6 @@ void default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char 
 	*n_decbuf = n_dec;
 
 	if (i != 0) {
-		//printf("[WARN] skipped %d bytes\n", i);
 		output_message(MSG_WARNING, L"skipped %d bytes", i);
 	}
 

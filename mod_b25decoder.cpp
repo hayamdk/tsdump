@@ -13,11 +13,7 @@ typedef struct {
 	IB25Decoder2 *pB25Decoder2;
 } b25decoder_stat_t;
 
-//static WCHAR errmsg[1024];
-
 static int use_b25dll = 0;
-//static const WCHAR *reg_hook_msg;
-
 static int reg_hook = 0;
 
 static int hook_stream_decoder_open(void **param, int *encrypted)
@@ -26,17 +22,13 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 
 	stat.hdll = LoadLibrary(L"B25Decoder.dll");
 	if (stat.hdll == NULL) {
-		//print_err(L"LoadLibrary", GetLastError());
-		//return L"B25Decoder.dll‚ðƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½";
 		output_message(MSG_SYSERROR, L"B25Decoder.dll‚ðƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(LoadLibrary)");
 		return 0;
 	}
 
 	stat.pCreateB25Decoder2 = (pCreateB25Decoder2_t*)GetProcAddress(stat.hdll, "CreateB25Decoder2");
 	if (stat.pCreateB25Decoder2 == NULL) {
-		//print_err(L"GetProcAddress", GetLastError());
 		FreeLibrary(stat.hdll);
-		//return L"CreateB25Decoder2()‚Ìƒ|ƒCƒ“ƒ^‚ðŽæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½";
 		output_message(MSG_SYSERROR, L"CreateB25Decoder2()‚Ìƒ|ƒCƒ“ƒ^‚ðŽæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(GetProcAddress)");
 		return 0;
 	}
@@ -45,14 +37,12 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 
 	if (stat.pB25Decoder2 == NULL) {
 		FreeLibrary(stat.hdll);
-		//return L"CreateB25Decoder2()‚ÉŽ¸”s";
 		output_message(MSG_ERROR, L"CreateB25Decoder2()‚ÉŽ¸”s");
 		return 0;
 	}
 
 	if ( ! stat.pB25Decoder2->Initialize() ) {
 		FreeLibrary(stat.hdll);
-		//return L"pB25Decoder2->Initialize()‚ÉŽ¸”s";
 		output_message(MSG_ERROR, L"pB25Decoder2->Initialize()‚ÉŽ¸”s");
 		return 0;
 	}
@@ -61,7 +51,6 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 	*pstat = stat;
 	*param = pstat;
 	*encrypted = 0;
-	//return NULL;
 	return 1;
 }
 
@@ -103,13 +92,10 @@ static int hook_postconfig()
 	}
 
 	if (!reg_hook) {
-		//_snwprintf_s(errmsg, 1024 - 1, L"generatorƒtƒbƒN‚Ì“o˜^‚ÉŽ¸”s‚µ‚Ü‚µ‚½: %s", reg_hook_msg);
-		//return errmsg;
 		output_message(MSG_ERROR, L"generatorƒtƒbƒN‚Ì“o˜^‚ÉŽ¸”s‚µ‚Ü‚µ‚½");
 		return 0;
 	}
 
-	//return NULL;
 	return 1;
 }
 

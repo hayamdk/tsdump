@@ -63,7 +63,6 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 		unsigned __int32 crc = crc32(ps->payload, ps->n_payload - 4);
 		if (ps->crc32 != crc) {
 			ps->stat = PAYLOAD_STAT_INIT;
-			//printf("Payload CRC32 mismatch!\n");
 			output_message(MSG_ERROR, L"Payload CRC32 mismatch!");
 		}
 	}

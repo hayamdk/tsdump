@@ -249,9 +249,6 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 
 		/* ファイル書き出し */
 		write_size = tos->pos_filled - tos->pos_write;
-		/*if (write_size < 0) {
-			int k = 0;
-		}*/
 		if ( write_size < 1024*1024 && !force_write ) { /* 書き出しが一定程度溜まっていない場合はパス */
 			//ts_update_transfer_history(tos, nowtime, 0);
 			return;
@@ -318,10 +315,6 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 		clear_size = tos->pos_write;
 	}
 
-/*	if (clear_size < 0) {
-		int k = 0;
-		return;
-	}*/
 	int min_clear_size = (int)((double)MIN_CLEAR_RATIO * BUFSIZE);
 	if ( clear_size < min_clear_size ) {
 		return;
@@ -332,17 +325,11 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 	tos->pos_filled -= clear_size;
 	tos->pos_pi -= clear_size;
 	tos->pos_write -= clear_size;
-/*	if (tos->pos_pi < 0 || tos->pos_filled < 0 || tos->pos_write < 0) {
-		int k = 0;
-	}*/
 	//printf("[DEBUG] ts_minimize_buf()を実行: clear_size=%d\n", clear_size);
 }
 
 void ts_require_buf(ts_output_stat_t *tos, int require_size)
 {
-
-	//printf("[WARN] バッファが足りません。バッファの空き容量が増えるのを待機します。\n");
-	//printf("[INFO] 書き込み完了を待機...");
 	output_message(MSG_WARNING, L"バッファが足りません。バッファの空き容量が増えるのを待機します。");
 	ts_wait_pgoutput(tos);
 	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
@@ -437,13 +424,11 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 		/* split! */
 		if (tos->n_pgos >= MAX_PGOVERLAP) {
-			//printf("[INFO] 番組の切り替わりを短時間に連続して検出しました\n");
 			output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
 		} else {
 			pgos = &(tos->pgos[tos->n_pgos]);
 			ch_info->service_id = tos->service_id; /* ここでch_infoの中身を書き換えている */
 
-			//get_fname(pgos->fn, tos, ch_info, L".ts");
 			pgos->fn = do_path_resolver(&tos->pi, ch_info); /* ここでch_infoにアクセス */
 			pgos->modulestats = do_pgoutput_create(pgos->fn, &tos->pi, ch_info); /* ここでch_infoにアクセス */
 			pgos->closetime = -1;
@@ -463,8 +448,6 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		/* 番組の時間が途中で変更された場合 */
 		if ( starttime != starttime_last ) {
 			if (tos->service_id == -1) {
-				//printf("番組開始時間の変更: ");
-				//wcscpy_s(msg1, L"番組開始時間の変更");
 				tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
 			} else {
 				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->service_id);
@@ -475,16 +458,12 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 				(int)(starttime/100%100), (int)(starttime%100) );
 		} else if ( endtime != endtime_last ) {
 			if (tos->service_id == -1) {
-				//printf("番組終了時間の変更: ");
-				//wcscpy_s(msg1, L"番組終了時間の変更");
 				tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
 			} else {
 				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->service_id);
 			}
 
 			if ( pi_endtime_unknown(&tos->pi_last) ) {
-				//printf("未定 → ");
-				//wcscpy_s(msg2, L"未定 → ");
 				tsd_strcpy(msg2, TSD_TEXT("未定 → "));
 			} else {
 				wsprintf( msg2, L"%02d:%02d → ", (int)(endtime_last / 100 % 100), (int)(endtime_last % 100) );
@@ -493,7 +472,6 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			if ( pi_endtime_unknown(&tos->pi) ) {
 				output_message(MSG_NOTIFY, L"%s: %s未定", msg1, msg2);
 			} else {
-				//printf("%02I64d:%02I64d\n", endtime / 100 % 100, endtime % 100);
 				output_message( MSG_NOTIFY, L"%s: %s%02d:%02d",
 					msg1, msg2, (int)(endtime / 100 % 100), (int)(endtime % 100) );
 			}

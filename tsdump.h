@@ -1,4 +1,4 @@
-#define VERSION_STR				"1.2.7-dev"
+#define VERSION_STR				"1.3.0-dev"
 #define DATE_STR				"2015/x/x"
 
 #define BUFSIZE_DEFAULT			96
