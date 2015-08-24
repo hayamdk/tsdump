@@ -610,12 +610,19 @@ void free_modules()
 void print_cmd_usage()
 {
 	int i;
-	wprintf(L"\n----------------------\n<使用法>\n");
+	wprintf(L"\n----------------------\n<コマンドオプション>\n");
 	for (i = 0; i < n_modulecmds; i++) {
-		wprintf(L"%s: %s\n",
-			modulecmds[i].cmd_def->cmd_name,
-			modulecmds[i].cmd_def->cmd_description
-		);
+		if (modulecmds[i].cmd_def->have_option) {
+			wprintf(L"%s [option]: %s\n",
+				modulecmds[i].cmd_def->cmd_name,
+				modulecmds[i].cmd_def->cmd_description
+				);
+		} else {
+			wprintf(L"%s: %s\n",
+				modulecmds[i].cmd_def->cmd_name,
+				modulecmds[i].cmd_def->cmd_description
+				);
+		}
 	}
 	wprintf(L"* は必須オプション\n");
 }

@@ -186,9 +186,9 @@ static const WCHAR* set_ch(const WCHAR *param)
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--bon", L"BonDriverのDLL*", 1, set_bon },
-	{ L"--sp", L"チューナー空間番号*", 1, set_sp },
-	{ L"--ch", L"チャンネル番号*", 1, set_ch },
+	{ L"--bon", L"BonDriverのDLL *", 1, set_bon },
+	{ L"--sp", L"チューナー空間番号 *", 1, set_sp },
+	{ L"--ch", L"チャンネル番号 *", 1, set_ch },
 	NULL,
 };
 
