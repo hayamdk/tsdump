@@ -484,11 +484,11 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 	WCHAR msgbuf[256];
 	int errtype = 0;
 
-	if (msgtype == MSG_WARNING) {
+	if ( msgtype == MSG_WARNING || msgtype == MSG_PACKETERROR ) {
 		msgtype_str = L"[WARNING] ";
 		fp = stderr;
 		errtype = 1;
-	} else if (msgtype == MSG_ERROR || msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
+	} else if ( msgtype == MSG_ERROR || msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
 		msgtype_str = L"[ERROR] ";
 		fp = stderr;
 		errtype = 1;

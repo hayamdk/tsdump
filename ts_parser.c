@@ -23,6 +23,7 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 	if (pos > 188) {
 		ps->n_payload = ps->recv_payload = 0;
 		ps->stat = PAYLOAD_STAT_INIT;
+		output_message(MSG_PACKETERROR, L"Invalid payload pos!");
 		return;
 	}
 
@@ -63,7 +64,7 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 		unsigned __int32 crc = crc32(ps->payload, ps->n_payload - 4);
 		if (ps->crc32 != crc) {
 			ps->stat = PAYLOAD_STAT_INIT;
-			output_message(MSG_ERROR, L"Payload CRC32 mismatch!");
+			output_message(MSG_PACKETERROR, L"Payload CRC32 mismatch!");
 		}
 	}
 }

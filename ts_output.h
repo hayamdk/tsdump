@@ -100,6 +100,7 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 
 	/* 不正なパケットかどうかをチェック */
 	if ( table_pos + 8 > 188 || n <= 0 || table_pos + n*4 + 2 > 188 ) {
+		output_message(MSG_PACKETERROR, L"Invalid packet!");
 		return 0; /* pass */
 	}
 
