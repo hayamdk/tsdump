@@ -1,3 +1,5 @@
+/* 静的リンクするモジュールの記述 */
+
 extern module_def_t mod_core;
 extern module_def_t mod_bondriver;
 extern module_def_t mod_b25decoder;

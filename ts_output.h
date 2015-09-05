@@ -154,13 +154,9 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_parse_s
 			return;
 		}
 		p = new_packet;
-		//memcpy(&(tos->buf[tos->pos_filled]), new_packet, 188);
-		//tos->pos_filled += 188;
 		tos->PAT_packet_counter++;
 	} else if (ismypid != 2) { /* 他サービス"のみ"に属するパケットはスルー */
 		p = packet;
-		//memcpy(&(tos->buf[tos->pos_filled]), packet, 188);
-		//tos->pos_filled += 188;
 	} else {
 		return;
 	}

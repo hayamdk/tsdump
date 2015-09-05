@@ -138,10 +138,6 @@ static inline int64_t timenumnow()
 	return timenumtt(t);
 }
 
-//extern WCHAR param_base_dir[MAX_PATH_LEN];
-//extern int param_all_services;
-//extern int param_services[MAX_SERVICES];
-//extern int param_n_services;
 extern int param_nowait;
 
 void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg);

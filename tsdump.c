@@ -33,7 +33,6 @@ int termflag = 0;
 
 int param_sp_num = -1;
 int param_ch_num = -1;
-//WCHAR param_base_dir[MAX_PATH_LEN];
 int param_all_services;
 int param_services[MAX_SERVICES];
 int param_n_services = 0;
@@ -44,7 +43,6 @@ void signal_handler(int sig)
 	UNREF_ARG(sig);
 	termflag = 1;
 	output_message(MSG_NOTIFY, L"\n終了シグナルをキャッチ");
-	//printf("\n終了シグナルをキャッチ\n");
 }
 
 FILE *logfp;
@@ -208,8 +206,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		single_mode = 1;
 	}
 
-	//int gettscount = 0;
-
 	do_open_stream();
 
 	while ( !termflag ) {
@@ -332,7 +328,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int err;
 	/* 終了処理 */
-	//printf("まだ書き出していないバッファを書き出ています\n");
 	output_message(MSG_NOTIFY, L"まだ書き出していないバッファを書き出ています");
 	for (i = 0; i < n_tos; i++) {
 		/* まだ書き出していないバッファを書き出し */
@@ -374,7 +369,6 @@ int wmain(int argc, WCHAR* argv[])
 	void *generator_stat = NULL;
 	void *decoder_stat = NULL;
 	int encrypted;
-	//const WCHAR *err_msg;
 
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
 
@@ -385,7 +379,6 @@ int wmain(int argc, WCHAR* argv[])
 
 	/* モジュールをロード */
 	if (load_modules() < 0) {
-		//fwprintf(stderr, L"[ERROR] モジュールのロード時にエラーが発生しました!");
 		output_message(MSG_ERROR, L"モジュールのロード時にエラーが発生しました!");
 		ret = 1;
 		goto END;
@@ -393,7 +386,6 @@ int wmain(int argc, WCHAR* argv[])
 
 	/* モジュールを初期化 */
 	if ( !init_modules(argc, argv) ) {
-		//fwprintf(stderr, L"[ERROR] モジュールの初期化時にエラーが発生しました!");
 		output_message(MSG_ERROR, L"モジュールの初期化時にエラーが発生しました!");
 		print_cmd_usage();
 		ret = 1;
@@ -404,7 +396,6 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGTERM, signal_handler);
 
 	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
-		//fwprintf(stderr, L"ストリームジェネレータを開けませんでした: %s\n", err_msg);
 		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした");
 		ret = 1;
 		goto END;
@@ -415,7 +406,6 @@ int wmain(int argc, WCHAR* argv[])
 	ch_info.services = param_services;
 
 	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
-		//fwprintf(stderr, L"ストリームデコーダを開けませんでした: %s\n", err_msg);
 		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした");
 		ret = 1;
 		goto END1;
