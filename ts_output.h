@@ -88,7 +88,7 @@ static inline void ts_update_transfer_history(ts_output_stat_t *tos, int64_t now
 
 static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsigned int target_sid, unsigned int continuity_counter)
 {
-	int payload_pos = ts_get_payload_pos(old_packet);
+	int payload_pos = ts_get_payload_data_pos(old_packet);
 	int table_pos = payload_pos + 8 + 4;
 	int section_len = ts_get_section_length(old_packet);
 	int n = (section_len - 5 - 4 - 4) / 4;

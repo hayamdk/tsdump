@@ -106,32 +106,41 @@ static inline int ts_get_payload_pos(const uint8_t *p)
 	if (ts_have_adaptation_field(p)) {
 		pos += p[pos]; /* adaptation field length */
 	}
+	return pos;
+}
+
+static inline int ts_get_payload_data_pos(const uint8_t *p)
+{
+	int pos = ts_get_payload_pos(p);
 	if (ts_get_payload_unit_start_indicator(p)) {
-		pos += p[pos] + 1; /* pointer field */
+		pos += p[pos] + 1; /* pointer_field */
 	}
 	return pos;
 }
 
 static inline int ts_get_section_length(const uint8_t *p)
 {
-	int pos = ts_get_payload_pos(p);
+	int pos = ts_get_payload_data_pos(p);
 	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
 }
 
 typedef enum {
 	PAYLOAD_STAT_INIT = 0,
 	PAYLOAD_STAT_PROC,
-	PAYLOAD_STAT_FINISH
+	PAYLOAD_STAT_FINISHED
 } payload_stat_t;
 
 typedef struct{
 	unsigned int pid;
 	payload_stat_t stat;
-	unsigned char payload[4096+3];
+	uint8_t payload[4096+3];
+	uint8_t next_payload[188];
+	int n_next_payload;
 	int n_payload;
+	int next_recv_payload;
 	int recv_payload;
 	unsigned int continuity_counter;
-	unsigned __int32 crc32;
+	uint32_t crc32;
 } payload_procstat_t;
 
 static inline unsigned __int32 get_payload_crc32(payload_procstat_t *ps)
@@ -170,4 +179,5 @@ static inline const char *get_stream_type_str(int stream_type) {
 	}
 }
 
+void parse_proginfo(payload_procstat_t *payload_stat, uint8_t *packet);
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);

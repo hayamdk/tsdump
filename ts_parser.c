@@ -12,60 +12,125 @@ typedef unsigned long	DWORD;
 
 static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps)
 {
-	int pos, remain;
+	int pos, remain, pointer_field;
 
+	/* FINISHED状態を初期状態に戻す */
+	if (ps->stat == PAYLOAD_STAT_FINISHED) {
+		if (ps->next_recv_payload > 0) {
+			/* 前回受信した残りのペイロード */
+			ps->stat = PAYLOAD_STAT_PROC;
+			memcpy(ps->payload, ps->next_payload, ps->next_recv_payload);
+			ps->n_payload = ps->n_next_payload;
+			ps->recv_payload = ps->next_recv_payload;
+			ps->n_next_payload = 0;
+			ps->next_recv_payload = 0;
+		} else {
+			/* 前回の残りが無いので初期状態にする */
+			ps->stat = PAYLOAD_STAT_INIT;
+		}
+	}
+
+	/* 対象PIDかどうかチェック */
 	if (ps->pid != ts_get_pid(packet)) {
 		return;
 	}
 
-	pos = ts_get_payload_pos(packet);
-	/* 不正なパケットかどうかのチェック */
-	if (pos > 188) {
-		ps->n_payload = ps->recv_payload = 0;
-		ps->stat = PAYLOAD_STAT_INIT;
-		output_message(MSG_PACKETERROR, L"Invalid payload pos!");
-		return;
-	}
-
+	/* パケットの処理 */
 	if (ps->stat == PAYLOAD_STAT_INIT) {
 		if (!ts_get_payload_unit_start_indicator(packet)) {
+			//printf("pass!\n");
 			return;
 		}
 		ps->stat = PAYLOAD_STAT_PROC;
 		ps->n_payload = ts_get_section_length(packet) + 3;
-		ps->recv_payload = 0;
+		ps->recv_payload = ps->n_next_payload = ps->next_recv_payload = 0;
 		ps->continuity_counter = ts_get_continuity_counter(packet);
+
+		pos = ts_get_payload_data_pos(packet);
+		/* 不正なパケットかどうかのチェック */
+		if (pos > 188) {
+			ps->stat = PAYLOAD_STAT_INIT;
+			output_message(MSG_PACKETERROR, L"Invalid payload data_byte offset! (pid=0x%02x)", ps->pid);
+			return;
+		}
+
 		remain = 188 - pos;
 		if (remain > ps->n_payload) {
 			remain = ps->n_payload;
-			ps->stat = PAYLOAD_STAT_FINISH;
+			ps->stat = PAYLOAD_STAT_FINISHED;
 		}
 		memcpy(ps->payload, &packet[pos], remain);
 		ps->recv_payload += remain;
 	} else if (ps->stat == PAYLOAD_STAT_PROC) {
+		/* continuity_counter の連続性を確認 */
 		if ((ps->continuity_counter + 1) % 16 != ts_get_continuity_counter(packet)) {
 			/* drop! */
+			output_message(MSG_PACKETERROR, L"packet continuity_counter is discontinuous! (pid=0x%02x)", ps->pid);
 			ps->n_payload = ps->recv_payload = 0;
 			ps->stat = PAYLOAD_STAT_INIT;
 			return;
 		}
 		ps->continuity_counter = ts_get_continuity_counter(packet);
-		remain = 188 - pos;
+
+		if (ts_get_payload_unit_start_indicator(packet)) {
+			pos = ts_get_payload_pos(packet);
+			pointer_field = packet[pos];
+			pos++;
+
+			/* 不正なパケットかどうかのチェック */
+			if (pos + pointer_field >= 188) {
+				ps->stat = PAYLOAD_STAT_INIT;
+				output_message(MSG_PACKETERROR, L"Invalid payload data_byte offset! (pid=0x%02x)", ps->pid);
+				return;
+			}
+
+			ps->n_next_payload = ts_get_section_length(packet) + 3;
+			ps->next_recv_payload = 188 - pos - pointer_field;
+			if (ps->next_recv_payload > ps->n_next_payload) {
+				ps->next_recv_payload = ps->n_next_payload;
+			}
+			memcpy(ps->next_payload, &packet[pos+pointer_field], ps->next_recv_payload);
+			ps->stat = PAYLOAD_STAT_FINISHED;
+
+			remain = pointer_field;
+		} else {
+			pos = ts_get_payload_data_pos(packet);
+			/* 不正なパケットかどうかのチェック */
+			if (pos > 188) {
+				ps->stat = PAYLOAD_STAT_INIT;
+				output_message(MSG_PACKETERROR, L"Invalid payload data_byte offset! (pid=0x%02x)", ps->pid);
+				return;
+			}
+
+			remain = 188 - pos;
+		}
+
 		if (remain >= ps->n_payload - ps->recv_payload) {
 			remain = ps->n_payload - ps->recv_payload;
-			ps->stat = PAYLOAD_STAT_FINISH;
+			ps->stat = PAYLOAD_STAT_FINISHED;
 		}
 		memcpy(&(ps->payload[ps->recv_payload]), &packet[pos], remain);
 		ps->recv_payload += remain;
 	}
 
-	if (ps->stat == PAYLOAD_STAT_FINISH) {
+	if (ps->stat == PAYLOAD_STAT_FINISHED) {
 		ps->crc32 = get_payload_crc32(ps);
 		unsigned __int32 crc = crc32(ps->payload, ps->n_payload - 4);
 		if (ps->crc32 != crc) {
 			ps->stat = PAYLOAD_STAT_INIT;
-			output_message(MSG_PACKETERROR, L"Payload CRC32 mismatch!");
+			output_message(MSG_PACKETERROR, L"Payload CRC32 mismatch! (pid=0x%02x)", ps->pid);
 		}
+	}
+}
+
+void parse_proginfo(payload_procstat_t *payload_stat, uint8_t *packet)
+{
+	int sid;
+	get_PSI_payload(packet, payload_stat);
+	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
+		//payload_stat->stat = PAYLOAD_STAT_INIT;
+		sid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
+		printf("table_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d \n", (int)payload_stat->payload[0], payload_stat->pid, sid, payload_stat->n_payload);
 	}
 }
 
@@ -80,7 +145,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 	get_PSI_payload(packet, &(tps->payload_PAT));
 	for (i = 0; i < tps->n_programs/* should be initialized to 0 */; i++) {
 		get_PSI_payload(packet, &(tps->payload_PMTs[i]));
-		if (tps->payload_PMTs[i].stat == PAYLOAD_STAT_FINISH) {
+		if (tps->payload_PMTs[i].stat == PAYLOAD_STAT_FINISHED) {
 			/* parse PMT */
 			int pid, stype, n_pids;
 			unsigned char *payload = tps->payload_PMTs[i].payload;
@@ -126,7 +191,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 		}
 	}
 
-	if (tps->payload_PAT.stat == PAYLOAD_STAT_FINISH && tps->payload_PMTs == NULL) {
+	if (tps->payload_PAT.stat == PAYLOAD_STAT_FINISHED && tps->payload_PMTs == NULL) {
 		/* parse PAT */
 		int n = (tps->payload_PAT.n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
 		int pn, pid, n_progs = 0;
@@ -152,7 +217,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 			pid = (payload[i * 4 + 2] & 0x1f) * 256 + payload[i * 4 + 3];
 			if (pn != 0) {
 				tps->payload_PMTs[n_progs].pid = pid;
-				tps->payload_PMTs[n_progs].stat = PAYLOAD_STAT_INIT;
+				//tps->payload_PMTs[n_progs].stat = PAYLOAD_STAT_INIT;
 				tps->programs[n_progs].service_id = payload[i * 4] * 256 + payload[i * 4 + 1];
 				tps->programs[n_progs].content_pids = NULL;
 				tps->programs[n_progs].n_pids = 0;

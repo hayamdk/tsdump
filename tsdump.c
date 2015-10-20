@@ -200,6 +200,17 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 
+	payload_procstat_t pid0x12, pid0x26, pid0x27;
+	pid0x12.pid = 0x12;
+	pid0x12.stat = PAYLOAD_STAT_INIT;
+	pid0x26.pid = 0x26;
+	pid0x26.stat = PAYLOAD_STAT_INIT;
+	pid0x27.pid = 0x27;
+	pid0x27.stat = PAYLOAD_STAT_INIT;
+
+	/*payload_procstat_t eit;
+	eit.stat = PAYLOAD_STAT_INIT;*/
+
 	//open_log(&logfp);
 
 	if ( !param_all_services && param_n_services == 0 ) {
@@ -216,6 +227,12 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, encrypted);
+
+		for (i = 0; i < n_dec; i+=188) {
+			parse_proginfo(&pid0x12, &decbuf[i]);
+			parse_proginfo(&pid0x26, &decbuf[i]);
+			parse_proginfo(&pid0x27, &decbuf[i]);
+		}
 
 		//tc_start("bufcopy");
 		if ( single_mode ) { /* 単一書き出しモード */
@@ -244,7 +261,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				parse_ts_packet(&tps, packet);
 
 				/* tosを生成 */
-				if ( ! tos && tps.payload_PAT.stat == PAYLOAD_STAT_FINISH ) {
+				if ( ! tos && tps.payload_PAT.stat == PAYLOAD_STAT_FINISHED ) {
 					n_tos = create_tos_per_service(&tos, &tps, ch_info);
 				}
 
