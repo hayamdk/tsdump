@@ -179,5 +179,7 @@ static inline const char *get_stream_type_str(int stream_type) {
 	}
 }
 
-void parse_proginfo(payload_procstat_t *payload_stat, uint8_t *packet);
+void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet);
+void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet);
+
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);

@@ -123,14 +123,83 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 	}
 }
 
-void parse_proginfo(payload_procstat_t *payload_stat, uint8_t *packet)
+void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 {
 	int sid;
 	get_PSI_payload(packet, payload_stat);
+	uint8_t *p, *q;
+	int len, dlen, eid, i, dtag, dlen2;
+	uint64_t start, dur;
+
+	if (payload_stat->payload[0] != 0x4e) {
+		return;
+	}
+
 	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
 		//payload_stat->stat = PAYLOAD_STAT_INIT;
 		sid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
 		printf("table_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d \n", (int)payload_stat->payload[0], payload_stat->pid, sid, payload_stat->n_payload);
+		
+		len = payload_stat->n_payload - 14 - 4/*crc32*/;
+		for (i=0; i < len; ) {
+			p = &payload_stat->payload[14+i];
+			eid = p[0]*0x100 + p[1];
+			start = p[2];
+			start = start * 0x100 + p[3];
+			start = start * 0x100 + p[4];
+			start = start * 0x100 + p[5];
+			start = start * 0x100 + p[6];
+			dur = p[7];
+			dur = dur * 0x100 + p[8];
+			dur = dur * 0x100 + p[9];
+			dlen = (p[10] & 0x0f) * 0x100 + p[11];
+			p = &p[12];
+			printf(" eid=0x%04x start=%I64x dur=%8x dlen=%d \n", eid, start, (uint32_t)dur, dlen);
+			for (q = p; q < &p[dlen]; ) {
+				dtag = q[0];
+				dlen2 = q[1];
+				printf("  tag=0x%02x dlen2=%d \n", dtag, dlen2);
+				q += (2 + dlen2);
+			}
+			i += (12+dlen);
+		}
+	}
+}
+
+void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet)
+{
+	int tsid, sid;
+	get_PSI_payload(packet, payload_stat);
+	uint8_t *p, *q;
+	int len, dlen, i, dtag, dlen2;
+
+	if (payload_stat->payload[0] != 0x42) {
+		return;
+	}
+
+	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
+		//payload_stat->stat = PAYLOAD_STAT_INIT;
+		tsid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
+		printf("table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d \n", (int)payload_stat->payload[0], payload_stat->pid, tsid, payload_stat->n_payload);
+
+		len = payload_stat->n_payload - 11 - 4/*crc32*/;
+		for (i = 0; i < len; ) {
+			p = &payload_stat->payload[11 + i];
+			sid = p[0] * 0x100 + p[1];
+			dlen = (p[3] & 0x0f) * 0x100 + p[4];
+			p = &p[5];
+			printf(" service_id=0x%04x dlen=%d \n", sid, dlen);
+			for (q = p; q < &p[dlen]; ) {
+				dtag = q[0];
+				dlen2 = q[1];
+				printf("  tag=0x%02x dlen2=%d \n", dtag, dlen2);
+				if (dtag == 0x48) {
+					int k = 0;
+				}
+				q += (2 + dlen2);
+			}
+			i += (5 + dlen);
+		}
 	}
 }
 

@@ -200,7 +200,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 
-	payload_procstat_t pid0x12, pid0x26, pid0x27;
+	payload_procstat_t pid0x11, pid0x12, pid0x26, pid0x27;
+	pid0x11.pid = 0x11;
+	pid0x11.stat = PAYLOAD_STAT_INIT;
 	pid0x12.pid = 0x12;
 	pid0x12.stat = PAYLOAD_STAT_INIT;
 	pid0x26.pid = 0x26;
@@ -229,9 +231,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream(decbuf, n_dec, encrypted);
 
 		for (i = 0; i < n_dec; i+=188) {
-			parse_proginfo(&pid0x12, &decbuf[i]);
-			parse_proginfo(&pid0x26, &decbuf[i]);
-			parse_proginfo(&pid0x27, &decbuf[i]);
+			parse_SDT(&pid0x11, &decbuf[i]);
+			//parse_EIT(&pid0x12, &decbuf[i]);
+			//parse_EIT(&pid0x26, &decbuf[i]);
+			//parse_EIT(&pid0x27, &decbuf[i]);
 		}
 
 		//tc_start("bufcopy");
