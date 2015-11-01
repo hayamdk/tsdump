@@ -21,6 +21,8 @@
 #include "load_modules.h"
 #include "strfuncs.h"
 
+#include "aribstr.h"
+
 //#define HAVE_TIMECALC_DECLARATION
 //#include "timecalc.h"
 
@@ -232,9 +234,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 		for (i = 0; i < n_dec; i+=188) {
 			parse_SDT(&pid0x11, &decbuf[i]);
-			//parse_EIT(&pid0x12, &decbuf[i]);
-			//parse_EIT(&pid0x26, &decbuf[i]);
-			//parse_EIT(&pid0x27, &decbuf[i]);
+			parse_EIT(&pid0x12, &decbuf[i]);
+			parse_EIT(&pid0x26, &decbuf[i]);
+			parse_EIT(&pid0x27, &decbuf[i]);
 		}
 
 		//tc_start("bufcopy");
@@ -390,7 +392,15 @@ int wmain(int argc, WCHAR* argv[])
 	void *decoder_stat = NULL;
 	int encrypted;
 
+	//uint8_t arib[] = { 0x23, 0x4e, 0x23, 0x48, 0x23, 0x4b, 0x41, 0x6d, 0x39, 0x67, 0x21, 0x26, 0x45, 0x6c, 0x35, 0x7e };
+	//wchar_t wc[1024];
+
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
+
+	/*AribToString(wc, arib, sizeof(arib));
+	wprintf(L"%s\n", wc);
+	getchar();
+	return 0;*/
 
 	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
 

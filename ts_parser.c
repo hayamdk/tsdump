@@ -9,6 +9,7 @@ typedef unsigned long	DWORD;
 
 #include "modules_def.h"
 #include "ts_parser.h"
+#include "aribstr.h"
 
 static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps)
 {
@@ -128,8 +129,9 @@ void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 	int sid;
 	get_PSI_payload(packet, payload_stat);
 	uint8_t *p, *q;
-	int len, dlen, eid, i, dtag, dlen2;
+	int len, dlen, eid, i, dtag, dlen2, running_status;
 	uint64_t start, dur;
+	const char *rs[] = {"undef", "not running", "coming", "stopped", "running", "reserved", "reserved", "reserved" };
 
 	if (payload_stat->payload[0] != 0x4e) {
 		return;
@@ -152,16 +154,37 @@ void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 			dur = p[7];
 			dur = dur * 0x100 + p[8];
 			dur = dur * 0x100 + p[9];
+			running_status = p[10] >> 5;
 			dlen = (p[10] & 0x0f) * 0x100 + p[11];
 			p = &p[12];
-			printf(" eid=0x%04x start=%I64x dur=%8x dlen=%d \n", eid, start, (uint32_t)dur, dlen);
+			printf(" eid=0x%04x start=%I64x dur=%8x dlen=%d running_status=%s(%d) \n",
+				eid, start, (uint32_t)dur, dlen, rs[running_status], running_status);
+
 			for (q = p; q < &p[dlen]; ) {
 				dtag = q[0];
 				dlen2 = q[1];
-				printf("  tag=0x%02x dlen2=%d \n", dtag, dlen2);
+				if (dtag == 0x4d) {
+					char code[4];
+					int len1, len2;
+					WCHAR s1[256], s2[256];
+					s1[0] = L'\0';
+					s2[0] = L'\0';
+
+					len1 = q[5];
+					len2 = q[6 + len1];
+
+					memcpy(code, &q[2], 3);
+					code[3] = '\0';
+
+					AribToString(s1, &q[6], len1);
+					AribToString(s2, &q[6 + len1 + 1], len2);
+
+					printf(" \n tag=0x%02x dlen2=%d code=%s     \n", dtag, dlen2, code);
+					wprintf(L"%s\n%s\n\n", s1, s2);
+				}
 				q += (2 + dlen2);
 			}
-			i += (12+dlen);
+			i += (12 + dlen);
 		}
 	}
 }
@@ -171,7 +194,8 @@ void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet)
 	int tsid, sid;
 	get_PSI_payload(packet, payload_stat);
 	uint8_t *p, *q;
-	int len, dlen, i, dtag, dlen2;
+	int len, dlen, i, dtag, dlen2, splen, slen;
+	WCHAR sp[1024], s[1024];
 
 	if (payload_stat->payload[0] != 0x42) {
 		return;
@@ -194,7 +218,13 @@ void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet)
 				dlen2 = q[1];
 				printf("  tag=0x%02x dlen2=%d \n", dtag, dlen2);
 				if (dtag == 0x48) {
-					int k = 0;
+					splen = q[3];
+					slen = q[4 + splen];
+					s[0] = L'\0';
+					sp[0] = L'\0';
+					AribToString(sp, &q[4], splen);
+					AribToString(s, &q[4+splen+1], slen);
+					wprintf(L"%s|%s   \n", sp, s);
 				}
 				q += (2 + dlen2);
 			}
