@@ -140,7 +140,14 @@ void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
 		//payload_stat->stat = PAYLOAD_STAT_INIT;
 		sid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
-		printf("table_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d \n", (int)payload_stat->payload[0], payload_stat->pid, sid, payload_stat->n_payload);
+		int current_next_indicator = payload_stat->payload[5] & 0x01;
+		int section_number = payload_stat->payload[6];
+		if (section_number != 0) {
+			return;
+		}
+		printf("----------------------------------------------------------------------------"
+			"\ntable_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d, section_number=%d   \n",
+			(int)payload_stat->payload[0], payload_stat->pid, sid, payload_stat->n_payload, section_number);
 		
 		len = payload_stat->n_payload - 14 - 4/*crc32*/;
 		for (i=0; i < len; ) {
@@ -167,8 +174,6 @@ void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 					char code[4];
 					int len1, len2;
 					WCHAR s1[256], s2[256];
-					s1[0] = L'\0';
-					s2[0] = L'\0';
 
 					len1 = q[5];
 					len2 = q[6 + len1];
@@ -176,8 +181,8 @@ void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
 					memcpy(code, &q[2], 3);
 					code[3] = '\0';
 
-					AribToString(s1, &q[6], len1);
-					AribToString(s2, &q[6 + len1 + 1], len2);
+					AribToString(s1, 256, &q[6], len1);
+					AribToString(s2, 256, &q[6 + len1 + 1], len2);
 
 					printf(" \n tag=0x%02x dlen2=%d code=%s     \n", dtag, dlen2, code);
 					wprintf(L"%s\n%s\n\n", s1, s2);
@@ -220,10 +225,8 @@ void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet)
 				if (dtag == 0x48) {
 					splen = q[3];
 					slen = q[4 + splen];
-					s[0] = L'\0';
-					sp[0] = L'\0';
-					AribToString(sp, &q[4], splen);
-					AribToString(s, &q[4+splen+1], slen);
+					AribToString(sp, 1024, &q[4], splen);
+					AribToString(s, 1024, &q[4+splen+1], slen);
 					wprintf(L"%s|%s   \n", sp, s);
 				}
 				q += (2 + dlen2);

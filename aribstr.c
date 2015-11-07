@@ -54,8 +54,7 @@ static	BYTE m_byEscSeqCount;
 static	BYTE m_byEscSeqIndex;
 static	bool m_bIsEscSeqDrcs;
 
-
-static	const DWORD AribToStringInternal(WCHAR *lpszDst, const uint8_t *pSrcData, const int dwSrcLen);
+static  const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen, const uint8_t *pSrcData, const int dwSrcLen);
 static	const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET CodeSet);
 
 static	const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode);
@@ -147,23 +146,32 @@ bool IsSmallCharMode(void)
 }
 
 int AribToString(
-	WCHAR *lpszDst, 
-	const uint8_t *pSrcData, 
-	const int dwSrcLen) {
+	WCHAR *dst,
+	const int dst_maxlen,
+	const uint8_t *src,
+	const int src_len )
+{
   
-	return AribToStringInternal(lpszDst, pSrcData, dwSrcLen);
+	return AribToStringInternal(dst, dst_maxlen, src, src_len);
 }
 
 
-const DWORD AribToStringInternal(WCHAR *lpszDst, 
+const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 								 const uint8_t *pSrcData, const int dwSrcLen)
 {
-	if(!pSrcData || !dwSrcLen || !lpszDst)return 0UL;
+	if (dwSrcLen <= 0 && dst_maxlen >= 1) {
+		lpszDst[0] = TSD_NULL_CHARACTER;
+		return 0;
+	}
+	if( dst_maxlen <= 0 || !pSrcData || dwSrcLen <= 0 || !lpszDst) return 0UL;
   
 	DWORD dwSrcPos = 0UL;
 	DWORD dwDstLen = 0UL;
 	int   dwSrcData;
-  
+
+	WCHAR charbuf[8];
+	int charlen;
+	
 	// 状態初期設定
 	m_byEscSeqCount = 0U;
 	m_pSingleGL = NULL;
@@ -180,6 +188,7 @@ const DWORD AribToStringInternal(WCHAR *lpszDst,
 
 	while(dwSrcPos < dwSrcLen){
 		dwSrcData = pSrcData[dwSrcPos] & 0xFF;
+		charlen = 0;
 
 		if(!m_byEscSeqCount){
       
@@ -193,15 +202,15 @@ const DWORD AribToStringInternal(WCHAR *lpszDst,
 					// 2バイトコード
 					if((dwSrcLen - dwSrcPos) < 2UL)break;
 					
-					dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
+					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
+					charlen = ProcessCharCode(charbuf, ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
 					dwSrcPos++;
-				}
-				else{
+				} else{
 					// 1バイトコード
-					dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)dwSrcData, CurCodeSet);
+					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)dwSrcData, CurCodeSet);
+					charlen = ProcessCharCode(charbuf, (WORD)dwSrcData, CurCodeSet);
 				}
-			}
-			else if((dwSrcData >= 0xA1U) && (dwSrcData <= 0xFEU)){
+			} else if((dwSrcData >= 0xA1U) && (dwSrcData <= 0xFEU)){
 				// GR領域
 				const CODE_SET CurCodeSet = *m_pLockingGR;
 				
@@ -209,15 +218,15 @@ const DWORD AribToStringInternal(WCHAR *lpszDst,
 					// 2バイトコード
 					if((dwSrcLen - dwSrcPos) < 2UL)break;
 					
-					dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)(pSrcData[dwSrcPos + 0] & 0x7FU) << 8) | (WORD)(pSrcData[dwSrcPos + 1] & 0x7FU), CurCodeSet);
+					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)(pSrcData[dwSrcPos + 0] & 0x7FU) << 8) | (WORD)(pSrcData[dwSrcPos + 1] & 0x7FU), CurCodeSet);
+					charlen = ProcessCharCode(charbuf, ((WORD)(pSrcData[dwSrcPos + 0] & 0x7FU) << 8) | (WORD)(pSrcData[dwSrcPos + 1] & 0x7FU), CurCodeSet);
 					dwSrcPos++;
-				}
-				else{
+				} else{
 					// 1バイトコード
-					dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)(dwSrcData & 0x7FU), CurCodeSet);
+					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)(dwSrcData & 0x7FU), CurCodeSet);
+					charlen = ProcessCharCode(charbuf, (WORD)(dwSrcData & 0x7FU), CurCodeSet);
 				}
-			}
-			else{
+			} else{
 				// 制御コード
 				switch(dwSrcData){
 				case 0x0FU	: LockingShiftGL(0U);				break;	// LS0
@@ -241,17 +250,25 @@ const DWORD AribToStringInternal(WCHAR *lpszDst,
 				default		: break;	// 非対応
 				}
 			}
-		}
-		else{
+		} else{
 			// エスケープシーケンス処理
 			ProcessEscapeSeq((BYTE)dwSrcData);
+		}
+
+		if (charlen > 0) {
+			/* dstの長さを見てオーバーランをしないようにする */
+			if (dwSrcLen + charlen >= dst_maxlen) {
+				break;
+			}
+			memcpy(&lpszDst[dwDstLen], charbuf, charlen*sizeof(WCHAR));
+			dwDstLen += charlen;
 		}
 		
 		dwSrcPos++;
 	}
 
 	// 終端文字
-	lpszDst[dwDstLen] = TEXT('\0');
+	lpszDst[dwDstLen] = TSD_NULL_CHARACTER;
 
 	return dwDstLen;
 }
@@ -342,9 +359,9 @@ const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode)
 /* JIS X 0208 から一旦Shift-JISに変換し、WindowsのランタイムでUTF-16LEに変換する */
 const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode)
 {
-	int u, v;
+	uint8_t u, v;
+	char shiftjis_char[3];
 	size_t ret;
-	unsigned char shiftjis_char[3];
 
 	u = (wCode >> 8) - 0x20;
 	v = (wCode & 0xFF) - 0x20;
