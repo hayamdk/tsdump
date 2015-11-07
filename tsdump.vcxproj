@@ -78,6 +78,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="aribstr.c" />
     <ClCompile Include="convtounicode.c" />
     <ClCompile Include="default_decoder.c" />
     <ClCompile Include="load_modules.c" />
@@ -97,6 +98,7 @@
     <ClCompile Include="ts_parser.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="aribstr.h" />
     <ClInclude Include="charsize1table.h" />
     <ClInclude Include="convtounicode.h" />
     <ClInclude Include="default_decoder.h" />
