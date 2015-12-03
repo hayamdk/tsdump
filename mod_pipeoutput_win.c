@@ -347,6 +347,7 @@ static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
 	UNREF_ARG(pi);
 	int i;
 	for (i = 0; i < n_pipecmds; i++) {
+		my_nonblockio_close(&ps[i].nbio);
 		close_pipe(&ps[i]);
 	}
 	for (i = 0; i < n_pipecmds; i++) {
