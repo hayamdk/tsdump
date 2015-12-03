@@ -202,7 +202,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 
-	payload_procstat_t pid0x11, pid0x12, pid0x26, pid0x27;
+	PSI_parse_t pid0x11, pid0x12, pid0x26, pid0x27;
 	pid0x11.pid = 0x11;
 	pid0x11.stat = PAYLOAD_STAT_INIT;
 	pid0x12.pid = 0x12;
@@ -396,6 +396,12 @@ int wmain(int argc, WCHAR* argv[])
 	//wchar_t wc[1024];
 
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
+
+	//uint8_t b[8] = { 0x13, 0x7f, 0x01, 0x37 };
+	//unsigned int t = get_bits(b, 12, 8);
+	//getchar();
+
+	//return 0;
 
 	/*AribToString(wc, arib, sizeof(arib));
 	wprintf(L"%s\n", wc);

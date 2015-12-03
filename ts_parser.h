@@ -124,15 +124,42 @@ static inline int ts_get_section_length(const uint8_t *p)
 	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
 }
 
+static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t length)
+{
+	unsigned int t = 0;
+	size_t offset_bytes, offset_bits, len1, len2, len3, i;
+
+	if (length == 0) {
+		return 0;
+	}
+
+	offset_bytes = offset / 8;
+	offset_bits = offset - offset_bytes * 8;
+	len1 = 8 - offset_bits;
+	if (len1 > length) {
+		len1 = length;
+	}
+	len2 = (length - len1) / 8;
+	len3 = length - len1 - len2 * 8;
+	t = buf[offset_bytes] & (0xff >> (8-len1));
+	for (i = 1; i <= len2; i++) {
+		t <<= 8;
+		t += buf[offset_bytes + i];
+	}
+	t <<= len3;
+	t += buf[offset_bytes + len2 + 1] >> (8 - len3);
+	return t;
+}
+
 typedef enum {
 	PAYLOAD_STAT_INIT = 0,
 	PAYLOAD_STAT_PROC,
 	PAYLOAD_STAT_FINISHED
-} payload_stat_t;
+} PSI_stat_t;
 
 typedef struct{
 	unsigned int pid;
-	payload_stat_t stat;
+	PSI_stat_t stat;
 	uint8_t payload[4096+3];
 	uint8_t next_payload[188];
 	int n_next_payload;
@@ -141,9 +168,9 @@ typedef struct{
 	int recv_payload;
 	unsigned int continuity_counter;
 	uint32_t crc32;
-} payload_procstat_t;
+} PSI_parse_t;
 
-static inline unsigned __int32 get_payload_crc32(payload_procstat_t *ps)
+static inline unsigned __int32 get_payload_crc32(PSI_parse_t *ps)
 {
 	return
 		ps->payload[ps->n_payload - 4] * 0x1000000 +
@@ -160,12 +187,81 @@ typedef struct {
 } program_pid_info_t;
 
 typedef struct {
-	payload_procstat_t payload_PAT;
+	PSI_parse_t payload_PAT;
 	unsigned __int32 payload_crc32_PAT;
-	payload_procstat_t *payload_PMTs;
+	PSI_parse_t *payload_PMTs;
 	program_pid_info_t *programs;
 	int n_programs;
 } ts_parse_stat_t;
+
+/* 短形式イベント記述子（Short event descriptor） */
+typedef struct {
+	unsigned int descriptor_tag : 8;
+	unsigned int descriptor_length : 8;
+	char ISO_639_language_code[4];
+	unsigned int event_name_length : 8;
+	const uint8_t *event_name_char;
+	unsigned int text_length : 8;
+	const uint8_t *text_char;
+} Sed_t;
+
+typedef struct {
+	unsigned int event_id : 16;
+	unsigned int start_time_mjd : 16;
+	unsigned int start_time_jtc : 24;
+	unsigned int duration : 24;
+	unsigned int running_status : 3;
+	unsigned int free_CA_mode : 1;
+	unsigned int descriptors_loop_length : 12;
+} EIT_body_t;
+
+typedef struct {
+	unsigned int table_id : 8;
+	unsigned int section_syntax_indicator : 1;
+	unsigned int section_length : 12;
+	unsigned int service_id : 16;
+	unsigned int version_number : 5;
+	unsigned int current_next_indicator : 1;
+	unsigned int section_number : 8;
+	unsigned int last_section_number : 8;
+	unsigned int transport_stream_id : 16;
+	unsigned int original_network_id : 16;
+	unsigned int segment_last_section_number : 8;
+	unsigned int last_table_id : 8;
+} EIT_header_t;
+
+/* サービス記述子（Service descriptor） */
+typedef struct {
+	unsigned int descriptor_tag : 8;
+	unsigned int descriptor_length : 8;
+	unsigned int service_type : 8;
+	unsigned int service_provider_name_length : 8;
+	const uint8_t *service_provider_name_char;
+	unsigned int service_name_length : 8;
+	const uint8_t *service_name_char;
+} Sd_t;
+
+typedef struct {
+	unsigned int service_id : 16;
+	unsigned int EIT_user_defined_flags : 3;
+	unsigned int EIT_schedule_flag : 1;
+	unsigned int EIT_present_following_flag : 1;
+	unsigned int running_status : 3;
+	unsigned int free_CA_mode : 1;
+	unsigned int descriptors_loop_length : 12;
+} SDT_body_t;
+
+typedef struct {
+	unsigned int table_id : 8;
+	unsigned int section_syntax_indicator : 1;
+	unsigned int section_length : 12;
+	unsigned int transport_stream_id : 16;
+	unsigned int version_number : 5;
+	unsigned int current_next_indicator : 1;
+	unsigned int section_number : 8;
+	unsigned int last_section_number : 8;
+	unsigned int original_network_id : 16;
+} SDT_header_t;
 
 static inline const char *get_stream_type_str(int stream_type) {
 	static const char *table[] = { "reserved", "video", "video", "audio", "audio",
@@ -173,13 +269,12 @@ static inline const char *get_stream_type_str(int stream_type) {
 		"typeA", "typeB", "typeC", "typeD", "auxiliary", "audio" };
 	if (stream_type <= 0xf) {
 		return table[stream_type];
-	}
-	else {
+	} else {
 		return "unkonwn";
 	}
 }
 
-void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet);
-void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet);
+void parse_EIT(PSI_parse_t *payload_stat, uint8_t *packet);
+void parse_SDT(PSI_parse_t *payload_stat, uint8_t *packet);
 
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);

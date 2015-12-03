@@ -11,7 +11,7 @@ typedef unsigned long	DWORD;
 #include "ts_parser.h"
 #include "aribstr.h"
 
-static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps)
+static inline void parse_PSI(unsigned char *packet, PSI_parse_t *ps)
 {
 	int pos, remain, pointer_field;
 
@@ -124,115 +124,188 @@ static inline void get_PSI_payload(unsigned char *packet, payload_procstat_t *ps
 	}
 }
 
-void parse_EIT(payload_procstat_t *payload_stat, uint8_t *packet)
+int parse_Sed(const uint8_t *desc, Sed_t *sed)
 {
-	int sid;
-	get_PSI_payload(packet, payload_stat);
-	uint8_t *p, *q;
-	int len, dlen, eid, i, dtag, dlen2, running_status;
-	uint64_t start, dur;
-	const char *rs[] = {"undef", "not running", "coming", "stopped", "running", "reserved", "reserved", "reserved" };
+	sed->descriptor_tag					= desc[0];
+	sed->descriptor_length				= desc[1];
+	memcpy(sed->ISO_639_language_code,	  &desc[2], 3);
+	sed->ISO_639_language_code[3]		= '\0';
+	
+	sed->event_name_length				= desc[5];
+	sed->event_name_char				= &desc[6];
+	if ( &sed->event_name_char[sed->event_name_length] > &desc[2 + sed->descriptor_length] ) {
+		return 0;
+	}
 
-	if (payload_stat->payload[0] != 0x4e) {
+	sed->text_length					= sed->event_name_char[sed->event_name_length];
+	sed->text_char						= &sed->event_name_char[sed->event_name_length + 1];
+	if ( &sed->text_char[sed->text_length] > &desc[2 + sed->descriptor_length] ) {
+		return 0;
+	}
+	return 1;
+}
+
+void parse_EIT_header(const uint8_t *payload, EIT_header_t *eit)
+{
+	eit->table_id						= payload[0];
+	eit->section_syntax_indicator		= get_bits(payload, 8, 1);
+	eit->section_length					= get_bits(payload, 12, 12);
+	eit->service_id						= get_bits(payload, 24, 16);
+	eit->version_number					= get_bits(payload, 42, 5);
+	eit->current_next_indicator			= get_bits(payload, 47, 1);
+	eit->section_number					= get_bits(payload, 48, 8);
+	eit->last_section_number			= get_bits(payload, 56, 8);
+	eit->transport_stream_id			= get_bits(payload, 64, 16);
+	eit->original_network_id			= get_bits(payload, 80, 16);
+	eit->segment_last_section_number	= get_bits(payload, 96, 8);
+	eit->last_table_id					= get_bits(payload, 104, 8);
+}
+
+void parse_EIT_body(const uint8_t *body, EIT_body_t *eit_b)
+{
+	eit_b->event_id						= get_bits(body, 0, 16);
+	eit_b->start_time_mjd				= get_bits(body, 16, 16);
+	eit_b->start_time_jtc				= get_bits(body, 32, 24);
+	eit_b->duration						= get_bits(body, 56, 24);
+	eit_b->running_status				= get_bits(body, 80, 3);
+	eit_b->free_CA_mode					= get_bits(body, 83, 1);
+	eit_b->descriptors_loop_length		= get_bits(body, 84, 12);
+}
+
+void parse_EIT(PSI_parse_t *payload_stat, uint8_t *packet)
+{
+	int len;
+	const char *rs[] = {"undef", "not running", "coming", "stopped", "running", "reserved", "reserved", "reserved" };
+	WCHAR s1[256], s2[256];
+	EIT_header_t eit_h;
+	EIT_body_t eit_b;
+	Sed_t sed;
+	uint8_t *p_eit_b, *p_eit_end;
+	uint8_t *p_Sed, *p_Sed_end;
+
+	parse_PSI(packet, payload_stat);
+
+	if (payload_stat->stat != PAYLOAD_STAT_FINISHED || payload_stat->payload[0] != 0x4e) {
 		return;
 	}
 
-	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
-		//payload_stat->stat = PAYLOAD_STAT_INIT;
-		sid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
-		int current_next_indicator = payload_stat->payload[5] & 0x01;
-		int section_number = payload_stat->payload[6];
-		if (section_number != 0) {
-			return;
-		}
-		printf("----------------------------------------------------------------------------"
-			"\ntable_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d, section_number=%d   \n",
-			(int)payload_stat->payload[0], payload_stat->pid, sid, payload_stat->n_payload, section_number);
+	parse_EIT_header(payload_stat->payload, &eit_h);
+
+	printf("----------------------------------------------------------------------------"
+		"\ntable_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d, section_number=%d   \n",
+		eit_h.table_id, payload_stat->pid, eit_h.service_id, payload_stat->n_payload, eit_h.section_number);
 		
-		len = payload_stat->n_payload - 14 - 4/*crc32*/;
-		for (i=0; i < len; ) {
-			p = &payload_stat->payload[14+i];
-			eid = p[0]*0x100 + p[1];
-			start = p[2];
-			start = start * 0x100 + p[3];
-			start = start * 0x100 + p[4];
-			start = start * 0x100 + p[5];
-			start = start * 0x100 + p[6];
-			dur = p[7];
-			dur = dur * 0x100 + p[8];
-			dur = dur * 0x100 + p[9];
-			running_status = p[10] >> 5;
-			dlen = (p[10] & 0x0f) * 0x100 + p[11];
-			p = &p[12];
-			printf(" eid=0x%04x start=%I64x dur=%8x dlen=%d running_status=%s(%d) \n",
-				eid, start, (uint32_t)dur, dlen, rs[running_status], running_status);
+	len = payload_stat->n_payload - 14 - 4/*=sizeof(crc32)*/;
+	p_eit_b = &payload_stat->payload[14];
+	p_eit_end = &p_eit_b[len];
+	while(p_eit_b < p_eit_end) {
+		parse_EIT_body(p_eit_b, &eit_b);
+		printf(" eid=0x%04x start=%d|%8x dur=%8x dlen=%d running_status=%s(%d) \n",
+			eit_b.event_id, eit_b.start_time_mjd, eit_b.start_time_jtc, eit_b.duration, eit_b.descriptors_loop_length,
+			rs[eit_b.running_status], eit_b.running_status);
 
-			for (q = p; q < &p[dlen]; ) {
-				dtag = q[0];
-				dlen2 = q[1];
-				if (dtag == 0x4d) {
-					char code[4];
-					int len1, len2;
-					WCHAR s1[256], s2[256];
+		p_Sed = &p_eit_b[12];
+		p_Sed_end = &p_Sed[eit_b.descriptors_loop_length];
+		while( p_Sed < p_Sed_end && parse_Sed(p_Sed, &sed) ) {
+			if (sed.descriptor_tag == 0x4d) {
+				AribToString(s1, 256, sed.event_name_char, sed.event_name_length);
+				AribToString(s2, 256, sed.text_char, sed.text_length);
 
-					len1 = q[5];
-					len2 = q[6 + len1];
-
-					memcpy(code, &q[2], 3);
-					code[3] = '\0';
-
-					AribToString(s1, 256, &q[6], len1);
-					AribToString(s2, 256, &q[6 + len1 + 1], len2);
-
-					printf(" \n tag=0x%02x dlen2=%d code=%s     \n", dtag, dlen2, code);
-					wprintf(L"%s\n%s\n\n", s1, s2);
-				}
-				q += (2 + dlen2);
+				printf(" \n tag=0x%02x dlen2=%d code=%s     \n", sed.descriptor_tag, eit_b.descriptors_loop_length, sed.ISO_639_language_code);
+				wprintf(L"%s\n%s\n\n", s1, s2);
 			}
-			i += (12 + dlen);
+			p_Sed += (1 + sed.descriptor_length);
 		}
+		p_eit_b = p_Sed_end;
 	}
 }
 
-void parse_SDT(payload_procstat_t *payload_stat, uint8_t *packet)
+int parse_Sd(uint8_t *desc, Sd_t *sd)
 {
-	int tsid, sid;
-	get_PSI_payload(packet, payload_stat);
-	uint8_t *p, *q;
-	int len, dlen, i, dtag, dlen2, splen, slen;
-	WCHAR sp[1024], s[1024];
+	sd->descriptor_tag					= desc[0];
+	sd->descriptor_length				= desc[1];
+	sd->service_type					= desc[2];
 
-	if (payload_stat->payload[0] != 0x42) {
+	sd->service_provider_name_length	= desc[3];
+	sd->service_provider_name_char		= &desc[4];
+	if ( &sd->service_provider_name_char[ sd->service_provider_name_length ] >
+			&desc[ 2 + sd->descriptor_length ] ) {
+		return 0;
+	}
+
+	sd->service_name_length				= sd->service_provider_name_char[ sd->service_provider_name_length ];
+	sd->service_name_char				= &sd->service_provider_name_char[ sd->service_provider_name_length + 1 ];
+	if ( &sd->service_name_char[ sd->service_name_length ] >
+			&desc[ 2 + sd->descriptor_length ] ) {
+		return 0;
+	}
+	return 1;
+}
+
+void parse_SDT_header(uint8_t *payload, SDT_header_t *sdt_h)
+{
+	sdt_h->table_id						= payload[0];
+	sdt_h->section_syntax_indicator 	= get_bits(payload,  8,  1);
+	sdt_h->section_length 				= get_bits(payload, 12, 12);
+	sdt_h->transport_stream_id 			= get_bits(payload, 24, 16);
+	sdt_h->version_number 				= get_bits(payload, 42,  5);
+	sdt_h->current_next_indicator 		= get_bits(payload, 47,  1);
+	sdt_h->section_number 				= get_bits(payload, 48,  8);
+	sdt_h->last_section_number 			= get_bits(payload, 56,  8);
+	sdt_h->original_network_id 			= get_bits(payload, 64, 16);
+}
+
+void parse_SDT_body(uint8_t *body, SDT_body_t *sdt_b)
+{
+	sdt_b->service_id					= get_bits(body,  0, 16);
+	sdt_b->EIT_user_defined_flags		= get_bits(body, 19,  3);
+	sdt_b->EIT_schedule_flag			= get_bits(body, 22,  1);
+	sdt_b->EIT_present_following_flag	= get_bits(body, 23,  1);
+	sdt_b->running_status				= get_bits(body, 24,  3);
+	sdt_b->free_CA_mode					= get_bits(body, 27,  1);
+	sdt_b->descriptors_loop_length 		= get_bits(body, 28, 12);
+}
+
+void parse_SDT(PSI_parse_t *payload_stat, uint8_t *packet)
+{
+	int len;
+	WCHAR sp[1024], s[1024];
+	SDT_header_t sdt_h;
+	SDT_body_t sdt_b;
+	Sd_t sd;
+	uint8_t *p_sdt_b, *p_sdt_end;
+	uint8_t *p_sd, *p_sd_end;
+
+	parse_PSI(packet, payload_stat);
+
+	if (payload_stat->stat != PAYLOAD_STAT_FINISHED || payload_stat->payload[0] != 0x42) {
 		return;
 	}
 
-	if (payload_stat->stat == PAYLOAD_STAT_FINISHED) {
-		//payload_stat->stat = PAYLOAD_STAT_INIT;
-		tsid = payload_stat->payload[3] * 0x100 + payload_stat->payload[4];
-		printf("table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d \n", (int)payload_stat->payload[0], payload_stat->pid, tsid, payload_stat->n_payload);
+	parse_SDT_header(payload_stat->payload, &sdt_h);
 
-		len = payload_stat->n_payload - 11 - 4/*crc32*/;
-		for (i = 0; i < len; ) {
-			p = &payload_stat->payload[11 + i];
-			sid = p[0] * 0x100 + p[1];
-			dlen = (p[3] & 0x0f) * 0x100 + p[4];
-			p = &p[5];
-			printf(" service_id=0x%04x dlen=%d \n", sid, dlen);
-			for (q = p; q < &p[dlen]; ) {
-				dtag = q[0];
-				dlen2 = q[1];
-				printf("  tag=0x%02x dlen2=%d \n", dtag, dlen2);
-				if (dtag == 0x48) {
-					splen = q[3];
-					slen = q[4 + splen];
-					AribToString(sp, 1024, &q[4], splen);
-					AribToString(s, 1024, &q[4+splen+1], slen);
-					wprintf(L"%s|%s   \n", sp, s);
-				}
-				q += (2 + dlen2);
+	printf("table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d \n", 
+		sdt_h.table_id , payload_stat->pid, sdt_h.transport_stream_id, payload_stat->n_payload);
+
+	len = payload_stat->n_payload - 11 - 4/*=sizeof(crc32)*/;
+	p_sdt_b = &payload_stat->payload[11];
+	p_sdt_end = &p_sdt_b[len];
+	while(p_sdt_b < p_sdt_end) {
+		parse_SDT_body(p_sdt_b, &sdt_b);
+		printf(" service_id=0x%04x dlen=%d \n", sdt_b.service_id, sdt_b.descriptors_loop_length);
+
+		p_sd = &p_sdt_b[5];
+		p_sd_end = &p_sd[sdt_b.descriptors_loop_length];
+		while( p_sd < p_sd_end && parse_Sd(p_sd, &sd) ) {
+			printf("  tag=0x%02x dlen2=%d \n", sd.descriptor_tag, sd.descriptor_length);
+			if (sd.descriptor_tag == 0x48) {
+				AribToString(sp, 1024, sd.service_provider_name_char, sd.service_provider_name_length);
+				AribToString(s, 1024, sd.service_name_char, sd.service_name_length);
+				wprintf(L"%s|%s   \n", sp, s);
 			}
-			i += (5 + dlen);
+			p_sd += (1 + sd.descriptor_length);
 		}
+		p_sdt_b = p_sd_end;
 	}
 }
 
@@ -244,9 +317,9 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 		return;
 	}
 
-	get_PSI_payload(packet, &(tps->payload_PAT));
+	parse_PSI(packet, &(tps->payload_PAT));
 	for (i = 0; i < tps->n_programs/* should be initialized to 0 */; i++) {
-		get_PSI_payload(packet, &(tps->payload_PMTs[i]));
+		parse_PSI(packet, &(tps->payload_PMTs[i]));
 		if (tps->payload_PMTs[i].stat == PAYLOAD_STAT_FINISHED) {
 			/* parse PMT */
 			int pid, stype, n_pids;
@@ -311,7 +384,7 @@ void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
 		}
 		output_message(MSG_DISP, L"---------------------------------- >>>");
 		tps->n_programs = n_progs;
-		tps->payload_PMTs = (payload_procstat_t*)malloc(n_progs*sizeof(payload_procstat_t));
+		tps->payload_PMTs = (PSI_parse_t*)malloc(n_progs*sizeof(PSI_parse_t));
 		tps->programs = (program_pid_info_t*)malloc(n_progs*sizeof(program_pid_info_t));
 		n_progs = 0;
 		for (i = 0; i < n; i++) {
