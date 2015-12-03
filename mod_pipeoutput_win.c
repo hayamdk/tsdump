@@ -196,7 +196,6 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 	ps->used = 0;
 
 	if (!CreatePipe(&hReadTemp, &hWrite, NULL, 0)) {
-		//fprintf(stderr, "[ERROR] パイプの作成に失敗\n");
 		output_message(MSG_SYSERROR, L"パイプの作成に失敗(CreatePipe)");
 		return;
 	}
@@ -293,8 +292,6 @@ static void wait_child_process(pipestat_t *ps)
 
 static void hook_pgoutput(void *stat, const unsigned char *buf, const size_t size)
 {
-	//DWORD /*written_total, written,*/ ret;
-	//BOOL ret;
 	pipestat_t *ps = (pipestat_t*)stat;
 	int i, ret, error;
 	const WCHAR *errmsg;
