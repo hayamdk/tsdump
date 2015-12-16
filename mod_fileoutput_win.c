@@ -176,7 +176,7 @@ static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const 
 
 static void hook_pgoutput(void *pstat, const unsigned char *buf, const size_t size)
 {
-	DWORD written;
+	DWORD written, errnum;
 	file_output_stat_t *fos = (file_output_stat_t*)pstat;
 	if (!fos) {
 		return;
@@ -187,11 +187,27 @@ static void hook_pgoutput(void *pstat, const unsigned char *buf, const size_t si
 		return;
 	}
 
-	WriteFile(fos->fh, buf, (DWORD)size, &written, &(fos->ol));
-	fos->writebuf = buf;
-	fos->write_bytes = size;
-	fos->written_bytes = 0;
-	fos->write_busy = 1;
+	if ( !WriteFile(fos->fh, buf, (DWORD)size, &written, &(fos->ol)) ) {
+		if ( (errnum = GetLastError()) == ERROR_IO_PENDING ) {
+			fos->writebuf = buf;
+			fos->write_bytes = size;
+			fos->written_bytes = 0;
+			fos->write_busy = 1;
+			return;
+		} else {
+			output_message(MSG_SYSERROR, L"WriteFile()‚ÉŽ¸”s‚µ‚Ü‚µ‚½");
+			fos->write_busy = 0;
+		}
+	} else {
+		if (written < size) {
+			fos->writebuf = buf;
+			fos->write_bytes = size;
+			fos->written_bytes = written;
+			fos->write_busy = 1;
+		} else {
+			fos->write_busy = 0;
+		}
+	}
 }
 
 static const int hook_pgoutput_check(void *pstat)

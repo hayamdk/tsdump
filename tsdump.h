@@ -1,5 +1,5 @@
-#define VERSION_STR				"1.3.1"
-#define DATE_STR				"2015/12/04"
+#define VERSION_STR				"1.3.2"
+#define DATE_STR				"2015/12/16"
 
 #define BUFSIZE_DEFAULT			96
 #define OVERLAP_SEC_DEFAULT		15
