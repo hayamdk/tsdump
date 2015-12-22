@@ -411,8 +411,6 @@ int wmain(int argc, WCHAR* argv[])
 		goto END1;
 	}
 
-	Sleep(500);
-
 	/* ˆ—‚Ì–{‘Ì */
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
