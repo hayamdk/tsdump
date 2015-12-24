@@ -141,7 +141,7 @@ static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t le
 	}
 	len2 = (length - len1) / 8;
 	len3 = length - len1 - len2 * 8;
-	t = buf[offset_bytes] & (0xff >> (8-len1));
+	t = (buf[offset_bytes] & (0xff>>offset_bits)) >> (8-len1-offset_bits);
 	for (i = 1; i <= len2; i++) {
 		t <<= 8;
 		t += buf[offset_bytes + i];
@@ -204,6 +204,26 @@ typedef struct {
 	unsigned int text_length : 8;
 	const uint8_t *text_char;
 } Sed_t;
+
+/* 拡張形式イベント記述子（Extended event descriptor） */
+typedef struct {
+	unsigned int descriptor_tag : 8;
+	unsigned int descriptor_length : 8;
+	unsigned int descriptor_number : 4;
+	unsigned int last_descriptor_number : 4;
+	char ISO_639_language_code[4];
+	unsigned int length_of_items : 8;
+
+	unsigned int text_length : 8;
+	const uint8_t *text_char;
+} Eed_t;
+
+typedef struct {
+	unsigned int item_description_length : 8;
+	const uint8_t *item_description_char;
+	unsigned int item_length : 8;
+	const uint8_t *item_char;
+} Eed_item_t;
 
 typedef struct {
 	unsigned int event_id : 16;

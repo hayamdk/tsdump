@@ -152,7 +152,8 @@ typedef enum {
 	MSG_WINSOCKERROR = 4,
 	MSG_NOTIFY = 5,
 	MSG_DISP = 6,
-	MSG_PACKETERROR = 7
+	MSG_PACKETERROR = 7,
+	MSG_DEBUG = 8,
 } message_type_t;
 
 typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
