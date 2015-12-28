@@ -605,6 +605,7 @@ void free_modules()
 			FreeLibrary(modules[i].hdll);
 		}
 	}
+	n_modules = 0;
 }
 
 void print_cmd_usage()
