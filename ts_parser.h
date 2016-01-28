@@ -194,6 +194,63 @@ typedef struct {
 	int n_programs;
 } ts_parse_stat_t;
 
+#define ARIB_CHAR_SIZE_RATIO 1
+
+typedef struct {
+	int aribstr_len;
+	uint8_t aribstr[256];
+	int str_len;
+	WCHAR str[256*ARIB_CHAR_SIZE_RATIO];
+} Sed_string_t;
+
+typedef struct {
+	int aribdesc_len;
+	uint8_t aribdesc[20]; /* ARIB TR-B14において上限が16bytesと定められている */
+	int desc_len;
+	WCHAR desc[20*ARIB_CHAR_SIZE_RATIO+1];
+	int aribitem_len;
+	uint8_t aribitem[480]; /* ARIB TR-B14において上限が440bytesと定められている */
+	int item_len;
+	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
+} Eed_item_string_t;
+
+#define PGINFO_GET_BASIC_INFO		1
+#define PGINFO_GET_SHORT_TEXT		2
+#define PGINFO_GET_EXTEND_TEXT		4
+
+typedef struct {
+
+	int status;
+
+	unsigned int network_id : 16;
+	unsigned int ts_id : 16;
+	unsigned int service_id : 16;
+	unsigned int event_id : 16;
+
+	/* EIT */
+	int curr_desc;
+	int last_desc;
+
+	int start_year;
+	int start_month;
+	int start_day;
+	int start_hour;
+	int start_min;
+	int start_sec;
+	int dur_hour;
+	int dur_min;
+	int dur_sec;
+
+	/* 短形式イベント記述子 */
+	Sed_string_t event_name;
+	Sed_string_t event_text;
+
+	/* 拡張形式イベント記述子 */
+	int n_items;
+	Eed_item_string_t items[8];
+
+} proginfo_t;
+
 /* 短形式イベント記述子（Short event descriptor） */
 typedef struct {
 	unsigned int descriptor_tag : 8;
@@ -294,7 +351,8 @@ static inline const char *get_stream_type_str(int stream_type) {
 	}
 }
 
-void parse_EIT(PSI_parse_t *payload_stat, uint8_t *packet);
-void parse_SDT(PSI_parse_t *payload_stat, uint8_t *packet);
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo);
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo);
 
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);
+void init_proginfo(proginfo_t *proginfo);

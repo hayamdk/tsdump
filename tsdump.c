@@ -223,6 +223,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	do_open_stream();
 
+	proginfo_t pi_prev, pi, pi_next;
+	init_proginfo(&pi);
+	pi.service_id = 0x400;
+
 	while ( !termflag ) {
 		nowtime = gettime();
 
@@ -233,10 +237,15 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream(decbuf, n_dec, encrypted);
 
 		for (i = 0; i < n_dec; i+=188) {
-			parse_SDT(&pid0x11, &decbuf[i]);
-			parse_EIT(&pid0x12, &decbuf[i]);
-			parse_EIT(&pid0x26, &decbuf[i]);
-			parse_EIT(&pid0x27, &decbuf[i]);
+			parse_SDT(&pid0x11, &decbuf[i], &pi);
+			parse_EIT(&pid0x12, &decbuf[i], &pi);
+			parse_EIT(&pid0x26, &decbuf[i], &pi);
+			parse_EIT(&pid0x27, &decbuf[i], &pi);
+		}
+
+		if ( pi.status & PGINFO_GET_BASIC_INFO ) {
+			init_proginfo(&pi);
+			pi.service_id = 0x400;
 		}
 
 		//tc_start("bufcopy");
