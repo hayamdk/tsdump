@@ -202,7 +202,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 
-	PSI_parse_t pid0x11, pid0x12, pid0x26, pid0x27;
+	PSI_parse_t pid0x11, pid0x12, pid0x26, pid0x27, pid0x00;
+	pid0x00.pid = 0;
+	pid0x00.stat = PAYLOAD_STAT_INIT;
 	pid0x11.pid = 0x11;
 	pid0x11.stat = PAYLOAD_STAT_INIT;
 	pid0x12.pid = 0x12;
@@ -223,9 +225,13 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	do_open_stream();
 
-	proginfo_t pi_prev, pi, pi_next;
-	init_proginfo(&pi);
-	pi.service_id = 0x400;
+	int n_services = 0;
+	proginfo_t /*pi_prev,*/ pi[16]/*, pi_next*/;
+	for (i = 0; i < 16; i++) {
+		init_proginfo(&pi[i]);
+	}
+	//pi[0].service_id = 0x400;
+	//pi[1].service_id = 0x401;
 
 	while ( !termflag ) {
 		nowtime = gettime();
@@ -237,15 +243,23 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream(decbuf, n_dec, encrypted);
 
 		for (i = 0; i < n_dec; i+=188) {
-			parse_SDT(&pid0x11, &decbuf[i], &pi);
-			parse_EIT(&pid0x12, &decbuf[i], &pi);
-			parse_EIT(&pid0x26, &decbuf[i], &pi);
-			parse_EIT(&pid0x27, &decbuf[i], &pi);
+			if (pid0x00.stat != PAYLOAD_STAT_FINISHED) {
+				/* PAT‚ÌŽæ“¾‚Í‰‰ñ‚Ì‚Ý */
+				parse_PAT(&pid0x00, &decbuf[i], pi, 16, &n_services);
+			} else {
+				parse_PMT(&decbuf[i], pi, n_services);
+			}
+			parse_SDT(&pid0x11, &decbuf[i], pi, 16);
+			parse_EIT(&pid0x12, &decbuf[i], pi, 16);
+			parse_EIT(&pid0x26, &decbuf[i], pi, 16);
+			parse_EIT(&pid0x27, &decbuf[i], pi, 16);
 		}
 
-		if ( pi.status & PGINFO_GET_BASIC_INFO ) {
-			init_proginfo(&pi);
-			pi.service_id = 0x400;
+		for (i = 0; i < n_services; i++) {
+			if (pi[i].status & PGINFO_GET_EVENT_INFO) {
+				printf("eeeeeeeeeeee! %d\n", i);
+				clear_proginfo(&pi[i]);
+			}
 		}
 
 		//tc_start("bufcopy");

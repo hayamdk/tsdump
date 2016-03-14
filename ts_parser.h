@@ -203,6 +203,8 @@ typedef struct {
 	WCHAR str[256*ARIB_CHAR_SIZE_RATIO];
 } Sed_string_t;
 
+typedef Sed_string_t Sd_string_t;
+
 typedef struct {
 	int aribdesc_len;
 	uint8_t aribdesc[20]; /* ARIB TR-B14Ç…Ç®Ç¢Çƒè„å¿Ç™16bytesÇ∆íËÇﬂÇÁÇÍÇƒÇ¢ÇÈ */
@@ -214,18 +216,37 @@ typedef struct {
 	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
-#define PGINFO_GET_BASIC_INFO		1
-#define PGINFO_GET_SHORT_TEXT		2
-#define PGINFO_GET_EXTEND_TEXT		4
+#define PGINFO_GET_PAT				1
+#define PGINFO_GET_PMT				2
+#define PGINFO_GET_SERVICE_INFO		4
+#define PGINFO_GET_EVENT_INFO		8
+#define PGINFO_GET_SHORT_TEXT		16
+#define PGINFO_GET_EXTEND_TEXT		32
+
+#define MAX_PIDS_PER_SERVICE		64
+
+typedef struct {
+	unsigned int stream_type : 8;
+	unsigned int pid : 16;
+} PMT_pid_def_t;
 
 typedef struct {
 
 	int status;
 
+	PSI_parse_t PMT_payload;
+	uint32_t PMT_last_CRC;
+
+	int n_service_pids;
+	PMT_pid_def_t service_pids[MAX_PIDS_PER_SERVICE];
+
 	unsigned int network_id : 16;
 	unsigned int ts_id : 16;
 	unsigned int service_id : 16;
 	unsigned int event_id : 16;
+
+	Sd_string_t service_provider_name;
+	Sd_string_t service_name;
 
 	/* EIT */
 	int curr_desc;
@@ -351,8 +372,11 @@ static inline const char *get_stream_type_str(int stream_type) {
 	}
 }
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo);
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo);
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services);
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services);
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *proginfos, const int n_services_max, int *n_services);
+void parse_PMT(uint8_t * packet, proginfo_t *proginfos, int n_services);
 
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);
+void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);
