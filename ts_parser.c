@@ -253,42 +253,69 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 {
 	int y, m, d, k;
 	double mjd;
+
+	if (proginfo->status & PGINFO_GET_EVENT_INFO && proginfo->event_id != eit_b->event_id) {
+		/* 前回の取得から番組が切り替わった */
+		clear_proginfo(proginfo);
+		proginfo->status |= PGINFO_FLAG_CHANGED;
+	}
 	proginfo->event_id = eit_b->event_id;
 
-	/* MJD -> YMD */
-	/*　2100 年2 月28 日までの間有効な公式（ARIB STD-B10 第２部より）　*/
-	mjd = (double)eit_b->start_time_mjd;
-	y = (int)( (mjd - 15078.2) / 365.25 );
-	m = (int)( (mjd - 14956.1 - (int)((double)y*365.25)) / 30.6001 );
-	d = eit_b->start_time_mjd - 14956 - (int)((double)y*365.25) - (int)((double)m*30.6001);
-	if (m == 14 || m == 15) {
-		k = 1;
+	if (eit_b->start_time_mjd == 0xffff && eit_b->start_time_jtc == 0xffffff) {
+		proginfo->start_year = 0;
+		proginfo->start_month = 0;
+		proginfo->start_day = 0;
+		proginfo->start_hour = 0;
+		proginfo->start_min = 0;
+		proginfo->start_sec = 0;
+		proginfo->status |= PGINFO_UNKNOWN_STARTTIME;
 	} else {
-		k = 0;
-	}
-	proginfo->start_year = 1900 + y + k;
-	proginfo->start_month = m - 1 - k*12;
-	proginfo->start_day = d;
-	
-	proginfo->start_hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
-		((eit_b->start_time_jtc >> 16) & 0x0f);
-	proginfo->start_min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
-		((eit_b->start_time_jtc >> 8) & 0x0f);
-	proginfo->start_sec = (eit_b->start_time_jtc >> 4 & 0x0f) * 10 +
-		(eit_b->start_time_jtc & 0x0f);
-	proginfo->dur_hour = (eit_b->duration >> 20 & 0x0f) * 10 +
-		((eit_b->duration >> 16) & 0x0f);
-	proginfo->dur_min = (eit_b->duration >> 12 & 0x0f) * 10 +
-		((eit_b->duration >> 8) & 0x0f);
-	proginfo->dur_sec = (eit_b->duration >> 4 & 0x0f) * 10 +
-		(eit_b->duration & 0x0f);
+		/* MJD -> YMD */
+		/*　2100年2月28日までの間有効な公式（ARIB STD-B10 第２部より）　*/
+		mjd = (double)eit_b->start_time_mjd;
+		y = (int)((mjd - 15078.2) / 365.25);
+		m = (int)((mjd - 14956.1 - (int)((double)y*365.25)) / 30.6001);
+		d = eit_b->start_time_mjd - 14956 - (int)((double)y*365.25) - (int)((double)m*30.6001);
+		if (m == 14 || m == 15) {
+			k = 1;
+		}
+		else {
+			k = 0;
+		}
+		proginfo->start_year = 1900 + y + k;
+		proginfo->start_month = m - 1 - k * 12;
+		proginfo->start_day = d;
 
-	if (proginfo->start_hour >= 24) { proginfo->start_hour = 23; }
-	if (proginfo->start_min >= 60) { proginfo->start_min = 59; }
-	if (proginfo->start_sec >= 60) { proginfo->start_sec = 59; }
-	if (proginfo->dur_hour >= 24) { proginfo->dur_hour = 23; }
-	if (proginfo->dur_min >= 60) { proginfo->dur_min = 59; }
-	if (proginfo->dur_sec >= 60) { proginfo->dur_sec = 59; }
+		proginfo->start_hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
+			((eit_b->start_time_jtc >> 16) & 0x0f);
+		proginfo->start_min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
+			((eit_b->start_time_jtc >> 8) & 0x0f);
+		proginfo->start_sec = (eit_b->start_time_jtc >> 4 & 0x0f) * 10 +
+			(eit_b->start_time_jtc & 0x0f);
+		if (proginfo->start_hour >= 24) { proginfo->start_hour = 23; }
+		if (proginfo->start_min >= 60) { proginfo->start_min = 59; }
+		if (proginfo->start_sec >= 60) { proginfo->start_sec = 59; }
+
+		proginfo->status &= ~PGINFO_UNKNOWN_STARTTIME;
+	}
+
+	if (eit_b->duration == 0xffffff) {
+		proginfo->dur_hour = 0;
+		proginfo->dur_min = 0;
+		proginfo->dur_sec = 0;
+		proginfo->status = PGINFO_UNKNOWN_DURATION;
+	} else {
+		proginfo->dur_hour = (eit_b->duration >> 20 & 0x0f) * 10 +
+			((eit_b->duration >> 16) & 0x0f);
+		proginfo->dur_min = (eit_b->duration >> 12 & 0x0f) * 10 +
+			((eit_b->duration >> 8) & 0x0f);
+		proginfo->dur_sec = (eit_b->duration >> 4 & 0x0f) * 10 +
+			(eit_b->duration & 0x0f);
+		if (proginfo->dur_hour >= 24) { proginfo->dur_hour = 23; }
+		if (proginfo->dur_min >= 60) { proginfo->dur_min = 59; }
+		if (proginfo->dur_sec >= 60) { proginfo->dur_sec = 59; }
+		proginfo->status &= ~PGINFO_UNKNOWN_DURATION;
+	}
 
 	proginfo->status |= PGINFO_GET_EVENT_INFO;
 }
