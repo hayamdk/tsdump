@@ -238,21 +238,25 @@ typedef struct {
 
 	int status;
 
+	/* PAT,PMT */
 	PSI_parse_t PMT_payload;
 	uint32_t PMT_last_CRC;
-
 	int n_service_pids;
 	PMT_pid_def_t service_pids[MAX_PIDS_PER_SERVICE];
+	unsigned int service_id : 16;
 
+	/* SDT */
 	unsigned int network_id : 16;
 	unsigned int ts_id : 16;
-	unsigned int service_id : 16;
-	unsigned int event_id : 16;
 
 	Sd_string_t service_provider_name;
 	Sd_string_t service_name;
 
 	/* EIT */
+	int64_t last_eventinfo_time;
+
+	unsigned int event_id : 16;
+
 	int curr_desc;
 	int last_desc;
 

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
+#include <sys/timeb.h>
 
 typedef wchar_t			WCHAR;
 typedef long			BOOL;
@@ -10,6 +12,7 @@ typedef unsigned long	DWORD;
 #include "modules_def.h"
 #include "ts_parser.h"
 #include "aribstr.h"
+#include "tsdump.h"
 
 static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 {
@@ -126,7 +129,7 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 
 void clear_proginfo(proginfo_t *proginfo)
 {
-	proginfo->status = PGINFO_GET_PAT;
+	proginfo->status &= PGINFO_GET_PAT;
 	proginfo->last_desc = -1;
 }
 
@@ -318,6 +321,7 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	}
 
 	proginfo->status |= PGINFO_GET_EVENT_INFO;
+	proginfo->last_eventinfo_time = gettime();
 }
 
 void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t *proginfo)
@@ -567,8 +571,11 @@ void parse_SDT_body(const uint8_t *body, SDT_body_t *sdt_b)
 	sdt_b->descriptors_loop_length 		= get_bits(body, 28, 12);
 }
 
-void store_SDT_Sd(const Sd_t *sd, proginfo_t *proginfo)
+void store_SDT(const SDT_header_t *sdt_h, const Sd_t *sd, proginfo_t *proginfo)
 {
+	proginfo->network_id = sdt_h->original_network_id;
+	proginfo->ts_id = sdt_h->transport_stream_id;
+
 	proginfo->service_name.aribstr_len = sd->service_name_length;
 	memcpy(proginfo->service_name.aribstr, sd->service_name_char, sd->service_name_length);
 	proginfo->service_provider_name.aribstr_len = sd->service_provider_name_length;
@@ -581,6 +588,7 @@ void store_SDT_Sd(const Sd_t *sd, proginfo_t *proginfo)
 	proginfo->service_provider_name.str_len =
 		AribToString(proginfo->service_provider_name.str, sizeof(proginfo->service_provider_name.str),
 			proginfo->service_provider_name.aribstr, proginfo->service_provider_name.aribstr_len);
+
 	proginfo->status |= PGINFO_GET_SERVICE_INFO;
 }
 
@@ -604,16 +612,16 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 
 	parse_SDT_header(payload_stat->payload, &sdt_h);
 
-	output_message(MSG_DEBUG, L"table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d",
-		sdt_h.table_id , payload_stat->pid, sdt_h.transport_stream_id, payload_stat->n_payload);
+	//output_message(MSG_DEBUG, L"table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d",
+	//	sdt_h.table_id , payload_stat->pid, sdt_h.transport_stream_id, payload_stat->n_payload);
 
 	len = payload_stat->n_payload - 11 - 4/*=sizeof(crc32)*/;
 	p_sdt_b = &payload_stat->payload[11];
 	p_sdt_end = &p_sdt_b[len];
 	while(&p_sdt_b[5] < p_sdt_end) {
 		parse_SDT_body(p_sdt_b, &sdt_b); /* read 5bytes */
-		output_message(MSG_DEBUG, L" service_id=0x%04x dlen=%d",
-			sdt_b.service_id, sdt_b.descriptors_loop_length);
+		//output_message(MSG_DEBUG, L" service_id=0x%04x dlen=%d",
+		//	sdt_b.service_id, sdt_b.descriptors_loop_length);
 
 		/* 対象のサービスIDかどうか */
 		curr_proginfo = find_curr_service(proginfo_all, n_services, sdt_b.service_id);
@@ -629,10 +637,10 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 		while( p_desc < p_desc_end ) {
 			dtag = p_desc[0];
 			dlen = p_desc[1];
-			output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d", dtag, dlen);
+			//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d", dtag, dlen);
 			if (dtag == 0x48) {
 				if (parse_Sd(p_desc, &sd)) {
-					store_SDT_Sd(&sd, curr_proginfo);
+					store_SDT(&sdt_h, &sd, curr_proginfo);
 					//AribToString(sp, 1024, sd.service_provider_name_char, sd.service_provider_name_length);
 					//AribToString(s, 1024, sd.service_name_char, sd.service_name_length);
 					//output_message(MSG_DEBUG, L"  |%s|%s|", sp, s);
