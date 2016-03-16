@@ -57,9 +57,19 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 static void hook_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, const unsigned char *src_buf, int src_size)
 {
 	DWORD dw_dst_size;
+	BOOL ret;
 	b25decoder_stat_t *pstat = (b25decoder_stat_t*)param;
-	pstat->pB25Decoder2->Decode((BYTE*)src_buf, src_size, dst_buf, &dw_dst_size);
-	*dst_size = dw_dst_size;
+
+	if (src_size > 0) {
+		ret = pstat->pB25Decoder2->Decode((BYTE*)src_buf, src_size, dst_buf, &dw_dst_size);
+		if (ret) {
+			*dst_size = dw_dst_size;
+			return;
+		}
+	}
+	/* else */
+	*dst_size = 0;
+	*dst_buf = NULL;
 }
 
 static void hook_stream_decoder_stats(void *param, decoder_stats_t *stats)

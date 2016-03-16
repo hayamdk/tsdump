@@ -72,7 +72,11 @@ static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 		pstat->pBon2->WaitTsStream(100);
 	}
 	/* tsをチューナーから取得 */
-	pstat->pBon2->GetTsStream(buf, &n_recv, &pstat->n_rem);
+	if (!pstat->pBon2->GetTsStream(buf, &n_recv, &pstat->n_rem)) {
+		*size = 0;
+		*buf = NULL;
+		return;
+	}
 	*size = n_recv;
 }
 
