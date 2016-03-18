@@ -177,6 +177,8 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 
 void init_service_list(ts_service_list_t *service_list)
 {
+	int i;
+
 	service_list->pid0x00.pid = 0;
 	service_list->pid0x00.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x11.pid = 0x11;
@@ -187,6 +189,10 @@ void init_service_list(ts_service_list_t *service_list)
 	service_list->pid0x26.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x27.pid = 0x27;
 	service_list->pid0x27.stat = PAYLOAD_STAT_INIT;
+
+	for (i = 0; i < MAX_SERVICES_PER_CH; i++) {
+		init_proginfo(&service_list->proginfos[i]);
+	}
 }
 
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
@@ -230,14 +236,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	}
 
 	do_open_stream();
-
-#ifdef AAA
-	int n_services = 0;
-	proginfo_t /*pi_prev,*/ pi[16]/*, pi_next*/;
-	for (i = 0; i < 16; i++) {
-		init_proginfo(&pi[i]);
-	}
-#endif
 
 	//memset(pi, 0, sizeof(proginfo_t) * 16);
 
