@@ -201,7 +201,6 @@ typedef struct {
 	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
-//#define PGINFO_FLAG_CHANGED			1
 #define PGINFO_GET_PAT				1
 #define PGINFO_GET_PMT				2
 #define PGINFO_GET_SERVICE_INFO		4

@@ -117,7 +117,7 @@ void init_tos(ts_output_stat_t *tos)
 		tos->pgos[i].fn = (WCHAR*)malloc(MAX_PATH_LEN*sizeof(WCHAR));
 	}
 
-	tos->retry_count = 0;
+	//tos->retry_count = 0;
 
 	//tos->pi_last.recyear = tos->pi.recyear = 9999;
 	//tos->last_pitime = gettime();
@@ -406,16 +406,18 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	int64_t starttime, endtime, last_starttime, last_endtime;
 	WCHAR msg1[64], msg2[64];
 
-	int t = 1;
-
 	if ( PGINFO_READY(tos->proginfo->status) && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
 		/* 15•bˆÈã”Ô‘gî•ñ‚ª“râ‚¦‚½‚çŽæ“¾–³‚µ‚Æ‚Ý‚È‚· */
 		clear_proginfo(tos->proginfo);
+	} else if ( tos->n_pgos == 0 && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
+		/* ‘‚«o‚µ‚ªŽn‚Ü‚ç‚È‚¢‚Ü‚Ü15•bŒo‚Á‚½‚ç‹­§ŠJŽn */
+		changed = 1;
+	} else if ( !PGINFO_READY(tos->proginfo->status) && tos->proginfo->status & PGINFO_GET_EVENT_INFO ) {
+		/* ‚½‚Ü‚½‚ÜŽæ“¾‚ª“r’†‚Ìê‡‚ÍƒpƒX */
+		return;
 	}
 
 	if ( PGINFO_READY(tos->proginfo->status) ) {
-		t = 2;
-		printf("A!");
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {
 			if (tos->last_proginfo.event_id != (int)tos->proginfo->event_id) {
 				changed = 1;
@@ -424,7 +426,6 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			changed = 1;
 		}
 	} else {
-		printf("B!");
 		if (PGINFO_READY(tos->last_proginfo.status)) {
 			changed = 1;
 		} else if( timenum64(nowtime) / 100 % 100 != timenum64(tos->last_nopi_time) / 100 % 100) {

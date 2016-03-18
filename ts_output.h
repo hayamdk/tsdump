@@ -34,7 +34,7 @@ typedef struct
 	int n_pgos;
 	pgoutput_stat_t *pgos;
 	int write_busy;
-	int retry_count;
+	//int retry_count;
 	int n_th;
 	int tps_index;
 	int singlemode;

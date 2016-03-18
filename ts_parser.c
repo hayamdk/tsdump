@@ -261,7 +261,6 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	if (proginfo->status & PGINFO_GET_EVENT_INFO && proginfo->event_id != eit_b->event_id) {
 		/* ‘O‰ñ‚Ìæ“¾‚©‚ç”Ô‘g‚ªØ‚è‘Ö‚í‚Á‚½ */
 		clear_proginfo(proginfo);
-		//proginfo->status |= PGINFO_FLAG_CHANGED;
 	}
 	proginfo->event_id = eit_b->event_id;
 
