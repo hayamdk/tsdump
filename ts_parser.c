@@ -9,8 +9,8 @@ typedef wchar_t			WCHAR;
 typedef long			BOOL;
 typedef unsigned long	DWORD;
 
-#include "modules_def.h"
 #include "ts_parser.h"
+#include "modules_def.h"
 #include "aribstr.h"
 #include "tsdump.h"
 
@@ -139,7 +139,7 @@ void init_proginfo(proginfo_t *proginfo)
 	proginfo->last_desc = -1;
 }
 
-int parse_Sed(const uint8_t *desc, Sed_t *sed)
+int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
 {
 	const uint8_t *desc_end;
 
@@ -165,7 +165,7 @@ int parse_Sed(const uint8_t *desc, Sed_t *sed)
 	return 1;
 }
 
-int parse_Eed(const uint8_t *desc, Eed_t *eed)
+int parse_EIT_Eed(const uint8_t *desc, Eed_t *eed)
 {
 	const uint8_t *desc_end;
 
@@ -192,7 +192,7 @@ int parse_Eed(const uint8_t *desc, Eed_t *eed)
 	return 1;
 }
 
-int parse_Eed_item(const uint8_t *item, const uint8_t *item_end, Eed_item_t *eed_item)
+int parse_EIT_Eed_item(const uint8_t *item, const uint8_t *item_end, Eed_item_t *eed_item)
 {
 	eed_item->item_description_length	= item[0];
 	eed_item->item_description_char		= &item[1];
@@ -260,7 +260,7 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	if (proginfo->status & PGINFO_GET_EVENT_INFO && proginfo->event_id != eit_b->event_id) {
 		/* 前回の取得から番組が切り替わった */
 		clear_proginfo(proginfo);
-		proginfo->status |= PGINFO_FLAG_CHANGED;
+		//proginfo->status |= PGINFO_FLAG_CHANGED;
 	}
 	proginfo->event_id = eit_b->event_id;
 
@@ -321,7 +321,6 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	}
 
 	proginfo->status |= PGINFO_GET_EVENT_INFO;
-	proginfo->last_eventinfo_time = gettime();
 }
 
 void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t *proginfo)
@@ -329,6 +328,18 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 	int i;
 	int item_len;
 	Eed_item_string_t *curr_item;
+
+	if (proginfo->last_desc != -1) {
+		/* 連続性チェック */
+		if ( proginfo->curr_desc == (int)eed->descriptor_number || 
+				proginfo->curr_desc + 1 == (int)eed->descriptor_number ) {
+			/* 前回の続き */
+			proginfo->curr_desc = eed->descriptor_number;
+		} else {
+			/* 不連続 */
+			proginfo->last_desc = -1;
+		}
+	}
 
 	/* 初期状態から */
 	if (proginfo->last_desc == -1) {
@@ -339,20 +350,6 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 		} else {
 			return;
 		}
-	}
-
-	/* 連続性チェック */
-	if ( proginfo->curr_desc == (int)eed->descriptor_number || 
-			proginfo->curr_desc + 1 == (int)eed->descriptor_number ) {
-		/* 前回の続き */
-		proginfo->curr_desc = eed->descriptor_number;
-	} else if( proginfo->curr_desc == proginfo->last_desc ) {
-		/* 取得が終わっている */
-		return;
-	} else {
-		/* 不連続 */
-		proginfo->last_desc = -1;
-		return;
 	}
 
 	if (eed_item->item_description_length > 0) {
@@ -484,7 +481,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 
 			if (dtag == 0x4d) {
 				Sed_t sed;
-				if (parse_Sed(p_desc, &sed)) {
+				if (parse_EIT_Sed(p_desc, &sed)) {
 					//AribToString(s1, 256, sed.event_name_char, sed.event_name_length);
 					//AribToString(s2, 256, sed.text_char, sed.text_length);
 
@@ -492,20 +489,27 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 					//	sed.descriptor_tag, sed.descriptor_length, sed.ISO_639_language_code);
 					//output_message(MSG_DEBUG, L"  [%s]\n[%s]", s1, s2);
 					store_EIT_Sed(&sed, curr_proginfo);
+					if (PGINFO_READY(curr_proginfo->status)) {
+						curr_proginfo->last_ready_time = gettime();
+					}
 					//output_message(MSG_DEBUG, L"  [%s]\n[%s]", proginfo->event_name.str, proginfo->event_text.str);
 				}
 			} else if (dtag == 0x4e) {
 				Eed_t eed;
 				Eed_item_t eed_item;
 				uint8_t *p_eed_item, *p_eed_item_end;
-				if (parse_Eed(p_desc, &eed)) {
+				if (parse_EIT_Eed(p_desc, &eed)) {
 					//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d code=%S dnum: %d of %d",
 					//	eed.descriptor_tag, eed.descriptor_length, eed.ISO_639_language_code, eed.descriptor_number, eed.last_descriptor_number);
 					p_eed_item = &p_desc[7];
 					p_eed_item_end = &p_eed_item[eed.length_of_items];
 					while (p_eed_item < p_eed_item_end) {
-						if (parse_Eed_item(p_eed_item, p_eed_item_end, &eed_item)) {
+						if (parse_EIT_Eed_item(p_eed_item, p_eed_item_end, &eed_item)) {
 
+							/* ARIB TR-B14 第四編 地上デジタルテレビジョン放送 PSI/SI 運用規定 12.2 セクションへの記述子の配置 は、
+							Eedが複数のEITにまたがって送信されることは無いことを規定していると解釈できる。
+							よってparse_EIT()を抜けたときはcurr_proginfo->itemsに全てのアイテムが収納されていることが保障される。
+							仮にこの仮定が満たされない場合でも、単に中途半端な番組情報が見えてしまうタイミングが存在するだけである */
 							store_EIT_Eed_item(&eed, &eed_item, curr_proginfo);
 
 							//AribToString(s1, 256, eed_item.item_description_char, eed_item.item_description_length);
@@ -525,7 +529,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 	}
 }
 
-int parse_Sd(const uint8_t *desc, Sd_t *sd)
+int parse_SDT_Sd(const uint8_t *desc, Sd_t *sd)
 {
 	sd->descriptor_tag					= desc[0];
 	sd->descriptor_length				= desc[1];
@@ -639,7 +643,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 			dlen = p_desc[1];
 			//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d", dtag, dlen);
 			if (dtag == 0x48) {
-				if (parse_Sd(p_desc, &sd)) {
+				if (parse_SDT_Sd(p_desc, &sd)) {
 					store_SDT(&sdt_h, &sd, curr_proginfo);
 					//AribToString(sp, 1024, sd.service_provider_name_char, sd.service_provider_name_length);
 					//AribToString(s, 1024, sd.service_name_char, sd.service_name_length);

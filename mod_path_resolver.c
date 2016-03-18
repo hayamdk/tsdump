@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 #include "tsdump.h"
 #include "strfuncs.h"
@@ -41,17 +42,20 @@ static void normalize_fname(WCHAR *fname)
 	}
 }
 
-static void get_fname(WCHAR* fname, const ProgInfo *pi, const ch_info_t *ch_info, WCHAR *ext)
+static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_info, WCHAR *ext)
 {
 	int64_t tn;
-	int i;
+	int i, isok = 0;
 
-	//ProgInfo *pi = &(tos->pi);
+	if (PGINFO_READY(pi->status)) {
+		isok = 1;
+	}
+
 	const WCHAR *chname, *pname;
-	if (pi->isok) {
+	if (isok) {
 		tn = timenum_start(pi);
-		chname = pi->chname;
-		pname = pi->pname;
+		chname = pi->service_name.str;
+		pname = pi->event_name.str;
 	} else {
 		tn = timenumnow();
 		chname = ch_info->ch_str;
@@ -65,7 +69,7 @@ static void get_fname(WCHAR* fname, const ProgInfo *pi, const ch_info_t *ch_info
 	normalize_fname(chname_n);
 
 	/* tnは番組情報の開始時刻 */
-	if (!pi->isok && ch_info->n_services > 1) {
+	if (!isok && ch_info->n_services > 1) {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, ext);
 	} else {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
@@ -75,7 +79,7 @@ static void get_fname(WCHAR* fname, const ProgInfo *pi, const ch_info_t *ch_info
 	}
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
-	if (!pi->isok && ch_info->n_services > 1) {
+	if (!isok && ch_info->n_services > 1) {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, ext);
 	} else {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
@@ -86,7 +90,7 @@ static void get_fname(WCHAR* fname, const ProgInfo *pi, const ch_info_t *ch_info
 
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
-		if (!pi->isok && ch_info->n_services > 1) {
+		if (!isok && ch_info->n_services > 1) {
 			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s_%d%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, i, ext);
 		} else {
 			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s_%d%s", param_base_dir, tn, chname_n, pname_n, i, ext);
@@ -102,7 +106,7 @@ END:
 	return;
 }
 
-static const WCHAR* hook_path_resolver(const ProgInfo *pi, const ch_info_t *ch_info)
+static const WCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
 {
 	WCHAR *fname = (WCHAR*)malloc(sizeof(WCHAR)*MAX_PATH_LEN);
 	get_fname(fname, pi, ch_info, L".ts");
@@ -137,7 +141,7 @@ static void register_hooks()
 }
 
 MODULE_DEF module_def_t mod_path_resolver = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_path_resolver",
 	register_hooks,
 	cmds,

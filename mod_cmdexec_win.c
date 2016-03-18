@@ -6,6 +6,7 @@
 
 #include <shlwapi.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 
 #define MAX_EXECCMDS 32
@@ -14,7 +15,7 @@ static int n_execcmds = 0;
 static WCHAR *execcmds[MAX_EXECCMDS];
 static int cwindow_min = 0;
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo* pi, const ch_info_t *ch_info)
+static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t* pi, const ch_info_t *ch_info)
 {
 	WCHAR *fname_dup = _wcsdup(fname);
 	UNREF_ARG(ch_info);
@@ -70,7 +71,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_cmdexec_win = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_cmdexec_win",
 	register_hooks,
 	cmds

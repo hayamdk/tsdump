@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 #include "IBonDriver2.h"
 
@@ -200,7 +201,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_bondriver = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_bondriver",
 	register_hooks,
 	cmds

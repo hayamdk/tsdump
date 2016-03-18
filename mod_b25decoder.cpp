@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 #include "IB25Decoder.h"
 
@@ -129,7 +130,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_b25decoder = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_b25decoder",
 	register_hooks,
 	cmds

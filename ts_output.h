@@ -6,7 +6,11 @@ typedef struct
 	int close_flag;
 	int64_t closetime;
 	void **modulestats;
-	ProgInfo final_pi;
+	//ProgInfo final_pi;
+
+	proginfo_t final_pi;
+	int initial_pi_status;
+
 } pgoutput_stat_t;
 
 typedef struct
@@ -23,8 +27,14 @@ typedef struct
 	int pos_pi;
 	int pos_filled_old;
 	transfer_history_t *th;
-	ProgInfo pi;
-	ProgInfo pi_last;
+
+	//ProgInfo pi;
+	//ProgInfo pi_last;
+
+	proginfo_t *proginfo;
+	proginfo_t last_proginfo;
+	int64_t last_nopi_time;
+
 	int n_pgos;
 	pgoutput_stat_t *pgos;
 	int write_busy;

@@ -216,16 +216,19 @@ typedef struct {
 	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
-#define PGINFO_FLAG_CHANGED			1
-#define PGINFO_GET_PAT				2
-#define PGINFO_GET_PMT				4
-#define PGINFO_GET_SERVICE_INFO		8
-#define PGINFO_GET_EVENT_INFO		16
-#define PGINFO_GET_SHORT_TEXT		32
-#define PGINFO_GET_EXTEND_TEXT		64
+//#define PGINFO_FLAG_CHANGED			1
+#define PGINFO_GET_PAT				1
+#define PGINFO_GET_PMT				2
+#define PGINFO_GET_SERVICE_INFO		4
+#define PGINFO_GET_EVENT_INFO		8
+#define PGINFO_GET_SHORT_TEXT		16
+#define PGINFO_GET_EXTEND_TEXT		32
 
-#define PGINFO_UNKNOWN_STARTTIME	128
-#define PGINFO_UNKNOWN_DURATION		256
+#define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
+#define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
+
+#define PGINFO_UNKNOWN_STARTTIME	64
+#define PGINFO_UNKNOWN_DURATION		128
 
 #define MAX_PIDS_PER_SERVICE		64
 
@@ -253,7 +256,7 @@ typedef struct {
 	Sd_string_t service_name;
 
 	/* EIT */
-	int64_t last_eventinfo_time;
+	int64_t last_ready_time;
 
 	unsigned int event_id : 16;
 
@@ -388,3 +391,63 @@ void parse_PMT(uint8_t * packet, proginfo_t *proginfos, int n_services);
 void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);
 void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);
+
+static inline int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
+{
+	int i;
+	WCHAR *p = dst, *end = &dst[n-1];
+
+	*p = L'\0';
+	if( !(pi->status & PGINFO_GET_EXTEND_TEXT) ) {
+		return 0;
+	}
+
+	for (i = 0; i < pi->n_items && p < end; i++) {
+		wcscpy_s(p, end - p, pi->items[i].desc);
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, L"\n");
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, pi->items[i].item);
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, L"\n");
+		while (*p != L'\0') { p++; }
+	}
+	return 1;
+}
+
+static inline int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
+{
+	WCHAR et1[4096], et2[4096];
+
+	if (pi1->status != pi2->status) {
+		return 1;
+	}
+	if (pi1->dur_hour != pi2->dur_hour ||
+		pi1->dur_min != pi2->dur_min ||
+		pi1->dur_sec != pi2->dur_sec ||
+		pi1->start_hour != pi2->start_hour ||
+		pi1->start_min != pi2->start_min ||
+		pi1->start_sec != pi2->start_sec ||
+		pi1->start_year != pi2->start_year ||
+		pi1->start_month != pi2->start_month ||
+		pi1->start_day != pi2->start_day) {
+		return 1;
+	}
+
+	if ( (pi1->status & PGINFO_GET_SHORT_TEXT) != (pi2->status & PGINFO_GET_SHORT_TEXT) ) {
+		return 1;
+	}
+	if ( (pi1->status & PGINFO_GET_SHORT_TEXT) & (pi2->status & PGINFO_GET_SHORT_TEXT) ) {
+		if (wcscmp(pi1->event_text.str, pi1->event_text.str) != 0) {
+			return 1;
+		}
+	}
+	if (get_extended_text(et1, sizeof(et1) / sizeof(WCHAR), pi1) !=
+		get_extended_text(et2, sizeof(et2) / sizeof(WCHAR), pi2)) {
+		return 1;
+	}
+	if (wcscmp(et1, et2) != 0) {
+		return 1;
+	}
+	return 0;
+}

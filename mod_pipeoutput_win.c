@@ -7,6 +7,7 @@
 
 #include <shlwapi.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 
 typedef struct{
@@ -257,7 +258,7 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 	return;
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const ProgInfo *pi, const ch_info_t *ch_info_t)
+static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t)
 {
 	int i;
 	UNREF_ARG(pi);
@@ -338,10 +339,11 @@ static void hook_pgoutput(void *stat, const unsigned char *buf, const size_t siz
 	}
 }
 
-static void hook_pgoutput_close(void *pstat, const ProgInfo *pi)
+static void hook_pgoutput_close(void *pstat, const proginfo_t *pi)
 {
-	pipestat_t *ps = (pipestat_t*)pstat;
 	UNREF_ARG(pi);
+
+	pipestat_t *ps = (pipestat_t*)pstat;
 	int i;
 	for (i = 0; i < n_pipecmds; i++) {
 		if (ps[i].used) {
@@ -386,7 +388,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_pipeoutput_win = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_pipeoutput_win",
 	register_hooks,
 	cmds

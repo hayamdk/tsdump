@@ -14,9 +14,9 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 #include "tsdump.h"
-#include "ts_parser.h"
 #include "ts_output.h"
 #include "load_modules.h"
 #include "strfuncs.h"
@@ -230,6 +230,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	for (i = 0; i < 16; i++) {
 		init_proginfo(&pi[i]);
 	}
+
+	//memset(pi, 0, sizeof(proginfo_t) * 16);
+
 	//pi[0].service_id = 0x400;
 	//pi[1].service_id = 0x401;
 
@@ -255,12 +258,12 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			parse_EIT(&pid0x27, &decbuf[i], pi, 16);
 		}
 
-		for (i = 0; i < n_services; i++) {
+		/*for (i = 0; i < n_services; i++) {
 			if (pi[i].status & PGINFO_GET_EVENT_INFO) {
 				printf("eeeeeeeeeeee! %d\n", i);
 				clear_proginfo(&pi[i]);
 			}
-		}
+		}*/
 
 		//tc_start("bufcopy");
 		if ( single_mode ) { /* 単一書き出しモード */
@@ -269,6 +272,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				n_tos = param_n_services = 1;
 				tos = (ts_output_stat_t*)malloc(1 * sizeof(ts_output_stat_t));
 				init_tos(tos);
+				tos->proginfo = &pi[0];
 			}
 
 			/* パケットをバッファにコピー */
@@ -585,7 +589,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_core = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_core",
 	register_hooks,
 	cmds

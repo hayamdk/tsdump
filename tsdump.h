@@ -27,16 +27,21 @@ static inline int64_t gettime()
 	return result;
 }
 
-static inline int64_t timenum_end_sec(const ProgInfo *pi, int *psec)
+static inline int64_t timenum_end_sec(const proginfo_t *pi, int *psec)
 {
 	int64_t tn;
 	struct tm t, te;
 	time_t tt;
 	int sec, min, hour, day_diff;
 
-	sec = pi->recsec + pi->dursec;
-	min = pi->recmin + pi->durmin;
-	hour = pi->rechour + pi->durhour;
+	if (pi->status & PGINFO_UNKNOWN_STARTTIME || pi->status & PGINFO_UNKNOWN_DURATION) {
+		*psec = 0;
+		return 0;
+	}
+
+	sec = pi->start_sec + pi->dur_sec;
+	min = pi->start_min + pi->dur_min;
+	hour = pi->start_hour + pi->dur_hour;
 	day_diff = 0;
 
 	if (sec >= 60) {
@@ -53,9 +58,9 @@ static inline int64_t timenum_end_sec(const ProgInfo *pi, int *psec)
 	}
 
 	memset(&t, 0, sizeof(struct tm));
-	t.tm_mday = pi->recday;
-	t.tm_mon = pi->recmonth - 1;
-	t.tm_year = pi->recyear - 1900;
+	t.tm_mday = pi->start_day;
+	t.tm_mon = pi->start_month - 1;
+	t.tm_year = pi->start_year - 1900;
 
 	tt = mktime(&t);
 	if (tt != -1) {
@@ -82,12 +87,12 @@ static inline int64_t timenum_end_sec(const ProgInfo *pi, int *psec)
 	return tn;
 }
 
-static inline int64_t timenum_end(const ProgInfo *pi)
+static inline int64_t timenum_end(const proginfo_t *pi)
 {
 	return timenum_end_sec(pi, NULL);
 }
 
-static inline int64_t timenum_end14(const ProgInfo *pi)
+static inline int64_t timenum_end14(const proginfo_t *pi)
 {
 	int64_t t;
 	int sec;
@@ -95,18 +100,23 @@ static inline int64_t timenum_end14(const ProgInfo *pi)
 	return t * 100 + sec;
 }
 
-static inline int64_t timenum_start(const ProgInfo *pi)
+static inline int64_t timenum_start(const proginfo_t *pi)
 {
 	int64_t tn;
-	tn = pi->recyear;
+
+	if (pi->status & PGINFO_UNKNOWN_STARTTIME) {
+		return 0;
+	}
+
+	tn = pi->start_year;
 	tn *= 100;
-	tn += pi->recmonth;
+	tn += pi->start_month;
 	tn *= 100;
-	tn += pi->recday;
+	tn += pi->start_day;
 	tn *= 100;
-	tn += pi->rechour;
+	tn += pi->start_hour;
 	tn *= 100;
-	tn += pi->recmin;
+	tn += pi->start_min;
 	//tn *= 100;
 	//tn += pi->recsec;
 	return tn;
@@ -118,6 +128,27 @@ static inline int64_t timenumtt(time_t t)
 	struct tm lt;
 	
 	localtime_s(&lt, &t);
+
+	tn = lt.tm_year + 1900;
+	tn *= 100;
+	tn += (lt.tm_mon + 1);
+	tn *= 100;
+	tn += lt.tm_mday;
+	tn *= 100;
+	tn += lt.tm_hour;
+	tn *= 100;
+	tn += lt.tm_min;
+	return tn;
+}
+
+static inline int64_t timenum64(int64_t ms)
+{
+	int64_t tn;
+	struct tm lt;
+
+	time_t tt = ms / 1000;
+
+	localtime_s(&lt, &tt);
 
 	tn = lt.tm_year + 1900;
 	tn *= 100;

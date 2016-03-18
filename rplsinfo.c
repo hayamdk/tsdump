@@ -6,6 +6,7 @@
 #include <tchar.h>
 #include <inttypes.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 
 #include "rplsinfo.h"

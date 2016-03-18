@@ -4,6 +4,7 @@
 #include <wchar.h>
 #include <inttypes.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 
 #include "tsprocess.h"

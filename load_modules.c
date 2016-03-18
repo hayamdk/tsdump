@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <process.h>
 
+#include "ts_parser.h"
 #include "modules_def.h"
 #include "tsdump.h"
 #include "load_modules.h"
@@ -155,7 +156,7 @@ int register_hook_path_resolver(hook_path_resolver_t handler)
 	return 1;
 }
 
-void **do_pgoutput_create(const WCHAR *fname, ProgInfo *pi, ch_info_t *ch_info)
+void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info)
 {
 	int i;
 	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
@@ -201,7 +202,7 @@ int do_pgoutput_wait(void **modulestats)
 	return err;
 }
 
-void do_pgoutput_close(void **modulestats, ProgInfo *pi)
+void do_pgoutput_close(void **modulestats, const proginfo_t *pi)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
@@ -367,7 +368,7 @@ void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const 
 	}
 }
 
-const WCHAR *default_path_resolver(const ProgInfo *pi, const ch_info_t *ch_info)
+const WCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
 {
 	UNREF_ARG(pi);
 	UNREF_ARG(ch_info);
@@ -376,7 +377,7 @@ const WCHAR *default_path_resolver(const ProgInfo *pi, const ch_info_t *ch_info)
 	return fname;
 }
 
-const WCHAR *do_path_resolver(const ProgInfo *proginfo, const ch_info_t *ch_info)
+const WCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info)
 {
 	if (hook_path_resolver) {
 		return hook_path_resolver(proginfo, ch_info);
@@ -412,7 +413,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
-	if ( mod->mod_ver != TSDUMP_MODULE_V2 ) {
+	if ( mod->mod_ver != TSDUMP_MODULE_V3 ) {
 		output_message(MSG_ERROR, L"ŒÝŠ·«‚Ì–³‚¢ƒ‚ƒWƒ…[ƒ‹‚Å‚·: %s", mod->modname);
 		return 0;
 	}

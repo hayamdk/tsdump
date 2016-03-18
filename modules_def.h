@@ -32,6 +32,8 @@
 
 #define			CONVBUFSIZE				65536
 
+#define OLDPGINFO
+#ifdef OLDPGINFO
 // î‘ëgèÓïÒç\ë¢ëÃ
 typedef struct {
 	int		recyear;
@@ -64,6 +66,7 @@ typedef struct {
 	/* í«â¡ */
 	BOOL	isok;
 } ProgInfo;
+#endif
 
 typedef void (*register_hooks_t)();
 
@@ -71,8 +74,9 @@ typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);
 
 typedef enum {
 	TSDUMP_MODULE_NONE = 0,
-	TSDUMP_MODULE_V1 = 1,
-	TSDUMP_MODULE_V2 = 2,
+/*	TSDUMP_MODULE_V1 = 1,
+	TSDUMP_MODULE_V2 = 2,*/
+	TSDUMP_MODULE_V3 = 3,
 } module_ver;
 
 typedef struct{
@@ -101,11 +105,11 @@ typedef struct{
 	const WCHAR *ch_str;
 } ch_info_t;
 
-typedef void* (*hook_pgoutput_create_t)(const WCHAR*, const ProgInfo*, const ch_info_t *ch_info);
+typedef void* (*hook_pgoutput_create_t)(const WCHAR*, const proginfo_t*, const ch_info_t *ch_info);
 typedef void(*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int(*hook_pgoutput_check_t)(void*);
 typedef const int(*hook_pgoutput_wait_t)(void*);
-typedef void(*hook_pgoutput_close_t)(void*, const ProgInfo*);
+typedef void(*hook_pgoutput_close_t)(void*, const proginfo_t*);
 typedef void(*hook_pgoutput_postclose_t)(void*);
 typedef int (*hook_postconfig_t)();
 typedef void(*hook_close_module_t)();
@@ -157,7 +161,7 @@ typedef enum {
 } message_type_t;
 
 typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
-typedef const WCHAR *(*hook_path_resolver_t)(const ProgInfo*, const ch_info_t*);
+typedef const WCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*);
 
 //typedef void(*hook_stream_splitter)();
 
