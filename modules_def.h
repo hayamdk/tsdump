@@ -30,44 +30,6 @@
 
 #define			UNREF_ARG(x)			(x)
 
-#define			CONVBUFSIZE				65536
-
-#define OLDPGINFO
-#ifdef OLDPGINFO
-// î‘ëgèÓïÒç\ë¢ëÃ
-typedef struct {
-	int		recyear;
-	int		recmonth;
-	int		recday;
-	int		rechour;
-	int		recmin;
-	int		recsec;
-	int		durhour;
-	int		durmin;
-	int		dursec;
-	int		rectimezone;
-	int		makerid;
-	int		modelcode;
-	int		recsrc;
-	int		chnum;
-	WCHAR	chname[CONVBUFSIZE];
-	int		chnamelen;
-	WCHAR	pname[CONVBUFSIZE];
-	int		pnamelen;
-	WCHAR	pdetail[CONVBUFSIZE];
-	int		pdetaillen;
-	WCHAR	pextend[CONVBUFSIZE];
-	int		pextendlen;
-	int		genre[3];
-	int		genretype[3];
-	BOOL	bSonyRpls;
-	BOOL	bPanaRpls;
-
-	/* í«â¡ */
-	BOOL	isok;
-} ProgInfo;
-#endif
-
 typedef void (*register_hooks_t)();
 
 typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);

@@ -8,7 +8,6 @@
 
 #include "ts_parser.h"
 #include "modules_def.h"
-#include "rplsinfo.h"
 #include "tsdump.h"
 #include "ts_output.h"
 #include "load_modules.h"
