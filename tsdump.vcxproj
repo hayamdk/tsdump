@@ -79,7 +79,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="aribstr.c" />
-    <ClCompile Include="convtounicode.c" />
     <ClCompile Include="default_decoder.c" />
     <ClCompile Include="load_modules.c" />
     <ClCompile Include="mod_b25decoder.cpp" />
@@ -89,43 +88,23 @@
     <ClCompile Include="mod_fileoutput_win.c" />
     <ClCompile Include="mod_path_resolver.c" />
     <ClCompile Include="mod_pipeoutput_win.c" />
-    <ClCompile Include="proginfo.c" />
-    <ClCompile Include="rplsinfo.c" />
     <ClCompile Include="strfuncs.c" />
     <ClCompile Include="tsdump.c" />
-    <ClCompile Include="tsprocess.c" />
     <ClCompile Include="ts_output.c" />
     <ClCompile Include="ts_parser.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aribstr.h" />
-    <ClInclude Include="charsize1table.h" />
-    <ClInclude Include="convtounicode.h" />
     <ClInclude Include="default_decoder.h" />
-    <ClInclude Include="hankaku1table.h" />
-    <ClInclude Include="hiragana1table.h" />
     <ClInclude Include="IB25Decoder.h" />
     <ClInclude Include="IBonDriver2.h" />
-    <ClInclude Include="jis12table.h" />
-    <ClInclude Include="jis12wintable.h" />
-    <ClInclude Include="jis3combiningtable.h" />
-    <ClInclude Include="jis3table.h" />
-    <ClInclude Include="jis4table.h" />
-    <ClInclude Include="kanacommon1table.h" />
-    <ClInclude Include="katakana1table.h" />
-    <ClInclude Include="kigou1excludetable.h" />
     <ClInclude Include="load_modules.h" />
     <ClInclude Include="modules.h" />
     <ClInclude Include="modules_def.h" />
-    <ClInclude Include="proginfo.h" />
-    <ClInclude Include="rplsinfo.h" />
     <ClInclude Include="strfuncs.h" />
     <ClInclude Include="tsdump.h" />
-    <ClInclude Include="tsprocess.h" />
     <ClInclude Include="ts_output.h" />
     <ClInclude Include="ts_parser.h" />
-    <ClInclude Include="tuikakigou1table.h" />
-    <ClInclude Include="tuikakigou2table.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
