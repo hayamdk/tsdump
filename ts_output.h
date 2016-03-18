@@ -6,7 +6,6 @@ typedef struct
 	int close_flag;
 	int64_t closetime;
 	void **modulestats;
-	//ProgInfo final_pi;
 
 	proginfo_t final_pi;
 	int initial_pi_status;
@@ -28,9 +27,6 @@ typedef struct
 	int pos_filled_old;
 	transfer_history_t *th;
 
-	//ProgInfo pi;
-	//ProgInfo pi_last;
-
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
 	int64_t last_nopi_time;
@@ -41,9 +37,11 @@ typedef struct
 	int retry_count;
 	int n_th;
 	int tps_index;
-	int service_id;
+	int singlemode;
 	int PAT_packet_counter;
 	int dropped_bytes;
+
+	int n_tos;
 } ts_output_stat_t;
 
 void init_tos(ts_output_stat_t *tos);
@@ -56,21 +54,21 @@ void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime);
 void ts_output(ts_output_stat_t *tos, int64_t nowtime, int);
 int ts_wait_pgoutput(ts_output_stat_t *tos);
 void ts_check_pgoutput(ts_output_stat_t *tos);
-int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_info_t *ch_info);
+int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);
 
-static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_parse_stat_t *tps)
+static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_service_list_t *service_list)
 {
 	int i, j, found = 0, my = 0;
-	for (i = 0; i < tps->n_programs; i++) {
-		if (pid == tps->payload_PMTs[i].pid) {
+	for (i = 0; i < service_list->n_services; i++) {
+		if (pid == service_list->proginfos[i].PMT_payload.pid ) {
 			if (i == tos->tps_index) {
 				my = 1;
 			} else {
 				found = 1;
 			}
 		}
-		for (j = 0; j < tps->programs[i].n_pids; j++) {
-			if (pid == tps->programs[i].content_pids[j]) {
+		for (j = 0; j < service_list->proginfos[i].n_service_pids; j++) {
+			if (pid == service_list->proginfos[i].service_pids[j].pid) {
 				if (i == tos->tps_index) {
 					my = 1;
 				} else {
@@ -150,17 +148,17 @@ static inline void ts_giveup_pibuf(ts_output_stat_t *tos)
 	tos->pos_pi = tos->pos_filled;
 }
 
-static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_parse_stat_t *tps, BYTE *packet)
+static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, BYTE *packet)
 {
 	unsigned int pid;
 	int ismypid;
 	BYTE new_packet[188], *p;
 
 	pid = ts_get_pid(packet);
-	ismypid = ts_is_mypid(pid, tos, tps);
+	ismypid = ts_is_mypid(pid, tos, service_list);
 	if (pid == 0) {
 		/* PATの内容を当該サービスだけにする */
-		if ( !ts_simplify_PAT_packet(new_packet, packet, tps->programs[tos->tps_index].service_id, tos->PAT_packet_counter) ) {
+		if ( !ts_simplify_PAT_packet(new_packet, packet, service_list->proginfos[tos->tps_index].service_id, tos->PAT_packet_counter) ) {
 			return;
 		}
 		p = new_packet;

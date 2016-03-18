@@ -59,25 +59,25 @@ void printpi(const proginfo_t *pi)
 	}
 }
 
-int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_info_t *ch_info)
+int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info)
 {
 	int i, j, k;
 	int n_tos;
 	ts_output_stat_t *tos;
 
 	if (ch_info->mode_all_services) {
-		n_tos = tps->n_programs;
+		n_tos = service_list->n_services;
 		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
 		for (i = 0; i < n_tos; i++) {
 			init_tos(&tos[i]);
 			tos[i].tps_index = i;
-			tos[i].service_id = tps->programs[i].service_id;
+			tos[i].proginfo = &service_list->proginfos[i];
 		}
 	} else {
 		n_tos = 0;
 		for (i = 0; i < ch_info->n_services; i++) {
-			for (j = 0; j < tps->n_programs; j++) {
-				if (ch_info->services[i] == tps->programs[j].service_id) {
+			for (j = 0; j < service_list->n_services; j++) {
+				if (ch_info->services[i] == service_list->proginfos[j].service_id) {
 					n_tos++;
 					break;
 				}
@@ -86,20 +86,20 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_parse_stat_t *tps, ch_inf
 		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
 		k = 0;
 		for (i = 0; i < ch_info->n_services; i++) {
-			for (j = 0; j < tps->n_programs; j++) {
-				if (ch_info->services[i] == tps->programs[j].service_id) {
+			for (j = 0; j < service_list->n_services; j++) {
+				if (ch_info->services[i] == service_list->proginfos[j].service_id) {
 					init_tos(&tos[k]);
 					tos[k].tps_index = j;
-					tos[k].service_id = tps->programs[j].service_id;
+					tos[k].proginfo = &service_list->proginfos[j];
 					k++;
 				}
 			}
 		}
 	}
 
-	ch_info->services = (int*)malloc(n_tos*sizeof(int));
+	ch_info->services = (unsigned int*)malloc(n_tos*sizeof(unsigned int));
 	for (i = 0; i < n_tos; i++) {
-		ch_info->services[i] = tos[i].service_id;
+		ch_info->services[i] = tos[i].proginfo->service_id;
 	}
 	ch_info->n_services = n_tos;
 
@@ -128,10 +128,10 @@ void init_tos(ts_output_stat_t *tos)
 	tos->pos_pi = 0;
 	tos->pos_write = 0;
 	tos->write_busy = 0;
-	tos->service_id = -1;
 	tos->dropped_bytes = 0;
 
 	tos->last_proginfo.status = 0;
+	tos->last_nopi_time = gettime();
 
 	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
 	if (tos->n_th < 2) {
@@ -406,7 +406,15 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	int64_t starttime, endtime, last_starttime, last_endtime;
 	WCHAR msg1[64], msg2[64];
 
+	int t = 1;
+
+	if ( PGINFO_READY(tos->proginfo->status) && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
+		/* 15秒以上番組情報が途絶えたら取得無しとみなす */
+		clear_proginfo(tos->proginfo);
+	}
+
 	if ( PGINFO_READY(tos->proginfo->status) ) {
+		t = 2;
 		printf("A!");
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {
 			if (tos->last_proginfo.event_id != (int)tos->proginfo->event_id) {
@@ -415,17 +423,14 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		} else {
 			changed = 1;
 		}
-	} else if (nowtime - tos->proginfo->last_ready_time > 15 * 1000) {
+	} else {
 		printf("B!");
 		if (PGINFO_READY(tos->last_proginfo.status)) {
-			tos->last_proginfo = *tos->proginfo;
 			changed = 1;
 		} else if( timenum64(nowtime) / 100 % 100 != timenum64(tos->last_nopi_time) / 100 % 100) {
 			changed = 1;
 		}
 		tos->last_nopi_time = nowtime;
-	}else {
-		return;
 	}
 
 	if (changed) {
@@ -440,7 +445,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 			pgos->initial_pi_status = tos->proginfo->status;
 
-			ch_info->service_id = tos->service_id; /* ここでch_infoの中身を書き換えている */
+			//ch_info->service_id = tos->service_id; /* ここでch_infoの中身を書き換えている */
 
 			pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
 			pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info); /* ここでch_infoにアクセス */
@@ -467,20 +472,20 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			last_endtime = timenum_end(&tos->last_proginfo);
 
 			if ( starttime != last_starttime ) {
-				if (tos->service_id == -1) {
+				if (tos->n_tos <= 1) {
 					tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
 				} else {
-					swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->service_id);
+					swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
 				}
 
 				output_message( MSG_NOTIFY, L"%s: %02d:%02d → %02d:%02d", msg1,
 					(int)(last_starttime/100%100), (int)(last_starttime%100),
 					(int)(starttime/100%100), (int)(starttime%100) );
 			} else if ( endtime != last_endtime ) {
-				if (tos->service_id == -1) {
+				if (tos->n_tos <= 1) {
 					tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
 				} else {
-					swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->service_id);
+					swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
 				}
 
 				if (last_endtime == 0 ) {

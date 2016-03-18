@@ -70,7 +70,7 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 
 	/* tnは番組情報の開始時刻 */
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
 	}
@@ -80,7 +80,7 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
 		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
 	}
@@ -91,7 +91,7 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s_%d%s", param_base_dir, tn, chname_n, ch_info->service_id, pname_n, i, ext);
+			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s_%d%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, i, ext);
 		} else {
 			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s_%d%s", param_base_dir, tn, chname_n, pname_n, i, ext);
 		}

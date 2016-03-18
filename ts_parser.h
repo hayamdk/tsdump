@@ -179,21 +179,6 @@ static inline unsigned __int32 get_payload_crc32(PSI_parse_t *ps)
 		ps->payload[ps->n_payload - 1];
 }
 
-typedef struct {
-	int service_id;
-	unsigned int *content_pids;
-	int n_pids;
-	unsigned __int32 payload_crc32;
-} program_pid_info_t;
-
-typedef struct {
-	PSI_parse_t payload_PAT;
-	unsigned __int32 payload_crc32_PAT;
-	PSI_parse_t *payload_PMTs;
-	program_pid_info_t *programs;
-	int n_programs;
-} ts_parse_stat_t;
-
 #define ARIB_CHAR_SIZE_RATIO 1
 
 typedef struct {
@@ -231,6 +216,7 @@ typedef struct {
 #define PGINFO_UNKNOWN_DURATION		128
 
 #define MAX_PIDS_PER_SERVICE		64
+#define MAX_SERVICES_PER_CH			32
 
 typedef struct {
 	unsigned int stream_type : 8;
@@ -282,6 +268,16 @@ typedef struct {
 	Eed_item_string_t items[8];
 
 } proginfo_t;
+
+typedef struct {
+	PSI_parse_t pid0x00;
+	PSI_parse_t pid0x11;
+	PSI_parse_t pid0x12;
+	PSI_parse_t pid0x26;
+	PSI_parse_t pid0x27;
+	int n_services;
+	proginfo_t proginfos[MAX_SERVICES_PER_CH];
+} ts_service_list_t;
 
 /* 短形式イベント記述子（Short event descriptor） */
 typedef struct {
@@ -388,7 +384,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *proginfos, const int n_services_max, int *n_services);
 void parse_PMT(uint8_t * packet, proginfo_t *proginfos, int n_services);
 
-void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);
+//void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet);
 void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);
 

@@ -304,11 +304,8 @@ const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET Cod
 			return PutAlphanumericChar(lpszDst, wCode);
 		} else {
 			//半角はそのまま出力
-			/*lpszDst[0] = wCode;
-			return 1UL;*/
 			lpszDst[0] = wCode;
-			lpszDst[1] = 0;
-			return 2;
+			return 1UL;
 		}
 
 	case CODE_HIRAGANA :

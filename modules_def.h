@@ -58,9 +58,9 @@ typedef struct{
 typedef struct{
 	int sp_num;
 	int ch_num;
-	int service_id;
+	//unsigned int service_id;
 	int n_services;
-	int *services;
+	unsigned int *services;
 	int mode_all_services;
 	const WCHAR *tuner_name;
 	const WCHAR *sp_str;

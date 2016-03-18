@@ -137,6 +137,7 @@ void init_proginfo(proginfo_t *proginfo)
 {
 	proginfo->status = 0;
 	proginfo->last_desc = -1;
+	proginfo->last_ready_time = gettime();
 }
 
 int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
@@ -738,99 +739,5 @@ void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *prog
 			}
 		}
 		output_message(MSG_DISP, L"---------------------------------- >>>");
-	}
-}
-
-void parse_ts_packet(ts_parse_stat_t *tps, unsigned char *packet)
-{
-	int i;
-
-	if (packet[0] != 0x47) {
-		return;
-	}
-
-	parse_PSI(packet, &(tps->payload_PAT));
-	for (i = 0; i < tps->n_programs/* should be initialized to 0 */; i++) {
-		parse_PSI(packet, &(tps->payload_PMTs[i]));
-		if (tps->payload_PMTs[i].stat == PAYLOAD_STAT_FINISHED) {
-			/* parse PMT */
-			int pid, stype, n_pids;
-			unsigned char *payload = tps->payload_PMTs[i].payload;
-			int pos = 12 + payload[11];
-			n_pids = 0;
-			if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) { /* CRCが前回と違ったときのみ表示 */
-				output_message(MSG_DISP, L"<<< ------------- PMT ---------------\n"
-					L"program_number: %d(0x%X), payload crc32: 0x%08X",
-					tps->programs[i].service_id, tps->programs[i].service_id, tps->payload_PMTs[i].crc32);
-			}
-			while (pos < tps->payload_PMTs[i].n_payload - 4/*crc32*/) {
-				stype = payload[pos];
-				pid = (payload[pos + 1] & 0x1f) * 256 + payload[pos + 2];
-				pos += (payload[pos + 3] & 0x0f) * 256 + payload[pos + 4] + 5;
-				n_pids++;
-				if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) { /* CRCが前回と違ったときのみ表示 */
-					output_message(MSG_DISP, L"stream_type:0x%x(%S), elementary_PID:%d(0x%X)",
-						stype, get_stream_type_str(stype), pid, pid);
-				}
-			}
-			if (tps->programs[i].payload_crc32 != tps->payload_PMTs[i].crc32) {
-				output_message(MSG_DISP, L"---------------------------------- >>>");
-			}
-			tps->programs[i].payload_crc32 = tps->payload_PMTs[i].crc32;
-			tps->payload_PMTs[i].stat = PAYLOAD_STAT_INIT;
-
-			if (tps->programs[i].n_pids != n_pids) {
-				if (tps->programs[i].content_pids != NULL) {
-					free(tps->programs[i].content_pids);
-				}
-				tps->programs[i].content_pids = (unsigned int*)malloc(n_pids*sizeof(unsigned int));
-			}
-			tps->programs[i].n_pids = n_pids;
-
-			n_pids = 0;
-			pos = 12 + payload[11];
-			while (pos < tps->payload_PMTs[i].n_payload - 4/*crc32*/) {
-				pid = (payload[pos + 1] & 0x1f) * 256 + payload[pos + 2];
-				pos += (payload[pos + 3] & 0x0f) * 256 + payload[pos + 4] + 5;
-				tps->programs[i].content_pids[n_pids] = pid;
-				n_pids++;
-			}
-		}
-	}
-
-	if (tps->payload_PAT.stat == PAYLOAD_STAT_FINISHED && tps->payload_PMTs == NULL) {
-		/* parse PAT */
-		int n = (tps->payload_PAT.n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
-		int pn, pid, n_progs = 0;
-		unsigned char *payload = &(tps->payload_PAT.payload[8]);
-		output_message(MSG_DISP, L"<<< ------------- PAT ---------------");
-		for (i = 0; i < n; i++) {
-			pn = payload[i * 4] * 256 + payload[i * 4 + 1];
-			pid = (payload[i * 4 + 2] & 0x1f) * 256 + payload[i * 4 + 3];
-			if (pn == 0) {
-				output_message(MSG_DISP, L"network_PID:%d(0x%X)", pid, pid);
-			} else {
-				n_progs++;
-				output_message(MSG_DISP, L"program_number:%d(0x%X), program_map_PID:%d(0x%X)", pn, pn, pid, pid);
-			}
-		}
-		output_message(MSG_DISP, L"---------------------------------- >>>");
-		tps->n_programs = n_progs;
-		tps->payload_PMTs = (PSI_parse_t*)malloc(n_progs*sizeof(PSI_parse_t));
-		tps->programs = (program_pid_info_t*)malloc(n_progs*sizeof(program_pid_info_t));
-		n_progs = 0;
-		for (i = 0; i < n; i++) {
-			pn = payload[i * 4] * 256 + payload[i * 4 + 1];
-			pid = (payload[i * 4 + 2] & 0x1f) * 256 + payload[i * 4 + 3];
-			if (pn != 0) {
-				tps->payload_PMTs[n_progs].pid = pid;
-				//tps->payload_PMTs[n_progs].stat = PAYLOAD_STAT_INIT;
-				tps->programs[n_progs].service_id = payload[i * 4] * 256 + payload[i * 4 + 1];
-				tps->programs[n_progs].content_pids = NULL;
-				tps->programs[n_progs].n_pids = 0;
-				n_progs++;
-			}
-		}
-		tps->payload_crc32_PAT = tps->payload_PAT.crc32;
 	}
 }

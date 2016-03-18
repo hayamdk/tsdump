@@ -36,7 +36,7 @@ int termflag = 0;
 int param_sp_num = -1;
 int param_ch_num = -1;
 int param_all_services;
-int param_services[MAX_SERVICES];
+unsigned int param_services[MAX_SERVICES];
 int param_n_services = 0;
 int param_nowait = 0;
 
@@ -175,6 +175,20 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	SetConsoleCursorPosition(hc, new_pos);
 }
 
+void init_service_list(ts_service_list_t *service_list)
+{
+	service_list->pid0x00.pid = 0;
+	service_list->pid0x00.stat = PAYLOAD_STAT_INIT;
+	service_list->pid0x11.pid = 0x11;
+	service_list->pid0x11.stat = PAYLOAD_STAT_INIT;
+	service_list->pid0x12.pid = 0x12;
+	service_list->pid0x12.stat = PAYLOAD_STAT_INIT;
+	service_list->pid0x26.pid = 0x26;
+	service_list->pid0x26.stat = PAYLOAD_STAT_INIT;
+	service_list->pid0x27.pid = 0x27;
+	service_list->pid0x27.stat = PAYLOAD_STAT_INIT;
+}
+
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
 	BYTE *recvbuf, *decbuf;
@@ -188,7 +202,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
-	ts_parse_stat_t tps = {0};
+	//ts_parse_stat_t tps = {0};
 
 	WCHAR title[256];
 	decoder_stats_t stats;
@@ -202,17 +216,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 
-	PSI_parse_t pid0x11, pid0x12, pid0x26, pid0x27, pid0x00;
-	pid0x00.pid = 0;
-	pid0x00.stat = PAYLOAD_STAT_INIT;
-	pid0x11.pid = 0x11;
-	pid0x11.stat = PAYLOAD_STAT_INIT;
-	pid0x12.pid = 0x12;
-	pid0x12.stat = PAYLOAD_STAT_INIT;
-	pid0x26.pid = 0x26;
-	pid0x26.stat = PAYLOAD_STAT_INIT;
-	pid0x27.pid = 0x27;
-	pid0x27.stat = PAYLOAD_STAT_INIT;
+	ts_service_list_t service_list;
+
+	init_service_list(&service_list);
 
 	/*payload_procstat_t eit;
 	eit.stat = PAYLOAD_STAT_INIT;*/
@@ -225,11 +231,13 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	do_open_stream();
 
+#ifdef AAA
 	int n_services = 0;
 	proginfo_t /*pi_prev,*/ pi[16]/*, pi_next*/;
 	for (i = 0; i < 16; i++) {
 		init_proginfo(&pi[i]);
 	}
+#endif
 
 	//memset(pi, 0, sizeof(proginfo_t) * 16);
 
@@ -246,16 +254,17 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream(decbuf, n_dec, encrypted);
 
 		for (i = 0; i < n_dec; i+=188) {
-			if (pid0x00.stat != PAYLOAD_STAT_FINISHED) {
+			if (service_list.pid0x00.stat != PAYLOAD_STAT_FINISHED) {
 				/* PATの取得は初回のみ */
-				parse_PAT(&pid0x00, &decbuf[i], pi, 16, &n_services);
+				parse_PAT(&service_list.pid0x00, &decbuf[i], service_list.proginfos, 
+							MAX_SERVICES_PER_CH, &service_list.n_services);
 			} else {
-				parse_PMT(&decbuf[i], pi, n_services);
+				parse_PMT(&decbuf[i], service_list.proginfos, service_list.n_services);
 			}
-			parse_SDT(&pid0x11, &decbuf[i], pi, 16);
-			parse_EIT(&pid0x12, &decbuf[i], pi, 16);
-			parse_EIT(&pid0x26, &decbuf[i], pi, 16);
-			parse_EIT(&pid0x27, &decbuf[i], pi, 16);
+			parse_SDT(&service_list.pid0x11, &decbuf[i], service_list.proginfos, 16);
+			parse_EIT(&service_list.pid0x12, &decbuf[i], service_list.proginfos, 16);
+			parse_EIT(&service_list.pid0x26, &decbuf[i], service_list.proginfos, 16);
+			parse_EIT(&service_list.pid0x27, &decbuf[i], service_list.proginfos, 16);
 		}
 
 		/*for (i = 0; i < n_services; i++) {
@@ -272,7 +281,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				n_tos = param_n_services = 1;
 				tos = (ts_output_stat_t*)malloc(1 * sizeof(ts_output_stat_t));
 				init_tos(tos);
-				tos->proginfo = &pi[0];
+				tos->proginfo = &service_list.proginfos[0];
 			}
 
 			/* パケットをバッファにコピー */
@@ -290,16 +299,16 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				BYTE *packet = &decbuf[pos];
 
 				/* PAT, PMTを取得 */
-				parse_ts_packet(&tps, packet);
+				//parse_ts_packet(&tps, packet);
 
 				/* tosを生成 */
-				if ( ! tos && tps.payload_PAT.stat == PAYLOAD_STAT_FINISHED ) {
-					n_tos = create_tos_per_service(&tos, &tps, ch_info);
+				if ( ! tos && service_list.pid0x00.stat == PAYLOAD_STAT_FINISHED ) {
+					n_tos = create_tos_per_service(&tos, &service_list, ch_info);
 				}
 
 				/* サービスごとにパケットをバッファにコピー */
 				for (i = 0; i < n_tos; i++) {
-					copy_current_service_packet(&tos[i], &tps, packet);
+					copy_current_service_packet(&tos[i], &service_list, packet);
 				}
 			}
 
@@ -353,8 +362,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			/* 溢れたバイト数を表示 */
 			for (i = 0; i < n_tos; i++) {
 				if (tos[i].dropped_bytes > 0) {
-					if ( tos[i].service_id != -1 ) {
-						output_message(MSG_ERROR, TSD_TEXT("バッファフルのためデータが溢れました(サービス%d, %dバイト)"), tos[i].service_id, tos[i].dropped_bytes);
+					if (n_tos > 1) {
+						output_message(MSG_ERROR, TSD_TEXT("バッファフルのためデータが溢れました(サービス%d, %dバイト)"), tos[i].proginfo->service_id, tos[i].dropped_bytes);
 					} else {
 						output_message(MSG_ERROR, TSD_TEXT("バッファフルのためデータが溢れました(%dバイト)"), tos[i].dropped_bytes);
 					}
