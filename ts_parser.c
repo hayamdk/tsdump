@@ -331,8 +331,15 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 
 	if (proginfo->last_desc != -1) {
 		/* 連続性チェック */
-		if ( proginfo->curr_desc == (int)eed->descriptor_number || 
-				proginfo->curr_desc + 1 == (int)eed->descriptor_number ) {
+		if (proginfo->curr_desc == (int)eed->descriptor_number) {
+			if (eed_item->item_description_length > 0) {
+				/* 前回と同じdescriptor_numberで項目名があるので不連続 */
+				proginfo->last_desc = -1;
+			} else {
+				/* 前回の続き */
+				proginfo->curr_desc = eed->descriptor_number;
+			}
+		} else if( proginfo->curr_desc + 1 == (int)eed->descriptor_number ) {
 			/* 前回の続き */
 			proginfo->curr_desc = eed->descriptor_number;
 		} else {
