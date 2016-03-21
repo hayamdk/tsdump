@@ -51,6 +51,9 @@
     <ClCompile Include="mod_path_resolver.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="mod_log.c">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="strfuncs.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
