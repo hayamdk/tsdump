@@ -1,5 +1,3 @@
-#pragma comment(lib, "tsdump.lib")
-
 #include <Windows.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -8,7 +6,7 @@
 #include <sys/timeb.h>
 #include <share.h>
 
-#define IN_SHARED_MODULE
+#include "ts_parser.h"
 #include "modules_def.h"
 
 static int output_log = 0;
@@ -141,7 +139,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_log = {
-	TSDUMP_MODULE_V2,
+	TSDUMP_MODULE_V3,
 	L"mod_log",
 	register_hooks,
 	cmds
