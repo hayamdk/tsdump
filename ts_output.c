@@ -125,7 +125,7 @@ void init_tos(ts_output_stat_t *tos)
 	tos->buf = (BYTE*)malloc(BUFSIZE);
 	tos->pos_filled = 0;
 	tos->pos_filled_old = 0;
-	tos->pos_pi = 0;
+	//tos->pos_pi = 0;
 	tos->pos_write = 0;
 	tos->write_busy = 0;
 	tos->dropped_bytes = 0;
@@ -303,19 +303,10 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 		return;
 	}
 
-	/* バッファが溜まってる場合番組情報ポインタを進める */
-	if ( tos->pos_filled >= (int)((double)0.95 * BUFSIZE) ) {
-		//printf("[DEBUG] バッファが溜まっているのでpi用バッファをクリア\n");
-		ts_giveup_pibuf(tos);
-	}
-
 	for (backward_size = i = 0; i < tos->n_th; i++) {
 		backward_size += tos->th[i].bytes;
 	}
 	clear_size = tos->pos_filled - backward_size;
-	if (clear_size > tos->pos_pi) {
-		clear_size = tos->pos_pi;
-	}
 	if (clear_size > tos->pos_write) {
 		clear_size = tos->pos_write;
 	}
@@ -328,7 +319,6 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 	move_size = tos->pos_filled - clear_size;
 	memmove(tos->buf, &(tos->buf[clear_size]), move_size);
 	tos->pos_filled -= clear_size;
-	tos->pos_pi -= clear_size;
 	tos->pos_write -= clear_size;
 	//printf("[DEBUG] ts_minimize_buf()を実行: clear_size=%d\n", clear_size);
 }
@@ -348,10 +338,6 @@ void ts_require_buf(ts_output_stat_t *tos, int require_size)
 
 	memmove(tos->buf, &(tos->buf[tos->pos_filled - move_size]), move_size);
 	tos->pos_filled -= move_size;
-	tos->pos_pi -= move_size;
-	if (tos->pos_pi < 0) {
-		tos->pos_pi = 0;
-	}
 	tos->pos_write = 0;
 }
 

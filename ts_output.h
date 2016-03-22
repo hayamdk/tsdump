@@ -23,7 +23,7 @@ typedef struct
 	BYTE *buf;
 	int pos_filled;
 	int pos_write;
-	int pos_pi;
+	//int pos_pi;
 	int pos_filled_old;
 	transfer_history_t *th;
 
@@ -141,11 +141,6 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	new_packet[3] = (new_packet[3] & 0xF0) + (continuity_counter & 0x0F);
 
 	return 1;
-}
-
-static inline void ts_giveup_pibuf(ts_output_stat_t *tos)
-{
-	tos->pos_pi = tos->pos_filled;
 }
 
 static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, BYTE *packet)
