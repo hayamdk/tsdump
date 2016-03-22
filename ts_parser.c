@@ -455,23 +455,12 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 		return;
 	}
 
-	/*output_message(MSG_DEBUG, L"table_id = 0x%02x, pid=0x%02x, service_id=0x%02x, len=%d, section_number=%d, ver=%d",
-		eit_h.table_id, payload_stat->pid, eit_h.service_id, payload_stat->n_payload, eit_h.section_number, eit_h.version_number);*/
-		
 	len = payload_stat->n_payload - 14 - 4/*=sizeof(crc32)*/;
 	p_eit_b = &payload_stat->payload[14];
 	p_eit_end = &p_eit_b[len];
 	while(&p_eit_b[12] < p_eit_end) {
 		parse_EIT_body(p_eit_b, &eit_b); /* read 12bytes */
 		store_EIT_body(&eit_b, curr_proginfo);
-
-		/*output_message(MSG_DEBUG, L" eid=0x%04x start=%d|%8x dur=%8x dlen=%d running_status=%S(%d)",
-			eit_b.event_id, eit_b.start_time_mjd, eit_b.start_time_jtc, eit_b.duration, eit_b.descriptors_loop_length,
-			rs[eit_b.running_status], eit_b.running_status);*/
-		/*output_message( MSG_DEBUG, L"eid=0x%04x, %d/%02d/%02d %02d:%02d:%02d +%02d:%02d:%02d",
-			proginfo->event_id, proginfo->start_year, proginfo->start_month, proginfo->start_day,
-			proginfo->start_hour, proginfo->start_min, proginfo->start_sec,
-			proginfo->dur_hour, proginfo->dur_min, proginfo->dur_sec );*/
 
 		p_desc = &p_eit_b[12];
 		p_desc_end = &p_desc[eit_b.descriptors_loop_length];
@@ -489,25 +478,16 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 			if (dtag == 0x4d) {
 				Sed_t sed;
 				if (parse_EIT_Sed(p_desc, &sed)) {
-					//AribToString(s1, 256, sed.event_name_char, sed.event_name_length);
-					//AribToString(s2, 256, sed.text_char, sed.text_length);
-
-					//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d code=%S",
-					//	sed.descriptor_tag, sed.descriptor_length, sed.ISO_639_language_code);
-					//output_message(MSG_DEBUG, L"  [%s]\n[%s]", s1, s2);
 					store_EIT_Sed(&sed, curr_proginfo);
 					if (PGINFO_READY(curr_proginfo->status)) {
 						curr_proginfo->last_ready_time = gettime();
 					}
-					//output_message(MSG_DEBUG, L"  [%s]\n[%s]", proginfo->event_name.str, proginfo->event_text.str);
 				}
 			} else if (dtag == 0x4e) {
 				Eed_t eed;
 				Eed_item_t eed_item;
 				uint8_t *p_eed_item, *p_eed_item_end;
 				if (parse_EIT_Eed(p_desc, &eed)) {
-					//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d code=%S dnum: %d of %d",
-					//	eed.descriptor_tag, eed.descriptor_length, eed.ISO_639_language_code, eed.descriptor_number, eed.last_descriptor_number);
 					p_eed_item = &p_desc[7];
 					p_eed_item_end = &p_eed_item[eed.length_of_items];
 					while (p_eed_item < p_eed_item_end) {
@@ -518,15 +498,9 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 							よってparse_EIT()を抜けたときはcurr_proginfo->itemsに全てのアイテムが収納されていることが保障される。
 							仮にこの仮定が満たされない場合でも、単に中途半端な番組情報が見えてしまうタイミングが存在するだけである */
 							store_EIT_Eed_item(&eed, &eed_item, curr_proginfo);
-
-							//AribToString(s1, 256, eed_item.item_description_char, eed_item.item_description_length);
-							//AribToString(s2, 256, eed_item.item_char, eed_item.item_length);
-							//output_message(MSG_DEBUG, L"   <%s>\n<%s>", s1, s2);
 						}
 						p_eed_item += ( 2 + eed_item.item_description_length + eed_item.item_length );
 					}
-					//AribToString(s1, 256, eed.text_char, eed.text_length);
-					//output_message(MSG_DEBUG, L"  <<%s>>", s1);
 				}
 			}
 
@@ -606,7 +580,6 @@ void store_SDT(const SDT_header_t *sdt_h, const Sd_t *sd, proginfo_t *proginfo)
 void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services)
 {
 	int len;
-	//WCHAR sp[1024], s[1024];
 	SDT_header_t sdt_h;
 	SDT_body_t sdt_b;
 	Sd_t sd;
@@ -623,16 +596,11 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 
 	parse_SDT_header(payload_stat->payload, &sdt_h);
 
-	//output_message(MSG_DEBUG, L"table_id = 0x%02x, pid=0x%02x, tsid=0x%02x, len=%d",
-	//	sdt_h.table_id , payload_stat->pid, sdt_h.transport_stream_id, payload_stat->n_payload);
-
 	len = payload_stat->n_payload - 11 - 4/*=sizeof(crc32)*/;
 	p_sdt_b = &payload_stat->payload[11];
 	p_sdt_end = &p_sdt_b[len];
 	while(&p_sdt_b[5] < p_sdt_end) {
 		parse_SDT_body(p_sdt_b, &sdt_b); /* read 5bytes */
-		//output_message(MSG_DEBUG, L" service_id=0x%04x dlen=%d",
-		//	sdt_b.service_id, sdt_b.descriptors_loop_length);
 
 		/* 対象のサービスIDかどうか */
 		curr_proginfo = find_curr_service(proginfo_all, n_services, sdt_b.service_id);
@@ -648,13 +616,9 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 		while( p_desc < p_desc_end ) {
 			dtag = p_desc[0];
 			dlen = p_desc[1];
-			//output_message(MSG_DEBUG, L"  tag=0x%02x dlen2=%d", dtag, dlen);
 			if (dtag == 0x48) {
 				if (parse_SDT_Sd(p_desc, &sd)) {
 					store_SDT(&sdt_h, &sd, curr_proginfo);
-					//AribToString(sp, 1024, sd.service_provider_name_char, sd.service_provider_name_length);
-					//AribToString(s, 1024, sd.service_name_char, sd.service_name_length);
-					//output_message(MSG_DEBUG, L"  |%s|%s|", sp, s);
 				}
 			}
 			p_desc += (2+dlen);
@@ -674,9 +638,6 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 
 	for (i = 0; i < n_services; i++) {
 		parse_PSI(packet, &proginfos[i].PMT_payload);
-		/*if (proginfos[i].status & PGINFO_GET_PMT) {
-			continue;
-		}*/
 		if (proginfos[i].PMT_payload.stat != PAYLOAD_STAT_FINISHED) {
 			continue;
 		}
@@ -694,9 +655,7 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 		while ( pos < len && n_pids <= MAX_PIDS_PER_SERVICE ) {
 			stream_type = payload[pos];
 			pid = (uint16_t)get_bits(payload, pos*8+11, 13);
-			//pid = (payload[pos + 1] & 0x1f) * 256 + payload[pos + 2];
 			pos += get_bits(payload, pos*8+28, 12) + 5;
-			//pos += (payload[pos + 3] & 0x0f) * 256 + payload[pos + 4] + 5;
 			if ( proginfos[i].PMT_last_CRC != proginfos[i].PMT_payload.crc32 ) { /* CRCが前回と違ったときのみ表示 */
 				output_message(MSG_DISP, L"stream_type:0x%x(%S), elementary_PID:%d(0x%X)",
 					stream_type, get_stream_type_str(stream_type), pid, pid);

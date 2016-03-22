@@ -1,5 +1,3 @@
-//#define _CRT_SECURE_NO_WARNINGS
-
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -46,15 +44,6 @@ void signal_handler(int sig)
 	termflag = 1;
 	output_message(MSG_NOTIFY, L"\n終了シグナルをキャッチ");
 }
-
-FILE *logfp;
-
-/*void open_log(FILE **fp)
-{
-	TCHAR fn[MAX_PATH_LEN];
-	_stprintf_s(fn, MAX_PATH_LEN - 1, _T("%s%s.log"), param_base_dir, bon_ch_name);
-	*fp = _tfopen(fn, _T("a+"));
-}*/
 
 void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...)
 {
@@ -208,7 +197,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
-	//ts_parse_stat_t tps = {0};
 
 	WCHAR title[256];
 	decoder_stats_t stats;
@@ -226,21 +214,11 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	init_service_list(&service_list);
 
-	/*payload_procstat_t eit;
-	eit.stat = PAYLOAD_STAT_INIT;*/
-
-	//open_log(&logfp);
-
 	if ( !param_all_services && param_n_services == 0 ) {
 		single_mode = 1;
 	}
 
 	do_open_stream();
-
-	//memset(pi, 0, sizeof(proginfo_t) * 16);
-
-	//pi[0].service_id = 0x400;
-	//pi[1].service_id = 0x401;
 
 	while ( !termflag ) {
 		nowtime = gettime();
@@ -264,13 +242,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			parse_EIT(&service_list.pid0x26, &decbuf[i], service_list.proginfos, 16);
 			parse_EIT(&service_list.pid0x27, &decbuf[i], service_list.proginfos, 16);
 		}
-
-		/*for (i = 0; i < n_services; i++) {
-			if (pi[i].status & PGINFO_GET_EVENT_INFO) {
-				printf("eeeeeeeeeeee! %d\n", i);
-				clear_proginfo(&pi[i]);
-			}
-		}*/
 
 		//tc_start("bufcopy");
 		if ( single_mode ) { /* 単一書き出しモード */
@@ -323,8 +294,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		}
 		//tc_end();
 
-		//fprintf(logfp, "%I64d n_recv=%d, n_dec=%d, filled=%d\n", nowtime, n_recv, n_dec, filled);
-
 		//tc_start("proginfo");
 		/* 定期的に番組情報をチェック */
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
@@ -369,14 +338,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 			}
 		}
-		//tc_end();
-
-		//tc_start("minimize");
-		/* minimize */
-		/*for (i = 0; i < n_tos; i++) {
-			ts_minimize_buf(&tos[i]);
-		}*/
-		//tc_end();
 
 		subtotal += n_dec;
 		total += n_dec;
@@ -426,21 +387,7 @@ int wmain(int argc, WCHAR* argv[])
 	void *decoder_stat = NULL;
 	int encrypted;
 
-	//uint8_t arib[] = { 0x23, 0x4e, 0x23, 0x48, 0x23, 0x4b, 0x41, 0x6d, 0x39, 0x67, 0x21, 0x26, 0x45, 0x6c, 0x35, 0x7e };
-	//wchar_t wc[1024];
-
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
-
-	//uint8_t b[8] = { 0x13, 0x7f, 0x01, 0x37 };
-	//unsigned int t = get_bits(b, 12, 8);
-	//getchar();
-
-	//return 0;
-
-	/*AribToString(wc, arib, sizeof(arib));
-	wprintf(L"%s\n", wc);
-	getchar();
-	return 0;*/
 
 	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
 

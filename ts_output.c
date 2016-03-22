@@ -117,15 +117,9 @@ void init_tos(ts_output_stat_t *tos)
 		tos->pgos[i].fn = (WCHAR*)malloc(MAX_PATH_LEN*sizeof(WCHAR));
 	}
 
-	//tos->retry_count = 0;
-
-	//tos->pi_last.recyear = tos->pi.recyear = 9999;
-	//tos->last_pitime = gettime();
-
 	tos->buf = (BYTE*)malloc(BUFSIZE);
 	tos->pos_filled = 0;
 	tos->pos_filled_old = 0;
-	//tos->pos_pi = 0;
 	tos->pos_write = 0;
 	tos->write_busy = 0;
 	tos->dropped_bytes = 0;
@@ -183,12 +177,10 @@ void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime)
 	}
 	if ( tos->n_pgos > 0 && start_pos > tos->pos_write ) {
 		tos->pgos[tos->n_pgos].delay_remain = start_pos - tos->pos_write;
-		//printf("[INFOOOOOOOOOOOOO] write start delay: %d bytes\n", tos->pgos[tos->n_pgos].delay_remain);
 	} else if ( tos->pos_write - start_pos ) {
 		do_pgoutput(tos->pgos[tos->n_pgos].modulestats, &(tos->buf[start_pos]), tos->pos_write - start_pos);
 		tos->write_busy = 1;
 	}
-	//printf("\n[INFOOOOOOOOOOOOO] backward_size = %d bytes\n", backward_size);
 }
 
 int ts_wait_pgoutput(ts_output_stat_t *tos)

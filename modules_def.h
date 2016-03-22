@@ -58,7 +58,6 @@ typedef struct{
 typedef struct{
 	int sp_num;
 	int ch_num;
-	//unsigned int service_id;
 	int n_services;
 	unsigned int *services;
 	int mode_all_services;
@@ -127,8 +126,7 @@ typedef const WCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*
 
 //typedef void(*hook_stream_splitter)();
 
-//MODULE_EXPORT_FUNC void print_err(WCHAR* name, int err);
-MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
+//MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
 
 #define output_message(type, fmt, ...) _output_message( __FILE__ , type, fmt, __VA_ARGS__)
 MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
