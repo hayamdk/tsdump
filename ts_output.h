@@ -31,10 +31,11 @@ typedef struct
 	proginfo_t last_proginfo;
 	int64_t last_nopi_time;
 
+	int64_t last_bufminimize_time;
+
 	int n_pgos;
 	pgoutput_stat_t *pgos;
 	int write_busy;
-	//int retry_count;
 	int n_th;
 	int tps_index;
 	int singlemode;

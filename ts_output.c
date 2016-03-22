@@ -132,6 +132,7 @@ void init_tos(ts_output_stat_t *tos)
 
 	tos->last_proginfo.status = 0;
 	tos->last_nopi_time = gettime();
+	tos->last_bufminimize_time = gettime();
 
 	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
 	if (tos->n_th < 2) {
@@ -240,7 +241,16 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 		//tc_start("check");
 		ts_check_pgoutput(tos);
 		//tc_end();
-	} else { /* 最新の状態が書き込み完了でも即座に完了処理を行わない(この後main_loop一周分の処理を終えてから) */
+	}
+
+	if (!tos->write_busy) {
+		/* バッファ切り詰め */
+		if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
+			/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを実行 */
+			ts_minimize_buf(tos);
+			tos->last_bufminimize_time = nowtime;
+		}
+
 		/* ファイル分割 */
 		if (tos->n_pgos >= 1 && 0 < tos->pgos[0].closetime && tos->pgos[0].closetime < nowtime) {
 			if ( ! tos->pgos[0].close_flag ) {

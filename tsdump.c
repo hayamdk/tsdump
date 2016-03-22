@@ -373,9 +373,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 		//tc_start("minimize");
 		/* minimize */
-		for (i = 0; i < n_tos; i++) {
+		/*for (i = 0; i < n_tos; i++) {
 			ts_minimize_buf(&tos[i]);
-		}
+		}*/
 		//tc_end();
 
 		subtotal += n_dec;
