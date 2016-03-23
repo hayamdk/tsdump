@@ -174,6 +174,8 @@ static void my_nonblockio_close(my_nonblockio_t *nbio)
 		TerminateThread(nbio->h_thread, 1);
 	}
 	CloseHandle(nbio->h_thread);
+	CloseHandle(nbio->slave_event);
+	CloseHandle(nbio->master_event);
 }
 
 static const WCHAR* my_nonblockio_errinfo(my_nonblockio_t *nbio, DWORD *errcode)
