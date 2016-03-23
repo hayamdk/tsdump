@@ -14,6 +14,181 @@ typedef unsigned long	DWORD;
 #include "aribstr.h"
 #include "tsdump.h"
 
+const WCHAR *genre_main[] = {
+	L"ニュース／報道",			L"スポーツ",	L"情報／ワイドショー",	L"ドラマ",
+	L"音楽",					L"バラエティ",	L"映画",				L"アニメ／特撮",
+	L"ドキュメンタリー／教養",	L"劇場／公演",	L"趣味／教育",			L"福祉",
+	L"予備",					L"予備",		L"拡張",				L"その他"
+};
+
+const WCHAR *genre_detail[] = {
+	/* 0x0 */
+	L"定時・総合", L"天気", L"特集・ドキュメント", L"政治・国会", L"経済・市況", L"海外・国際", L"解説", L"討論・会談",
+	L"報道特番", L"ローカル・地域", L"交通", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x1 */
+	L"スポーツニュース", L"野球", L"サッカー", L"ゴルフ", L"その他の球技", L"相撲・格闘技", L"オリンピック・国際大会", L"マラソン・陸上・水泳",
+	L"モータースポーツ", L"マリン・ウィンタースポーツ", L"競馬・公営競技", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x2 */
+	L"芸能・ワイドショー", L"ファッション", L"暮らし・住まい", L"健康・医療", L"ショッピング・通販", L"グルメ・料理", L"イベント", L"番組紹介・お知らせ",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x3 */
+	L"国内ドラマ", L"海外ドラマ", L"時代劇", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x4 */
+	L"国内ロック・ポップス", L"海外ロック・ポップス", L"クラシック・オペラ", L"ジャズ・フュージョン", L"歌謡曲・演歌", L"ライブ・コンサート", L"ランキング・リクエスト", L"カラオケ・のど自慢",
+	L"民謡・邦楽", L"童謡・キッズ", L"民族音楽・ワールドミュージック", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x5 */
+	L"クイズ", L"ゲーム", L"トークバラエティ", L"お笑い・コメディ", L"音楽バラエティ", L"旅バラエティ", L"料理バラエティ", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x6 */
+	L"洋画", L"邦画", L"アニメ", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x7 */
+	L"国内アニメ", L"海外アニメ", L"特撮", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x8 */
+	L"社会・時事", L"歴史・紀行", L"自然・動物・環境", L"宇宙・科学・医学", L"カルチャー・伝統芸能", L"文学・文芸", L"スポーツ", L"ドキュメンタリー全般",
+	L"インタビュー・討論", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0x9 */
+	L"現代劇・新劇", L"ミュージカル", L"ダンス・バレエ", L"落語・演芸", L"歌舞伎・古典", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0xA */
+	L"旅・釣り・アウトドア", L"園芸・ペット・手芸", L"音楽・美術・工芸", L"囲碁・将棋", L"麻雀・パチンコ", L"車・オートバイ", L"コンピュータ・ＴＶゲーム", L"会話・語学",
+	L"幼児・小学生", L"中学生・高校生", L"大学生・受験", L"生涯教育・資格", L"教育問題", L"-", L"-", L"その他",
+
+	/* 0xB */
+	L"高齢者", L"障害者", L"社会福祉", L"ボランティア", L"手話", L"文字（字幕）", L"音声解説", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+
+	/* 0xC */
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+
+	/* 0xD */
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+
+	/* 0xE */
+	L"BS/地上デジタル放送用番組付属情報", L"広帯域CSデジタル放送用拡張", L"衛星デジタル音声放送用拡張", L"サーバー型番組付属情報", L"IP放送用番組付属情報", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+
+	/* 0xF */
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他"
+};
+
+const WCHAR *genre_user[] = {
+	L"中止の可能性あり",
+	L"延長の可能性あり",
+	L"中断の可能性あり",
+	L"同一シリーズの別話数放送の可能性あり",
+	L"編成未定枠",
+	L"繰り上げの可能性あり",
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+
+	L"中断ニュースあり", L"当該イベントに関連する臨時サービスあり"
+	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-"
+};
+
+void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item)
+{
+	if (item.content_nibble_level_1 != 0xe) {
+		*genre1 = genre_main[item.content_nibble_level_1];
+		*genre2 = genre_detail[item.content_nibble_level_1 * 0x10 + item.content_nibble_level_2];
+	} else {
+		*genre1 = genre_detail[item.content_nibble_level_1 * 0x10 + item.content_nibble_level_2];
+		if (item.user_nibble_1 <= 0x01) {
+			*genre2 = genre_user[item.user_nibble_1 * 0x10 + item.user_nibble_2];
+		} else {
+			*genre2 = L"-";
+		}
+	}
+}
+
+int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
+{
+	int i;
+	WCHAR *p = dst, *end = &dst[n - 1];
+
+	*p = L'\0';
+	if (!(pi->status & PGINFO_GET_EXTEND_TEXT)) {
+		return 0;
+	}
+
+	for (i = 0; i < pi->n_items && p < end; i++) {
+		wcscpy_s(p, end - p, pi->items[i].desc);
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, L"\n");
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, pi->items[i].item);
+		while (*p != L'\0') { p++; }
+		wcscpy_s(p, end - p, L"\n");
+		while (*p != L'\0') { p++; }
+	}
+	return 1;
+}
+
+int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
+{
+	WCHAR et1[4096], et2[4096];
+	int i;
+
+	if (pi1->status != pi2->status) {
+		return 1;
+	}
+
+	if (pi1->dur_hour != pi2->dur_hour ||
+		pi1->dur_min != pi2->dur_min ||
+		pi1->dur_sec != pi2->dur_sec ||
+		pi1->start_hour != pi2->start_hour ||
+		pi1->start_min != pi2->start_min ||
+		pi1->start_sec != pi2->start_sec ||
+		pi1->start_year != pi2->start_year ||
+		pi1->start_month != pi2->start_month ||
+		pi1->start_day != pi2->start_day) {
+		return 1;
+	}
+
+	if ( pi1->status & PGINFO_GET_SHORT_TEXT ) {
+		if (wcscmp(pi1->event_text.str, pi2->event_text.str) != 0) {
+			return 1;
+		}
+	}
+
+	if ( pi1->status & PGINFO_GET_GENRE ) {
+		if( pi1->genre_info.n_items != pi2->genre_info.n_items ) {
+			return 1;
+		}
+		for (i = 0; i < pi1->genre_info.n_items; i++) {
+			if ( memcmp(&pi1->genre_info.items[i], 
+						&pi2->genre_info.items[i],
+						sizeof(pi1->genre_info.items[i]) ) != 0 ) {
+				return 1;
+			}
+		}
+	}
+
+	if ( get_extended_text(et1, sizeof(et1) / sizeof(WCHAR), pi1) !=
+		get_extended_text(et2, sizeof(et2) / sizeof(WCHAR), pi2) ) {
+		return 1;
+	}
+	if (wcscmp(et1, et2) != 0) {
+		return 1;
+	}
+
+	return 0;
+}
+
 static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 {
 	int pos, remain, pointer_field;
@@ -144,7 +319,7 @@ int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
 {
 	const uint8_t *desc_end;
 
-	sed->descriptor_tag					= desc[0];
+	//sed->descriptor_tag					= desc[0];
 	sed->descriptor_length				= desc[1];
 
 	desc_end							= &desc[2 + sed->descriptor_length];
@@ -170,7 +345,7 @@ int parse_EIT_Eed(const uint8_t *desc, Eed_t *eed)
 {
 	const uint8_t *desc_end;
 
-	eed->descriptor_tag					= desc[0];
+	//eed->descriptor_tag					= desc[0];
 	eed->descriptor_length				= desc[1];
 	desc_end							= &desc[2+eed->descriptor_length];
 
@@ -413,6 +588,22 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 	}
 }
 
+void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
+{
+	int i;
+	cd->n_items							= desc[1] / 2;
+	if (cd->n_items > 8) {
+		cd->n_items = 8;
+	}
+
+	for (i = 0; i < cd->n_items; i++) {
+		cd->items[i].content_nibble_level_1 = get_bits(&desc[2+i*2], 0, 4);
+		cd->items[i].content_nibble_level_2 = get_bits(&desc[2+i*2], 4, 4);
+		cd->items[i].user_nibble_1 = get_bits(&desc[2+i*2], 8, 4);
+		cd->items[i].user_nibble_2 = get_bits(&desc[2+i*2], 12, 4);
+	}
+}
+
 proginfo_t *find_curr_service(proginfo_t *proginfos, int n_services, unsigned int service_id)
 {
 	int i;
@@ -427,8 +618,6 @@ proginfo_t *find_curr_service(proginfo_t *proginfos, int n_services, unsigned in
 void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services)
 {
 	int len;
-	//const char *rs[] = {"undef", "not running", "coming", "stopped", "running", "reserved", "reserved", "reserved" };
-	//WCHAR s1[256], s2[256];
 	EIT_header_t eit_h;
 	EIT_body_t eit_b;
 	uint8_t *p_eit_b, *p_eit_end;
@@ -502,6 +691,9 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 						p_eed_item += ( 2 + eed_item.item_description_length + eed_item.item_length );
 					}
 				}
+			} else if (dtag == 0x54) {
+				parse_EIT_Cd(p_desc, &curr_proginfo->genre_info);
+				curr_proginfo->status |= PGINFO_GET_GENRE;
 			}
 
 			p_desc += (2+dlen);
@@ -512,7 +704,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 
 int parse_SDT_Sd(const uint8_t *desc, Sd_t *sd)
 {
-	sd->descriptor_tag					= desc[0];
+	//sd->descriptor_tag					= desc[0];
 	sd->descriptor_length				= desc[1];
 	sd->service_type					= desc[2];
 

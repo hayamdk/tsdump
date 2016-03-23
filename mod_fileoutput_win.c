@@ -40,10 +40,11 @@ static inline int64_t gettime()
 static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const proginfo_t *pi)
 {
 	WCHAR fname[MAX_PATH_LEN];
-	WCHAR genre[1024];
 	WCHAR extended_text[4096];
+	const WCHAR *genre1, *genre2;
 	FILE *fp = NULL;
 	errno_t err;
+	int i;
 
 	if (!PGINFO_READY(pi->status)) {
 		output_message(MSG_WARNING, L"番組情報が取得できなかったので番組情報ファイルを生成しません");
@@ -59,16 +60,20 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const proginfo_t *pi)
 		return NULL;
 	}
 
-	genre[0] = L'\0';
-	//putGenreStr(genre, 1024 - 1, pi->genretype, pi->genre);
-
 	fwprintf(fp, L"%d%02d%02d\n%02d%02d%02d\n", pi->start_year, pi->start_month, pi->start_day,
 		pi->start_hour, pi->start_min, pi->start_sec);
 	fwprintf(fp, L"%02d%02d%02d\n", pi->dur_hour, pi->dur_min, pi->dur_sec);
 	fwprintf(fp, L"%s\n", pi->service_name.str);
-	fwprintf(fp, L"%s\n", genre);
 	fwprintf(fp, L"%s\n----------------\n", pi->event_name.str);
-	fwprintf(fp, L"%s\n--------\n", pi->event_text.str);
+
+	if (pi->status & PGINFO_GET_GENRE) {
+		for (i = 0; i < pi->genre_info.n_items; i++) {
+			get_genre_str(&genre1, &genre2, pi->genre_info.items[i]);
+			fwprintf(fp, L"%s (%s)\n", genre1, genre2);
+		}
+	}
+
+	fwprintf(fp, L"----------------\n%s\n----------------\n", pi->event_text.str);
 
 	if (pi->status & PGINFO_GET_EXTEND_TEXT) {
 		get_extended_text(extended_text, sizeof(extended_text)/sizeof(WCHAR), pi);

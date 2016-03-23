@@ -1,4 +1,20 @@
-static const unsigned __int32 crc32tab[256] = {
+#define PGINFO_GET_PAT				1
+#define PGINFO_GET_PMT				2
+#define PGINFO_GET_SERVICE_INFO		4
+#define PGINFO_GET_EVENT_INFO		8
+#define PGINFO_GET_SHORT_TEXT		16
+#define PGINFO_GET_EXTEND_TEXT		32
+#define PGINFO_GET_GENRE			64
+#define PGINFO_UNKNOWN_STARTTIME	128
+#define PGINFO_UNKNOWN_DURATION		256
+
+#define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
+#define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
+
+#define MAX_PIDS_PER_SERVICE		64
+#define MAX_SERVICES_PER_CH			32
+
+static const uint32_t crc32tab[256] = {
 	0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9,
 	0x130476dc, 0x17c56b6b, 0x1a864db2, 0x1e475005,
 	0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61,
@@ -201,46 +217,43 @@ typedef struct {
 	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
-#define PGINFO_GET_PAT				1
-#define PGINFO_GET_PMT				2
-#define PGINFO_GET_SERVICE_INFO		4
-#define PGINFO_GET_EVENT_INFO		8
-#define PGINFO_GET_SHORT_TEXT		16
-#define PGINFO_GET_EXTEND_TEXT		32
-
-#define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
-#define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
-
-#define PGINFO_UNKNOWN_STARTTIME	64
-#define PGINFO_UNKNOWN_DURATION		128
-
-#define MAX_PIDS_PER_SERVICE		64
-#define MAX_SERVICES_PER_CH			32
-
 typedef struct {
 	unsigned int stream_type : 8;
 	unsigned int pid : 16;
 } PMT_pid_def_t;
 
+/* コンテント記述子 (Content descriptor) */
+typedef struct {
+	unsigned int content_nibble_level_1 : 4;
+	unsigned int content_nibble_level_2 : 4;
+	unsigned int user_nibble_1 : 4;
+	unsigned int user_nibble_2 : 4;
+} Cd_t_item;
+
+typedef struct {
+	int n_items;
+	Cd_t_item items[8]; /* TR-B14の規定では最大7 */
+} Cd_t;
+
 typedef struct {
 
 	int status;
 
-	/* PAT,PMT */
+	/***** PAT,PMT *****/
 	PSI_parse_t PMT_payload;
 	uint32_t PMT_last_CRC;
 	int n_service_pids;
 	PMT_pid_def_t service_pids[MAX_PIDS_PER_SERVICE];
 	unsigned int service_id : 16;
 
-	/* SDT */
+	/***** SDT *****/
 	unsigned int network_id : 16;
 	unsigned int ts_id : 16;
 
 	Sd_string_t service_provider_name;
 	Sd_string_t service_name;
 
-	/* EIT */
+	/***** EIT *****/
 	int64_t last_ready_time;
 
 	unsigned int event_id : 16;
@@ -266,6 +279,9 @@ typedef struct {
 	int n_items;
 	Eed_item_string_t items[8];
 
+	/* コンテント記述子 */
+	Cd_t genre_info;
+
 } proginfo_t;
 
 typedef struct {
@@ -280,7 +296,7 @@ typedef struct {
 
 /* 短形式イベント記述子（Short event descriptor） */
 typedef struct {
-	unsigned int descriptor_tag : 8;
+	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;
 	char ISO_639_language_code[4];
 	unsigned int event_name_length : 8;
@@ -291,7 +307,7 @@ typedef struct {
 
 /* 拡張形式イベント記述子（Extended event descriptor） */
 typedef struct {
-	unsigned int descriptor_tag : 8;
+	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;
 	unsigned int descriptor_number : 4;
 	unsigned int last_descriptor_number : 4;
@@ -336,7 +352,7 @@ typedef struct {
 
 /* サービス記述子（Service descriptor） */
 typedef struct {
-	unsigned int descriptor_tag : 8;
+	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;
 	unsigned int service_type : 8;
 	unsigned int service_provider_name_length : 8;
@@ -387,62 +403,6 @@ void parse_PMT(uint8_t * packet, proginfo_t *proginfos, int n_services);
 void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);
 
-static inline int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
-{
-	int i;
-	WCHAR *p = dst, *end = &dst[n-1];
-
-	*p = L'\0';
-	if( !(pi->status & PGINFO_GET_EXTEND_TEXT) ) {
-		return 0;
-	}
-
-	for (i = 0; i < pi->n_items && p < end; i++) {
-		wcscpy_s(p, end - p, pi->items[i].desc);
-		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, L"\n");
-		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, pi->items[i].item);
-		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, L"\n");
-		while (*p != L'\0') { p++; }
-	}
-	return 1;
-}
-
-static inline int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
-{
-	WCHAR et1[4096], et2[4096];
-
-	if (pi1->status != pi2->status) {
-		return 1;
-	}
-	if (pi1->dur_hour != pi2->dur_hour ||
-		pi1->dur_min != pi2->dur_min ||
-		pi1->dur_sec != pi2->dur_sec ||
-		pi1->start_hour != pi2->start_hour ||
-		pi1->start_min != pi2->start_min ||
-		pi1->start_sec != pi2->start_sec ||
-		pi1->start_year != pi2->start_year ||
-		pi1->start_month != pi2->start_month ||
-		pi1->start_day != pi2->start_day) {
-		return 1;
-	}
-
-	if ( (pi1->status & PGINFO_GET_SHORT_TEXT) != (pi2->status & PGINFO_GET_SHORT_TEXT) ) {
-		return 1;
-	}
-	if ( (pi1->status & PGINFO_GET_SHORT_TEXT) & (pi2->status & PGINFO_GET_SHORT_TEXT) ) {
-		if (wcscmp(pi1->event_text.str, pi1->event_text.str) != 0) {
-			return 1;
-		}
-	}
-	if (get_extended_text(et1, sizeof(et1) / sizeof(WCHAR), pi1) !=
-		get_extended_text(et2, sizeof(et2) / sizeof(WCHAR), pi2)) {
-		return 1;
-	}
-	if (wcscmp(et1, et2) != 0) {
-		return 1;
-	}
-	return 0;
-}
+int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi);
+void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item);
+int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);

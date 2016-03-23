@@ -36,7 +36,9 @@ static inline int64_t timenum_end_sec(const proginfo_t *pi, int *psec)
 	int sec, min, hour, day_diff;
 
 	if (pi->status & PGINFO_UNKNOWN_STARTTIME || pi->status & PGINFO_UNKNOWN_DURATION) {
-		*psec = 0;
+		if (psec) {
+			*psec = 0;
+		}
 		return 0;
 	}
 
