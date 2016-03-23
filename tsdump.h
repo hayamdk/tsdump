@@ -1,5 +1,6 @@
 #define VERSION_STR				"1.4.0-dev"
 #define DATE_STR				"2016/xx/xx"
+
 #define BUFSIZE_DEFAULT			96
 #define OVERLAP_SEC_DEFAULT		15
 #define CHECK_INTERVAL_DEFAULT	500
