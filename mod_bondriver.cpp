@@ -120,6 +120,16 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	ci.ch_num = ch_num;
 	ci.sp_num = sp_num;
 
+	if (!ci.tuner_name) {
+		ci.tuner_name = L"NullTuner";
+	}
+	if (!ci.ch_str) {
+		ci.ch_str = L"Null";
+	}
+	if (!ci.sp_str) {
+		ci.sp_str = L"Null";
+	}
+
 	/* ‚±‚ê‚ğ“ü‚ê‚Ä‚¨‚©‚È‚¢‚ÆSetChannel‚É¸”s‚·‚éBonDriver‚ª‘¶İ‚·‚é e.g. BonDriver PT-ST l’Œ”Å3 */
 	Sleep(500);
 
