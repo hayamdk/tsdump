@@ -33,9 +33,6 @@
     <ClCompile Include="mod_cmdexec_win.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_fileoutput_stdio.c">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="mod_fileoutput_win.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>

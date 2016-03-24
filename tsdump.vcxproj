@@ -84,7 +84,6 @@
     <ClCompile Include="mod_b25decoder.cpp" />
     <ClCompile Include="mod_bondriver.cpp" />
     <ClCompile Include="mod_cmdexec_win.c" />
-    <ClCompile Include="mod_fileoutput_stdio.c" />
     <ClCompile Include="mod_fileoutput_win.c" />
     <ClCompile Include="mod_path_resolver.c" />
     <ClCompile Include="mod_pipeoutput_win.c" />
