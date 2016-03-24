@@ -304,7 +304,8 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 
 void clear_proginfo(proginfo_t *proginfo)
 {
-	proginfo->status &= PGINFO_GET_PAT;
+	/* PAT、PMTの取得状況だけはイベントの切り替わりと無関係なのでクリアしない */
+	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT);
 	proginfo->last_desc = -1;
 }
 
@@ -481,7 +482,7 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 		proginfo->dur_hour = 0;
 		proginfo->dur_min = 0;
 		proginfo->dur_sec = 0;
-		proginfo->status = PGINFO_UNKNOWN_DURATION;
+		proginfo->status |= PGINFO_UNKNOWN_DURATION;
 	} else {
 		proginfo->dur_hour = (eit_b->duration >> 20 & 0x0f) * 10 +
 			((eit_b->duration >> 16) & 0x0f);

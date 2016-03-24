@@ -29,7 +29,7 @@ typedef struct
 
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
-	int64_t last_nopi_time;
+	int64_t last_checkpi_time;
 
 	int64_t last_bufminimize_time;
 

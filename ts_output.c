@@ -124,8 +124,8 @@ void init_tos(ts_output_stat_t *tos)
 	tos->write_busy = 0;
 	tos->dropped_bytes = 0;
 
-	tos->last_proginfo.status = 0;
-	tos->last_nopi_time = gettime();
+	init_proginfo(&tos->last_proginfo);
+	tos->last_checkpi_time = gettime();
 	tos->last_bufminimize_time = gettime();
 
 	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
@@ -395,13 +395,10 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	WCHAR msg1[64], msg2[64];
 
 	if ( PGINFO_READY(tos->proginfo->status) && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
-		/* 15•bˆÈã”Ô‘gî•ñ‚ª“râ‚¦‚½‚çŽæ“¾–³‚µ‚Æ‚Ý‚È‚· */
+		/* ‰¼‚ÉŒ»Žž“_‚ÅREADY‚Å‚à15•bˆÈã”Ô‘gî•ñ‚ª“râ‚¦‚Ä‚¢‚½‚çŽæ“¾–³‚µ‚Æ‚Ý‚È‚· */
 		clear_proginfo(tos->proginfo);
-	} else if ( tos->n_pgos == 0 && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
-		/* ‘‚«o‚µ‚ªŽn‚Ü‚ç‚È‚¢‚Ü‚Ü15•bŒo‚Á‚½‚ç‹­§ŠJŽn */
-		changed = 1;
-	} else if ( !PGINFO_READY(tos->proginfo->status) && tos->proginfo->status & PGINFO_GET_EVENT_INFO ) {
-		/* ‚½‚Ü‚½‚ÜŽæ“¾‚ª“r’†‚Ìê‡‚ÍƒpƒX */
+	} else if ( !PGINFO_READY(tos->proginfo->status) && nowtime - tos->last_checkpi_time < 15*1000 ) {
+		/* ”Ô‘gî•ñ‚ªŽæ“¾‚Å‚«‚Ä‚¢‚È‚­‚Ä‚à15•b‚Í”»’è‚ð•Û—¯‚·‚é */
 		return;
 	}
 
@@ -416,10 +413,12 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	} else {
 		if (PGINFO_READY(tos->last_proginfo.status)) {
 			changed = 1;
-		} else if( timenum64(nowtime) / 100 % 100 != timenum64(tos->last_nopi_time) / 100 % 100) {
+		} else if( timenum64(nowtime) / 100 != timenum64(tos->last_checkpi_time) / 100 ) {
+			changed = 1;
+		} else if (tos->n_pgos == 0) {
+			/* ‚Ü‚¾o—Í‚ªŽn‚Ü‚Á‚Ä‚¢‚È‚©‚Á‚½‚ç‹­§ŠJŽn */
 			changed = 1;
 		}
-		tos->last_nopi_time = nowtime;
 	}
 
 	if (changed) {
@@ -494,4 +493,5 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	}
 
 	tos->last_proginfo = *tos->proginfo;
+	tos->last_checkpi_time = nowtime;
 }
