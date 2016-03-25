@@ -140,7 +140,7 @@ MODULE_EXPORT_FUNC void register_hook_pgoutput_postclose(hook_pgoutput_postclose
 MODULE_EXPORT_FUNC void register_hook_postconfig(hook_postconfig_t handler);
 MODULE_EXPORT_FUNC void register_hook_close_module(hook_close_module_t handler);
 MODULE_EXPORT_FUNC void register_hook_open_stream(hook_open_stream_t handler);
-MODULE_EXPORT_FUNC void register_hook_crypted_stream(hook_encrypted_stream_t handler);
+MODULE_EXPORT_FUNC void register_hook_encrypted_stream(hook_encrypted_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
 MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
 MODULE_EXPORT_FUNC int register_hooks_stream_generator(hooks_stream_generator_t *handlers);
