@@ -849,12 +849,6 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 			continue;
 		}
 
-		if ( proginfos[i].PMT_last_CRC != proginfos[i].PMT_payload.crc32 ) { /* CRCが前回と違ったときのみ表示 */
-			output_message(MSG_DISP, L"<<< ------------- PMT ---------------\n"
-				L"program_number: %d(0x%X), payload crc32: 0x%08X",
-				proginfos[i].service_id, proginfos[i].service_id, proginfos[i].PMT_payload.crc32 );
-		}
-
 		len = proginfos[i].PMT_payload.n_payload - 4/*crc32*/;
 		payload = proginfos[i].PMT_payload.payload;
 		pos = 12 + get_bits(payload, 84, 12);
@@ -863,10 +857,6 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 			stream_type = payload[pos];
 			pid = (uint16_t)get_bits(payload, pos*8+11, 13);
 			pos += get_bits(payload, pos*8+28, 12) + 5;
-			if ( proginfos[i].PMT_last_CRC != proginfos[i].PMT_payload.crc32 ) { /* CRCが前回と違ったときのみ表示 */
-				output_message(MSG_DISP, L"stream_type:0x%x(%S), elementary_PID:%d(0x%X)",
-					stream_type, get_stream_type_str(stream_type), pid, pid);
-			}
 			proginfos[i].service_pids[n_pids].stream_type = stream_type;
 			proginfos[i].service_pids[n_pids].pid = pid;
 			n_pids++;
@@ -875,9 +865,6 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 		proginfos[i].PMT_payload.stat = PAYLOAD_STAT_INIT;
 		proginfos[i].status |= PGINFO_GET_PMT;
 		proginfos[i].PMT_last_CRC = proginfos[i].PMT_payload.crc32;
-		if ( proginfos[i].PMT_last_CRC != proginfos[i].PMT_payload.crc32 ) {
-			output_message(MSG_DISP, L"---------------------------------- >>>");
-		}
 	}
 }
 
@@ -894,22 +881,19 @@ void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *prog
 		}
 
 		payload = &(PAT_payload->payload[8]);
-		output_message(MSG_DISP, L"<<< ------------- PAT ---------------");
 		*n_services = 0;
 		for (i = 0; i < n; i++) {
 			pn = get_bits(payload, i*32, 16);
 			pid = get_bits(payload, i*32+19, 13);
 			if (pn == 0) {
-				output_message(MSG_DISP, L"network_PID:%d(0x%X)", pid, pid);
+				/* do nothing */
 			} else {
 				proginfos[*n_services].service_id = pn;
 				proginfos[*n_services].PMT_payload.stat = PAYLOAD_STAT_INIT;
 				proginfos[*n_services].PMT_payload.pid = pid;
 				proginfos[*n_services].status |= PGINFO_GET_PAT;
 				(*n_services)++;
-				output_message(MSG_DISP, L"program_number:%d(0x%X), program_map_PID:%d(0x%X)", pn, pn, pid, pid);
 			}
 		}
-		output_message(MSG_DISP, L"---------------------------------- >>>");
 	}
 }

@@ -84,6 +84,35 @@ void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt
 	}
 }
 
+int print_services(ts_service_list_t *services_list)
+{
+	int i, get_service_info = 0, sid;
+
+	for (i = 0; i < services_list->n_services; i++) {
+		if ( !(services_list->proginfos[i].status & PGINFO_GET_PAT) ) {
+			return 0;
+		}
+		if (services_list->proginfos[i].status & PGINFO_GET_SERVICE_INFO) {
+			get_service_info = 1;
+		}
+	}
+	if (!get_service_info) {
+		/* 最低1サービスでもサービス情報が取得できるのを待つ */
+		return 0;
+	}
+
+	output_message(MSG_DISP, L"サービス数: %d", services_list->n_services);
+	for (i = 0; i < services_list->n_services; i++) {
+
+		if (services_list->proginfos[i].status & PGINFO_GET_SERVICE_INFO) {
+			sid = services_list->proginfos[i].service_id;
+			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), %s", i, sid, sid, services_list->proginfos[i].service_name.str);
+		} else {
+			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), (名称不明)", i, sid, sid);
+		}
+	}
+}
+
 void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 {
 	int n, i, j, backward_size, console_width, width, multiline;
@@ -211,6 +240,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	int single_mode = 0;
 
 	int pos;
+	int printservice = 0;
 
 	ts_service_list_t service_list;
 
@@ -238,6 +268,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 							MAX_SERVICES_PER_CH, &service_list.n_services);
 			} else {
 				parse_PMT(&decbuf[i], service_list.proginfos, service_list.n_services);
+				if (!printservice) {
+					printservice = print_services(&service_list);
+				}
 			}
 			parse_SDT(&service_list.pid0x11, &decbuf[i], service_list.proginfos, 16);
 			parse_EIT(&service_list.pid0x12, &decbuf[i], service_list.proginfos, 16);
