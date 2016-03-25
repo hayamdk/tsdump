@@ -40,6 +40,8 @@ unsigned int param_services[MAX_SERVICES];
 int param_n_services = 0;
 int param_nowait = 0;
 
+int need_clear_line = 0;
+
 void signal_handler(int sig)
 {
 	UNREF_ARG(sig);
@@ -111,6 +113,39 @@ int print_services(ts_service_list_t *services_list)
 			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), (名称不明)", i, sid, sid);
 		}
 	}
+}
+
+void clear_line()
+{
+	CONSOLE_SCREEN_BUFFER_INFO ci;
+	HANDLE hc;
+	int i, console_width = 0;
+	WCHAR line[256];
+
+	if (need_clear_line <= 0) {
+		return;
+	}
+
+	hc = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hc != INVALID_HANDLE_VALUE) {
+		if (GetConsoleScreenBufferInfo(hc, &ci) != 0) {
+			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINEだとこれを取得できない(0がセットされる) */
+				console_width = ci.dwSize.X;
+			}
+		}
+	}
+
+	if (console_width >= 256) {
+		console_width = 255;
+	}
+	for (i = 0; i < console_width-1; i++) {
+		line[i] = L' ';
+	}
+	line[console_width-1] = L'\0';
+
+	tsd_printf(L"%s\r", line);
+
+	need_clear_line--;
 }
 
 void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
@@ -193,6 +228,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 
 	tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
 	SetConsoleCursorPosition(hc, new_pos);
+	need_clear_line = 3;
 }
 
 void init_service_list(ts_service_list_t *service_list)
@@ -523,6 +559,8 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 	FILE *fp = stdout;
 	WCHAR msgbuf[256];
 	int errtype = 0;
+
+	clear_line();
 
 	if ( msgtype == MSG_WARNING || msgtype == MSG_PACKETERROR ) {
 		msgtype_str = L"[WARNING] ";
