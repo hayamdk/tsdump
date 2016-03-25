@@ -4,8 +4,10 @@
 #include <inttypes.h>
 #include <Windows.h>
 
+#include "module_def.h"
+#include "ts_proginfo.h"
+#include "module_hooks.h"
 #include "ts_parser.h"
-#include "modules_def.h"
 
 int64_t ts_n_drops = 0;
 int64_t ts_n_total = 0;

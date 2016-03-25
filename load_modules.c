@@ -8,8 +8,9 @@
 #include <inttypes.h>
 #include <process.h>
 
-#include "ts_parser.h"
-#include "modules_def.h"
+#include "module_def.h"
+#include "ts_proginfo.h"
+#include "module_hooks.h"
 #include "tsdump.h"
 #include "load_modules.h"
 #include "default_decoder.h"

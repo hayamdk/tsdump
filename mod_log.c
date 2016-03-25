@@ -6,8 +6,9 @@
 #include <sys/timeb.h>
 #include <share.h>
 
-#include "ts_parser.h"
-#include "modules_def.h"
+#include "module_def.h"
+#include "ts_proginfo.h"
+#include "module_hooks.h"
 
 static int output_log = 0;
 static const WCHAR *log_fname = NULL;

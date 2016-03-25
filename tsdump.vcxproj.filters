@@ -71,6 +71,9 @@
     <ClInclude Include="ts_parser.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="ts_proginfo.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="tsdump.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -80,7 +83,10 @@
     <ClInclude Include="modules.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="modules_def.h">
+    <ClInclude Include="module_def.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="module_hooks.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="default_decoder.h">

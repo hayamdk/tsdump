@@ -12,8 +12,10 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
+#include "module_def.h"
+#include "ts_proginfo.h"
+#include "module_hooks.h"
 #include "ts_parser.h"
-#include "modules_def.h"
 #include "tsdump.h"
 #include "ts_output.h"
 #include "load_modules.h"

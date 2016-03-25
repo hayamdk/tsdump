@@ -100,11 +100,13 @@
     <ClInclude Include="IBonDriver2.h" />
     <ClInclude Include="load_modules.h" />
     <ClInclude Include="modules.h" />
-    <ClInclude Include="modules_def.h" />
+    <ClInclude Include="module_def.h" />
+    <ClInclude Include="module_hooks.h" />
     <ClInclude Include="strfuncs.h" />
     <ClInclude Include="tsdump.h" />
     <ClInclude Include="ts_output.h" />
     <ClInclude Include="ts_parser.h" />
+    <ClInclude Include="ts_proginfo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

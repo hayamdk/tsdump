@@ -9,8 +9,9 @@
 
 #include <shlwapi.h>
 
-#include "ts_parser.h"
-#include "modules_def.h"
+#include "module_def.h"
+#include "ts_proginfo.h"
+#include "module_hooks.h"
 #include "strfuncs.h"
 
 typedef struct {

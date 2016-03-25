@@ -1,35 +1,3 @@
-#define MAX_PATH_LEN		MAX_PATH
-
-#ifdef IN_SHARED_MODULE
-	#ifdef __cplusplus
-		#define MODULE_EXPORT_FUNC		extern "C" __declspec(dllimport)
-		#define MODULE_EXPORT_VAR		extern "C" __declspec(dllimport)
-		#define MODULE_DEF				extern "C" __declspec(dllexport)
-	#else
-		#define MODULE_EXPORT_FUNC		__declspec(dllimport)
-		#define MODULE_EXPORT_VAR		__declspec(dllimport)
-		#define MODULE_DEF				__declspec(dllexport)
-	#endif
-#else
-	#ifdef __cplusplus
-		#define MODULE_EXPORT_FUNC		extern "C" __declspec(dllexport)
-		#define MODULE_EXPORT_VAR		extern "C" __declspec(dllexport)
-		#define MODULE_DEF				extern "C"
-	#else
-		#define MODULE_EXPORT_FUNC		__declspec(dllexport)
-		#define MODULE_EXPORT_VAR		__declspec(dllexport)
-		#define MODULE_DEF
-	#endif
-#endif
-
-#ifdef _MSC_VER
-	#ifndef __cplusplus
-		#define inline __inline
-	#endif
-#endif
-
-#define			UNREF_ARG(x)			(x)
-
 typedef void (*register_hooks_t)();
 
 typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);
@@ -125,8 +93,6 @@ typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*
 typedef const WCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*);
 
 //typedef void(*hook_stream_splitter)();
-
-//MODULE_EXPORT_FUNC int putGenreStr(WCHAR*, const int, const int*, const int*);
 
 #define output_message(type, fmt, ...) _output_message( __FILE__ , type, fmt, __VA_ARGS__)
 MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
