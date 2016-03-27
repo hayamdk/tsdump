@@ -619,18 +619,18 @@ void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
 	}
 }
 
-proginfo_t *find_curr_service(proginfo_t *proginfos, int n_services, unsigned int service_id)
+proginfo_t *find_curr_service(ts_service_list_t *sl, unsigned int service_id)
 {
 	int i;
-	for (i = 0; i < n_services; i++) {
-		if (service_id == proginfos[i].service_id) {
-			return &proginfos[i];
+	for (i = 0; i < sl->n_services; i++) {
+		if (service_id == sl->proginfos[i].service_id) {
+			return &sl->proginfos[i];
 		}
 	}
 	return NULL;
 }
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services)
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl)
 {
 	int len;
 	EIT_header_t eit_h;
@@ -654,7 +654,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 	}
 
 	/* 対象のサービスIDかどうか */
-	curr_proginfo = find_curr_service(proginfo_all, n_services, eit_h.service_id);
+	curr_proginfo = find_curr_service(sl, eit_h.service_id);
 	if(!curr_proginfo) {
 		return;
 	}
@@ -784,7 +784,7 @@ void store_SDT(const SDT_header_t *sdt_h, const Sd_t *sd, proginfo_t *proginfo)
 	proginfo->status |= PGINFO_GET_SERVICE_INFO;
 }
 
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services)
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl)
 {
 	int len;
 	SDT_header_t sdt_h;
@@ -809,33 +809,33 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *pro
 	while(&p_sdt_b[5] < p_sdt_end) {
 		parse_SDT_body(p_sdt_b, &sdt_b); /* read 5bytes */
 
-		/* 対象のサービスIDかどうか */
-		curr_proginfo = find_curr_service(proginfo_all, n_services, sdt_b.service_id);
-		if (!curr_proginfo) {
-			continue;
-		}
-
 		p_desc = &p_sdt_b[5];
 		p_desc_end = &p_desc[sdt_b.descriptors_loop_length];
 		if (p_desc_end > p_sdt_end) {
 			break;
 		}
-		while( p_desc < p_desc_end ) {
-			dtag = p_desc[0];
-			dlen = p_desc[1];
-			if (dtag == 0x48) {
-				if (parse_SDT_Sd(p_desc, &sd)) {
-					store_SDT(&sdt_h, &sd, curr_proginfo);
+
+		/* 対象のサービスIDかどうか */
+		curr_proginfo = find_curr_service(sl, sdt_b.service_id);
+		if (curr_proginfo) {
+
+			while( p_desc < p_desc_end ) {
+				dtag = p_desc[0];
+				dlen = p_desc[1];
+				if (dtag == 0x48) {
+					if (parse_SDT_Sd(p_desc, &sd)) {
+						store_SDT(&sdt_h, &sd, curr_proginfo);
+					}
 				}
+				p_desc += (2+dlen);
 			}
-			p_desc += (2+dlen);
 		}
 		p_sdt_b = p_desc_end;
 	}
 }
 
 /* PMT: ISO 13818-1 2.4.4.8 Program Map Table */
-void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
+void parse_PMT(uint8_t *packet, ts_service_list_t *sl)
 {
 	int i;
 	int pos, n_pids, len;
@@ -843,32 +843,32 @@ void parse_PMT(uint8_t *packet, proginfo_t *proginfos, int n_services)
 	uint8_t stream_type;
 	uint8_t *payload;
 
-	for (i = 0; i < n_services; i++) {
-		parse_PSI(packet, &proginfos[i].PMT_payload);
-		if (proginfos[i].PMT_payload.stat != PAYLOAD_STAT_FINISHED) {
+	for (i = 0; i < sl->n_services; i++) {
+		parse_PSI(packet, &sl->proginfos[i].PMT_payload);
+		if (sl->proginfos[i].PMT_payload.stat != PAYLOAD_STAT_FINISHED) {
 			continue;
 		}
 
-		len = proginfos[i].PMT_payload.n_payload - 4/*crc32*/;
-		payload = proginfos[i].PMT_payload.payload;
+		len = sl->proginfos[i].PMT_payload.n_payload - 4/*crc32*/;
+		payload = sl->proginfos[i].PMT_payload.payload;
 		pos = 12 + get_bits(payload, 84, 12);
 		n_pids = 0;
 		while ( pos < len && n_pids <= MAX_PIDS_PER_SERVICE ) {
 			stream_type = payload[pos];
 			pid = (uint16_t)get_bits(payload, pos*8+11, 13);
 			pos += get_bits(payload, pos*8+28, 12) + 5;
-			proginfos[i].service_pids[n_pids].stream_type = stream_type;
-			proginfos[i].service_pids[n_pids].pid = pid;
+			sl->proginfos[i].service_pids[n_pids].stream_type = stream_type;
+			sl->proginfos[i].service_pids[n_pids].pid = pid;
 			n_pids++;
 		}
-		proginfos[i].n_service_pids = n_pids;
-		proginfos[i].PMT_payload.stat = PAYLOAD_STAT_INIT;
-		proginfos[i].status |= PGINFO_GET_PMT;
-		proginfos[i].PMT_last_CRC = proginfos[i].PMT_payload.crc32;
+		sl->proginfos[i].n_service_pids = n_pids;
+		sl->proginfos[i].PMT_payload.stat = PAYLOAD_STAT_INIT;
+		sl->proginfos[i].status |= PGINFO_GET_PMT;
+		sl->proginfos[i].PMT_last_CRC = sl->proginfos[i].PMT_payload.crc32;
 	}
 }
 
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *proginfos, const int n_services_max, int *n_services)
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, ts_service_list_t *sl)
 {
 	int i, n, pn, pid;
 	uint8_t *payload;
@@ -876,23 +876,23 @@ void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *prog
 	parse_PSI(packet, PAT_payload);
 	if (PAT_payload->stat == PAYLOAD_STAT_FINISHED) {
 		n = (PAT_payload->n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
-		if (n > n_services_max) {
-			n = n_services_max;
+		if (n > MAX_SERVICES_PER_CH) {
+			n = MAX_SERVICES_PER_CH;
 		}
 
 		payload = &(PAT_payload->payload[8]);
-		*n_services = 0;
+		sl->n_services = 0;
 		for (i = 0; i < n; i++) {
 			pn = get_bits(payload, i*32, 16);
 			pid = get_bits(payload, i*32+19, 13);
 			if (pn == 0) {
 				/* do nothing */
 			} else {
-				proginfos[*n_services].service_id = pn;
-				proginfos[*n_services].PMT_payload.stat = PAYLOAD_STAT_INIT;
-				proginfos[*n_services].PMT_payload.pid = pid;
-				proginfos[*n_services].status |= PGINFO_GET_PAT;
-				(*n_services)++;
+				sl->proginfos[sl->n_services].service_id = pn;
+				sl->proginfos[sl->n_services].PMT_payload.stat = PAYLOAD_STAT_INIT;
+				sl->proginfos[sl->n_services].PMT_payload.pid = pid;
+				sl->proginfos[sl->n_services].status |= PGINFO_GET_PAT;
+				(sl->n_services)++;
 			}
 		}
 	}

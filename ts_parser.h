@@ -259,10 +259,10 @@ typedef struct {
 	unsigned int original_network_id : 16;
 } SDT_header_t;
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services);
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, proginfo_t *proginfo_all, int n_services);
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, proginfo_t *proginfos, const int n_services_max, int *n_services);
-void parse_PMT(uint8_t * packet, proginfo_t *proginfos, int n_services);
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl);
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl);
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, ts_service_list_t *sl);
+void parse_PMT(uint8_t * packet, ts_service_list_t *sl);
 
 void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);

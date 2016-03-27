@@ -105,14 +105,14 @@ int print_services(ts_service_list_t *services_list)
 
 	output_message(MSG_DISP, L"サービス数: %d", services_list->n_services);
 	for (i = 0; i < services_list->n_services; i++) {
-
+		sid = services_list->proginfos[i].service_id;
 		if (services_list->proginfos[i].status & PGINFO_GET_SERVICE_INFO) {
-			sid = services_list->proginfos[i].service_id;
 			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), %s", i, sid, sid, services_list->proginfos[i].service_name.str);
 		} else {
 			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), (名称不明)", i, sid, sid);
 		}
 	}
+	return 1;
 }
 
 void clear_line()
@@ -300,18 +300,17 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		for (i = 0; i < n_dec; i+=188) {
 			if (service_list.pid0x00.stat != PAYLOAD_STAT_FINISHED) {
 				/* PATの取得は初回のみ */
-				parse_PAT(&service_list.pid0x00, &decbuf[i], service_list.proginfos, 
-							MAX_SERVICES_PER_CH, &service_list.n_services);
+				parse_PAT(&service_list.pid0x00, &decbuf[i], &service_list);
 			} else {
-				parse_PMT(&decbuf[i], service_list.proginfos, service_list.n_services);
+				parse_PMT(&decbuf[i], &service_list);
 				if (!printservice) {
 					printservice = print_services(&service_list);
 				}
 			}
-			parse_SDT(&service_list.pid0x11, &decbuf[i], service_list.proginfos, 16);
-			parse_EIT(&service_list.pid0x12, &decbuf[i], service_list.proginfos, 16);
-			parse_EIT(&service_list.pid0x26, &decbuf[i], service_list.proginfos, 16);
-			parse_EIT(&service_list.pid0x27, &decbuf[i], service_list.proginfos, 16);
+			parse_SDT(&service_list.pid0x11, &decbuf[i], &service_list);
+			parse_EIT(&service_list.pid0x12, &decbuf[i], &service_list);
+			parse_EIT(&service_list.pid0x26, &decbuf[i], &service_list);
+			parse_EIT(&service_list.pid0x27, &decbuf[i], &service_list);
 		}
 
 		//tc_start("bufcopy");
