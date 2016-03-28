@@ -115,47 +115,76 @@ int print_services(ts_service_list_t *services_list)
 	return 1;
 }
 
-void clear_line()
+int save_line(COORD *new_pos)
 {
 	CONSOLE_SCREEN_BUFFER_INFO ci;
 	HANDLE hc;
-	int i, console_width = 0;
-	WCHAR line[256];
-
-	if (need_clear_line <= 0) {
-		return;
-	}
+	int console_width = 0;
 
 	hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hc != INVALID_HANDLE_VALUE) {
 		if (GetConsoleScreenBufferInfo(hc, &ci) != 0) {
 			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINEだとこれを取得できない(0がセットされる) */
 				console_width = ci.dwSize.X;
+				new_pos->X = 0;
+				new_pos->Y = ci.dwCursorPosition.Y;
+				if ( ci.dwCursorPosition.Y > ci.dwSize.Y - 3 ) { /* 3行分の余白が無ければ最後に行を戻す */
+					new_pos->Y = ci.dwSize.Y - 3;
+				}
 			}
 		}
+	} else {
+		console_width = -1;
 	}
 
 	if (console_width >= 256) {
 		console_width = 255;
 	}
-	for (i = 0; i < console_width-1; i++) {
-		line[i] = L' ';
+
+	return console_width;
+}
+
+void restore_line(const COORD new_pos)
+{
+	HANDLE hc = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hc != INVALID_HANDLE_VALUE) {
+		SetConsoleCursorPosition(hc, new_pos);
 	}
-	line[console_width-1] = L'\0';
+}
 
-	tsd_printf(L"%s\r", line);
+void clear_line()
+{
+	int console_width;
+	COORD new_pos;
+	WCHAR line[256];
+	int i;
 
-	need_clear_line--;
+	if (!need_clear_line) {
+		return;
+	}
+
+	console_width = save_line(&new_pos);
+	if (console_width > 0) {
+		for (i = 0; i < console_width - 1; i++) {
+			line[i] = L' ';
+		}
+		line[console_width - 1] = L'\0';
+
+		tsd_printf(L"%s\n", line);
+		tsd_printf(L"%s\n", line);
+		tsd_printf(L"%s\n", line);
+		restore_line(new_pos);
+	}
+
+	need_clear_line = 0;
 }
 
 void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 {
-	int n, i, j, backward_size, console_width, width, multiline;
+	int n, i, j, backward_size, console_width, width;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
-	HANDLE hc;
-	CONSOLE_SCREEN_BUFFER_INFO ci;
 	COORD new_pos;
 	double rate;
 
@@ -163,72 +192,52 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 		return;
 	}
 
-	multiline = 0;
-	hc = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (hc != INVALID_HANDLE_VALUE) {
-		if ( GetConsoleScreenBufferInfo(hc, &ci) != 0 ) {
-			if ( ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0 ) { /* WINEだとこれを取得できない(0がセットされる) */
-				multiline = 1;
-				console_width = ci.dwSize.X;
-				new_pos.X = 0;
-				new_pos.Y = ci.dwCursorPosition.Y;
-				if ( ci.dwCursorPosition.Y > ci.dwSize.Y - 3 ) { /* 3行分の余白が無ければ最後に行を戻す */
-					new_pos.Y = ci.dwSize.Y - 3;
-				}
-			}
-		}
-	} else {
+	console_width = save_line(&new_pos);
+	if (console_width < 0) {
 		fprintf(stderr, "console error\r");
-		return;
-	}
-
-	if (!multiline) {
+	} else if (console_width == 0) {
 		rate = 100.0 * tos->pos_filled / BUFSIZE;
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
-		return;
-	}
+	} else {
+		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
-	if (console_width >= 256) {
-		console_width = 255;
-	}
-
-	width = ( console_width - 6 - (n_tos-1) ) / n_tos;
-
-	for (i = 0; i < n_tos; i++) {
-		for (backward_size = j = 0; j < tos[i].n_th; j++) {
-			backward_size += tos[i].th[j].bytes;
-		}
-
-		for (n = 0; n < width; n++) {
-			int pos = (int)( (double)BUFSIZE / width * (n+0.5) );
-			if (pos < tos[i].pos_write) {
-				*p = '-';
-			} else if (pos < tos[i].pos_filled) {
-				*p = '!';
-			} else {
-				*p = '_';
+		for (i = 0; i < n_tos; i++) {
+			for (backward_size = j = 0; j < tos[i].n_th; j++) {
+				backward_size += tos[i].th[j].bytes;
 			}
-			if (pos > tos[i].pos_filled - backward_size) {
-				if (*p == '-') {
-					*p = '+';
-				} else if(*p == '/') {
-					*p = '|';
+
+			for (n = 0; n < width; n++) {
+				int pos = (int)( (double)BUFSIZE / width * (n+0.5) );
+				if (pos < tos[i].pos_write) {
+					*p = '-';
+				} else if (pos < tos[i].pos_filled) {
+					*p = '!';
+				} else {
+					*p = '_';
 				}
+				if (pos > tos[i].pos_filled - backward_size) {
+					if (*p == '-') {
+						*p = '+';
+					} else if(*p == '/') {
+						*p = '|';
+					}
+				}
+				p++;
 			}
-			p++;
+			if (i != n_tos - 1) {
+				*(p++) = ' ';
+			}
 		}
-		if (i != n_tos - 1) {
-			*(p++) = ' ';
-		}
+		*p = '\0';
+
+		memset(hor, '-', console_width - 1);
+		hor[console_width - 1] = '\0';
+
+		tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
+		restore_line(new_pos);
+
+		need_clear_line = 1;
 	}
-	*p = '\0';
-
-	memset(hor, '-', console_width - 1);
-	hor[console_width - 1] = '\0';
-
-	tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
-	SetConsoleCursorPosition(hc, new_pos);
-	need_clear_line = 3;
 }
 
 void init_service_list(ts_service_list_t *service_list)
