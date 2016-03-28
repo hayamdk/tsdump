@@ -104,7 +104,7 @@ static inline int ts_get_payload_pos(const uint8_t *p)
 {
 	int pos = 4;
 	if (ts_have_adaptation_field(p)) {
-		pos += p[pos]; /* adaptation field length */
+		pos += p[pos] + 1; /* adaptation field length */
 	}
 	return pos;
 }
