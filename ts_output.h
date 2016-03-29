@@ -97,17 +97,28 @@ static inline void ts_update_transfer_history(ts_output_stat_t *tos, int64_t now
 
 static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsigned int target_sid, unsigned int continuity_counter)
 {
-	int payload_pos = ts_get_payload_data_pos(old_packet);
-	int table_pos = payload_pos + 8 + 4;
-	int section_len = ts_get_section_length(old_packet);
-	int n = (section_len - 5 - 4 - 4) / 4;
+	ts_header_t tsh;
+	int payload_pos, table_pos, section_len, n;
+
+	if (!parse_ts_header(old_packet, &tsh)) {
+		output_message(MSG_PACKETERROR, L"Invalid ts header!");
+		return 0; /* pass */
+	}
 
 	/* 複数パケットにまたがるPATには未対応 */
-	if (!ts_get_payload_unit_start_indicator(old_packet)) {
+	if (!tsh.payload_unit_start_indicator) {
 		return 0; /* pass */
 	}
 
 	/* 不正なパケットかどうかをチェック */
+	section_len = ts_get_section_length(old_packet, &tsh);
+	if (section_len < 0) {
+		output_message(MSG_PACKETERROR, L"Invalid payload pos!");
+		return 0; /* pass */
+	}
+	payload_pos = tsh.payload_data_pos;
+	table_pos = payload_pos + 8 + 4;
+	n = (section_len - 5 - 4 - 4) / 4;
 	if ( table_pos + 8 > 188 || n <= 0 || table_pos + n*4 + 2 > 188 ) {
 		output_message(MSG_PACKETERROR, L"Invalid packet!");
 		return 0; /* pass */
@@ -144,13 +155,19 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	return 1;
 }
 
-static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, BYTE *packet)
+static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, uint8_t *packet)
 {
 	unsigned int pid;
 	int ismypid;
-	BYTE new_packet[188], *p;
+	uint8_t new_packet[188], *p;
+	ts_header_t tsh;
 
-	pid = ts_get_pid(packet);
+	if (!parse_ts_header(packet, &tsh)) {
+		output_message(MSG_PACKETERROR, L"Invalid ts header!");
+		return; /* pass */
+	}
+
+	pid = tsh.pid;
 	ismypid = ts_is_mypid(pid, tos, service_list);
 	if (pid == 0) {
 		/* PATの内容を当該サービスだけにする */

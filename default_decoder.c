@@ -13,17 +13,18 @@ int64_t ts_n_drops = 0;
 int64_t ts_n_total = 0;
 static int ts_counter[0x2000] = {0};
 
-static inline const int64_t ts_drop_counter(unsigned char *packet)
+static inline const int64_t ts_drop_counter(uint8_t *packet)
 {
+	ts_header_t tsh;
 	ts_n_total++;
 
-	if (packet[0] != 0x47) {
+	if (!parse_ts_header(packet, &tsh)) {
 		ts_n_drops++;
 		goto END;
 	}
 
-	unsigned int pid = ts_get_pid(packet);
-	unsigned int counter = ts_get_continuity_counter(packet);
+	unsigned int pid = tsh.pid;
+	unsigned int counter = tsh.continuity_counter;
 	unsigned int counter_should_be;
 
 	if (pid == 0x1fff) { /* null packet */
@@ -31,10 +32,10 @@ static inline const int64_t ts_drop_counter(unsigned char *packet)
 	}
 
 	if (ts_counter[pid] != 0) { /* == 0 : initialized */
-		if (ts_have_payload(packet)) {
+		if (tsh.adaptation_field_control & 0x01) {
+			/* have payload */
 			counter_should_be = (ts_counter[pid] + 1) % 16;
-		}
-		else {
+		} else {
 			counter_should_be = ts_counter[pid] % 16;
 		}
 

@@ -75,54 +75,24 @@ static inline unsigned __int32 crc32(unsigned char *buf, int len)
 	return crc;
 }
 
-static inline unsigned int ts_get_pid(const uint8_t *p)
-{
-	return (p[1] & 0x1f) * 0x100 + p[2];
-}
+typedef struct{
+	uint8_t sync_byte;
+	unsigned int transport_error_indicator : 1;
+	unsigned int payload_unit_start_indicator : 1;
+	unsigned int transport_priority : 1;
+	unsigned int pid : 13;
+	unsigned int transport_scrambling_control : 2;
+	unsigned int adaptation_field_control : 2;
+	unsigned int continuity_counter : 4;
+	uint8_t adaptation_field_len;
+	uint8_t pointer_field;
+	unsigned int section_length : 12;
 
-static inline int ts_get_payload_unit_start_indicator(const uint8_t *p)
-{
-	return (p[1] / 0x40) & 0x01;
-}
+	uint8_t payload_pos;
+	uint8_t payload_data_pos;
+} ts_header_t;
 
-static inline unsigned int ts_get_continuity_counter(const uint8_t *p)
-{
-	return p[3] & 0x0F;
-}
-
-static inline int ts_have_adaptation_field(const uint8_t *p)
-{
-	return (p[3] & 0x20) / 0x20;
-}
-
-static inline int ts_have_payload(const uint8_t *p)
-{
-	return (p[3] & 0x10) / 0x10;
-}
-
-static inline int ts_get_payload_pos(const uint8_t *p)
-{
-	int pos = 4;
-	if (ts_have_adaptation_field(p)) {
-		pos += p[pos] + 1; /* adaptation field length */
-	}
-	return pos;
-}
-
-static inline int ts_get_payload_data_pos(const uint8_t *p)
-{
-	int pos = ts_get_payload_pos(p);
-	if (ts_get_payload_unit_start_indicator(p)) {
-		pos += p[pos] + 1; /* pointer_field */
-	}
-	return pos;
-}
-
-static inline int ts_get_section_length(const uint8_t *p)
-{
-	int pos = ts_get_payload_data_pos(p);
-	return (p[pos + 1] & 0x0f) * 256 + p[pos + 2];
-}
+int parse_ts_header(const uint8_t *packet, ts_header_t *ts_header);
 
 static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t length)
 {
@@ -149,6 +119,15 @@ static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t le
 	t <<= len3;
 	t += buf[offset_bytes + len2 + 1] >> (8 - len3);
 	return t;
+}
+
+static inline int ts_get_section_length(const uint8_t *p, ts_header_t *tsh)
+{
+	int pos = tsh->payload_data_pos;
+	if (pos >= 188 - 3) {
+		return -1;
+	}
+	return get_bits(p, pos * 8 + 12, 12);
 }
 
 static inline unsigned __int32 get_payload_crc32(PSI_parse_t *ps)
