@@ -261,6 +261,15 @@ const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 						lpszDst[dwDstLen++] = TSD_TEXT(' ');
 					}
 					break;
+				/*case 0x0DU:*/
+				case 0x0AU:
+					/* 改行コード */
+					lpszDst[dwDstLen++] = TSD_TEXT('\n');
+					break;
+				case 0x09U:
+					/* タブ */
+					lpszDst[dwDstLen++] = TSD_TEXT('\t');
+					break;
 				default		: break;	// 非対応
 				}
 			}
