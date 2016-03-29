@@ -18,7 +18,8 @@ static inline const int64_t ts_drop_counter(uint8_t *packet)
 	ts_header_t tsh;
 	ts_n_total++;
 
-	if (!parse_ts_header(packet, &tsh)) {
+	parse_ts_header(packet, &tsh);
+	if (!tsh.valid_sync_byte) {
 		ts_n_drops++;
 		goto END;
 	}

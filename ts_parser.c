@@ -203,65 +203,61 @@ static const char *get_stream_type_str(int stream_type) {
 	}
 }
 
-int parse_ts_header(const uint8_t *packet, ts_header_t *ts_header)
+int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
 {
 	int pos;
-	ts_header_t tsh;
+	uint8_t sync_byte;
 
-	tsh.sync_byte						= packet[0];
+	sync_byte = packet[0];
 
-	if (tsh.sync_byte != 0x47) {
+	if (sync_byte != 0x47) {
+		tsh->valid_sync_byte = 0;
 		return 0;
 	}
 
-	tsh.transport_error_indicator		= get_bits(packet, 8, 1);
-	tsh.payload_unit_start_indicator	= get_bits(packet, 9, 1);
-	tsh.transport_priority				= get_bits(packet, 10, 1);
-	tsh.pid								= get_bits(packet, 11, 13);
-	tsh.transport_scrambling_control	= get_bits(packet, 24, 2);
-	tsh.adaptation_field_control		= get_bits(packet, 26, 2);
-	tsh.continuity_counter				= get_bits(packet, 28, 4);
+	tsh->valid_sync_byte				= 1;
+	tsh->sync_byte						= sync_byte;
+	tsh->transport_error_indicator		= get_bits(packet, 8, 1);
+	tsh->payload_unit_start_indicator	= get_bits(packet, 9, 1);
+	tsh->transport_priority				= get_bits(packet, 10, 1);
+	tsh->pid							= get_bits(packet, 11, 13);
+	tsh->transport_scrambling_control	= get_bits(packet, 24, 2);
+	tsh->adaptation_field_control		= get_bits(packet, 26, 2);
+	tsh->continuity_counter				= get_bits(packet, 28, 4);
 
 	pos = 4;
-	tsh.adaptation_field_len = 0;
-	if (tsh.adaptation_field_control & 0x02) {
+	tsh->adaptation_field_len = 0;
+	if (tsh->adaptation_field_control & 0x02) {
 		/* have adaptation_field */
-		tsh.adaptation_field_len = packet[pos];
-		pos += 1 + tsh.adaptation_field_len;
+		tsh->adaptation_field_len = packet[pos];
+		pos += 1 + tsh->adaptation_field_len;
 	}
 
-	tsh.payload_pos = 0;
-	tsh.payload_data_pos = 0;
-	tsh.pointer_field = 0;
-	if (tsh.adaptation_field_control & 0x01) {
+	tsh->payload_pos = 0;
+	tsh->payload_data_pos = 0;
+	tsh->pointer_field = 0;
+	if (tsh->adaptation_field_control & 0x01) {
 		/* have payload */
 		if (pos >= 188) {
 			return 0;
 		}
-		tsh.payload_pos = (uint8_t)pos;
-		if (tsh.payload_unit_start_indicator) {
-			tsh.pointer_field = packet[tsh.payload_pos];
-			pos += 1 + tsh.pointer_field;
+		tsh->payload_pos = (uint8_t)pos;
+		if (tsh->payload_unit_start_indicator) {
+			tsh->pointer_field = packet[tsh->payload_pos];
+			pos += 1 + tsh->pointer_field;
 		}
 		if (pos >= 188) {
 			return 0;
 		}
-		tsh.payload_data_pos = (uint8_t)pos;
+		tsh->payload_data_pos = (uint8_t)pos;
 	}
 
-	*ts_header = tsh;
 	return 1;
 }
 
-static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
+static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *ps)
 {
 	int pos, remain, pointer_field;
-	ts_header_t tsh;
-
-	if (!parse_ts_header(packet, &tsh)) {
-		output_message(MSG_PACKETERROR, L"Invalid ts header!");
-		return; /* pass */
-	}
 
 	/* FINISHED状態を初期状態に戻す */
 	if (ps->stat == PAYLOAD_STAT_FINISHED) {
@@ -280,22 +276,22 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 	}
 
 	/* 対象PIDかどうかチェック */
-	if (ps->pid != tsh.pid) {
+	if (ps->pid != tsh->pid) {
 		return;
 	}
 
 	/* パケットの処理 */
 	if (ps->stat == PAYLOAD_STAT_INIT) {
-		if (!tsh.payload_unit_start_indicator) {
+		if (!tsh->payload_unit_start_indicator) {
 			//printf("pass!\n");
 			return;
 		}
 		ps->stat = PAYLOAD_STAT_PROC;
-		ps->n_payload = ts_get_section_length(packet, &tsh) + 3;
+		ps->n_payload = ts_get_section_length(packet, tsh) + 3;
 		ps->recv_payload = ps->n_next_payload = ps->next_recv_payload = 0;
-		ps->continuity_counter = tsh.continuity_counter;
+		ps->continuity_counter = tsh->continuity_counter;
 
-		pos = tsh.payload_data_pos;
+		pos = tsh->payload_data_pos;
 
 		remain = 188 - pos;
 		if (remain > ps->n_payload) {
@@ -306,18 +302,18 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 		ps->recv_payload += remain;
 	} else if (ps->stat == PAYLOAD_STAT_PROC) {
 		/* continuity_counter の連続性を確認 */
-		if ((ps->continuity_counter + 1) % 16 != tsh.continuity_counter) {
+		if ((ps->continuity_counter + 1) % 16 != tsh->continuity_counter) {
 			/* drop! */
 			output_message(MSG_PACKETERROR, L"packet continuity_counter is discontinuous! (pid=0x%02x)", ps->pid);
 			ps->n_payload = ps->recv_payload = 0;
 			ps->stat = PAYLOAD_STAT_INIT;
 			return;
 		}
-		ps->continuity_counter = tsh.continuity_counter;
+		ps->continuity_counter = tsh->continuity_counter;
 
-		if (tsh.payload_unit_start_indicator) {
-			pos = tsh.payload_pos;
-			pointer_field = tsh.pointer_field;
+		if (tsh->payload_unit_start_indicator) {
+			pos = tsh->payload_pos;
+			pointer_field = tsh->pointer_field;
 			pos++;
 
 			/* 不正なパケットかどうかのチェック */
@@ -327,7 +323,7 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 				return;
 			}
 
-			ps->n_next_payload = ts_get_section_length(packet, &tsh) + 3;
+			ps->n_next_payload = ts_get_section_length(packet, tsh) + 3;
 			ps->next_recv_payload = 188 - pos - pointer_field;
 			if (ps->next_recv_payload > ps->n_next_payload) {
 				ps->next_recv_payload = ps->n_next_payload;
@@ -337,7 +333,7 @@ static inline void parse_PSI(const uint8_t *packet, PSI_parse_t *ps)
 
 			remain = pointer_field;
 		} else {
-			pos = tsh.payload_data_pos;
+			pos = tsh->payload_data_pos;
 			/* 不正なパケットかどうかのチェック */
 			if (pos > 188) {
 				ps->stat = PAYLOAD_STAT_INIT;
@@ -680,7 +676,7 @@ proginfo_t *find_curr_service(ts_service_list_t *sl, unsigned int service_id)
 	return NULL;
 }
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl)
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int len;
 	EIT_header_t eit_h;
@@ -690,7 +686,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list
 	uint8_t dtag, dlen;
 	proginfo_t *curr_proginfo;
 
-	parse_PSI(packet, payload_stat);
+	parse_PSI(packet, tsh, payload_stat);
 
 	if (payload_stat->stat != PAYLOAD_STAT_FINISHED || payload_stat->payload[0] != 0x4e) {
 		return;
@@ -834,7 +830,7 @@ void store_SDT(const SDT_header_t *sdt_h, const Sd_t *sd, proginfo_t *proginfo)
 	proginfo->status |= PGINFO_GET_SERVICE_INFO;
 }
 
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl)
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int len;
 	SDT_header_t sdt_h;
@@ -845,7 +841,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list
 	uint8_t dtag, dlen;
 	proginfo_t *curr_proginfo;
 
-	parse_PSI(packet, payload_stat);
+	parse_PSI(packet, tsh, payload_stat);
 
 	if (payload_stat->stat != PAYLOAD_STAT_FINISHED || payload_stat->payload[0] != 0x42) {
 		return;
@@ -885,7 +881,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list
 }
 
 /* PMT: ISO 13818-1 2.4.4.8 Program Map Table */
-void parse_PMT(uint8_t *packet, ts_service_list_t *sl)
+void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int i;
 	int pos, n_pids, len;
@@ -894,7 +890,7 @@ void parse_PMT(uint8_t *packet, ts_service_list_t *sl)
 	uint8_t *payload;
 
 	for (i = 0; i < sl->n_services; i++) {
-		parse_PSI(packet, &sl->proginfos[i].PMT_payload);
+		parse_PSI(packet, tsh, &sl->proginfos[i].PMT_payload);
 		if (sl->proginfos[i].PMT_payload.stat != PAYLOAD_STAT_FINISHED) {
 			continue;
 		}
@@ -918,12 +914,12 @@ void parse_PMT(uint8_t *packet, ts_service_list_t *sl)
 	}
 }
 
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, ts_service_list_t *sl)
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int i, n, pn, pid;
 	uint8_t *payload;
 
-	parse_PSI(packet, PAT_payload);
+	parse_PSI(packet, tsh, PAT_payload);
 	if (PAT_payload->stat == PAYLOAD_STAT_FINISHED) {
 		n = (PAT_payload->n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
 		if (n > MAX_SERVICES_PER_CH) {

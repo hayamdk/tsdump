@@ -155,11 +155,12 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	return 1;
 }
 
-static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, uint8_t *packet)
+static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, const uint8_t *packet)
 {
 	unsigned int pid;
 	int ismypid;
-	uint8_t new_packet[188], *p;
+	uint8_t new_packet[188];
+	const uint8_t *p;
 	ts_header_t tsh;
 
 	if (!parse_ts_header(packet, &tsh)) {

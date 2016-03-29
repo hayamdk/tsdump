@@ -77,6 +77,7 @@ static inline unsigned __int32 crc32(unsigned char *buf, int len)
 
 typedef struct{
 	uint8_t sync_byte;
+	int valid_sync_byte;
 	unsigned int transport_error_indicator : 1;
 	unsigned int payload_unit_start_indicator : 1;
 	unsigned int transport_priority : 1;
@@ -92,7 +93,7 @@ typedef struct{
 	uint8_t payload_data_pos;
 } ts_header_t;
 
-int parse_ts_header(const uint8_t *packet, ts_header_t *ts_header);
+int parse_ts_header(const uint8_t *packet, ts_header_t *tsh);
 
 static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t length)
 {
@@ -121,7 +122,7 @@ static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t le
 	return t;
 }
 
-static inline int ts_get_section_length(const uint8_t *p, ts_header_t *tsh)
+static inline int ts_get_section_length(const uint8_t *p, const ts_header_t *tsh)
 {
 	int pos = tsh->payload_data_pos;
 	if (pos >= 188 - 3) {
@@ -238,10 +239,10 @@ typedef struct {
 	unsigned int original_network_id : 16;
 } SDT_header_t;
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl);
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, ts_service_list_t *sl);
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, ts_service_list_t *sl);
-void parse_PMT(uint8_t * packet, ts_service_list_t *sl);
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_PMT(const uint8_t * packet, const ts_header_t *tsh, ts_service_list_t *sl);
 
 void clear_proginfo(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);

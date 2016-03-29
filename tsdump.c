@@ -289,6 +289,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	ts_service_list_t service_list;
 
+	const uint8_t *packet;
+	ts_header_t tsh;
+
 	init_service_list(&service_list);
 
 	if ( !param_all_services && param_n_services == 0 ) {
@@ -307,19 +310,31 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream(decbuf, n_dec, encrypted);
 
 		for (i = 0; i < n_dec; i+=188) {
+			packet = &decbuf[i];
+			if (!parse_ts_header(packet, &tsh)) {
+				if (tsh.valid_sync_byte) {
+					/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+					   PESパケットの規格を要調査 */
+					//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+				} else {
+					output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+				}
+				continue; /* pass */
+			}
+
 			if (service_list.pid0x00.stat != PAYLOAD_STAT_FINISHED) {
 				/* PATの取得は初回のみ */
-				parse_PAT(&service_list.pid0x00, &decbuf[i], &service_list);
+				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list);
 			} else {
-				parse_PMT(&decbuf[i], &service_list);
+				parse_PMT(packet, &tsh, &service_list);
 				if (!printservice) {
 					printservice = print_services(&service_list);
 				}
 			}
-			parse_SDT(&service_list.pid0x11, &decbuf[i], &service_list);
-			parse_EIT(&service_list.pid0x12, &decbuf[i], &service_list);
-			parse_EIT(&service_list.pid0x26, &decbuf[i], &service_list);
-			parse_EIT(&service_list.pid0x27, &decbuf[i], &service_list);
+			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list);
+			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list);
+			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list);
+			parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list);
 		}
 
 		//tc_start("bufcopy");
@@ -344,7 +359,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			/* パケットを処理 */
 			for (pos = 0; pos < (int)n_dec; pos += 188) {
-				BYTE *packet = &decbuf[pos];
+				packet = &decbuf[pos];
 
 				/* PAT, PMTを取得 */
 				//parse_ts_packet(&tps, packet);
