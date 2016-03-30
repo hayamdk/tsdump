@@ -245,4 +245,5 @@ void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_
 void parse_PMT(const uint8_t * packet, const ts_header_t *tsh, ts_service_list_t *sl);
 
 void clear_proginfo(proginfo_t *proginfo);
+void clear_proginfo_update_flag(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);

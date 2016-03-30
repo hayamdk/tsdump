@@ -7,6 +7,7 @@
 #define PGINFO_GET_GENRE			64
 #define PGINFO_UNKNOWN_STARTTIME	128
 #define PGINFO_UNKNOWN_DURATION		256
+#define PGINFO_READY_UPDATED		512
 
 #define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
 #define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
@@ -92,8 +93,6 @@ typedef struct {
 	Sd_string_t service_name;
 
 	/***** EIT *****/
-	int64_t last_ready_time;
-
 	unsigned int event_id : 16;
 
 	int curr_desc;

@@ -373,7 +373,11 @@ void init_proginfo(proginfo_t *proginfo)
 {
 	proginfo->status = 0;
 	proginfo->last_desc = -1;
-	proginfo->last_ready_time = gettime();
+}
+
+void clear_proginfo_update_flag(proginfo_t *proginfo)
+{
+	proginfo->status &= (~PGINFO_READY_UPDATED);
 }
 
 int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
@@ -730,7 +734,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 				if (parse_EIT_Sed(p_desc, &sed)) {
 					store_EIT_Sed(&sed, curr_proginfo);
 					if (PGINFO_READY(curr_proginfo->status)) {
-						curr_proginfo->last_ready_time = gettime();
+						curr_proginfo->status |= PGINFO_READY_UPDATED;
 					}
 				}
 			} else if (dtag == 0x4e) {

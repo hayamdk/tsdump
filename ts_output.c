@@ -128,6 +128,7 @@ void init_tos(ts_output_stat_t *tos)
 
 	init_proginfo(&tos->last_proginfo);
 	tos->last_checkpi_time = gettime();
+	tos->retry_count = 0;
 	tos->last_bufminimize_time = gettime();
 
 	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
@@ -402,13 +403,17 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	int64_t starttime, endtime, last_starttime, last_endtime;
 	WCHAR msg1[64], msg2[64];
 
-	if ( PGINFO_READY(tos->proginfo->status) && nowtime - tos->proginfo->last_ready_time > 15*1000 ) {
-		/* ‰¼‚ÉŒ»Žž“_‚ÅREADY‚Å‚à15•bˆÈã”Ô‘gî•ñ‚ª“râ‚¦‚Ä‚¢‚½‚çŽæ“¾–³‚µ‚Æ‚Ý‚È‚· */
+	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) ) {
+		/* ÅV‚Ì”Ô‘gî•ñ‚ªŽæ“¾‚Å‚«‚Ä‚¢‚È‚­‚Ä‚à15•b‚Í”»’è‚ð•Û—¯‚·‚é */
+		if (tos->retry_count < 15 * 1000 / CHECK_INTERVAL) {
+			tos->retry_count++;
+			return;
+		}
 		clear_proginfo(tos->proginfo);
-	} else if ( !PGINFO_READY(tos->proginfo->status) && nowtime - tos->last_checkpi_time < 15*1000 ) {
-		/* ”Ô‘gî•ñ‚ªŽæ“¾‚Å‚«‚Ä‚¢‚È‚­‚Ä‚à15•b‚Í”»’è‚ð•Û—¯‚·‚é */
-		return;
 	}
+
+	clear_proginfo_update_flag(tos->proginfo);
+	tos->retry_count = 0;
 
 	if ( PGINFO_READY(tos->proginfo->status) ) {
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {
