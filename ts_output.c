@@ -250,6 +250,9 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 			/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを実行 */
 			ts_minimize_buf(tos);
 			tos->last_bufminimize_time = nowtime;
+		} else if ( nowtime < tos->last_bufminimize_time ) {
+			/* 時刻の巻き戻りに対応 */
+			tos->last_bufminimize_time = nowtime;
 		}
 
 		/* ファイル分割 */
