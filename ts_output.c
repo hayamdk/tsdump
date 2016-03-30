@@ -146,7 +146,13 @@ void close_tos(ts_output_stat_t *tos)
 
 	/* close all output */
 	for (i = 0; i < tos->n_pgos; i++) {
-		do_pgoutput_close(tos->pgos[i].modulestats, &tos->pgos[i].final_pi);
+		if (0 < tos->pgos[i].closetime) {
+			/* マージン録画フェーズに移っていたら保存されているfinal_piを使う */
+			do_pgoutput_close(tos->pgos[i].modulestats, &tos->pgos[i].final_pi);
+		} else {
+			/* そうでなければ最新のproginfoを */
+			do_pgoutput_close(tos->pgos[i].modulestats, tos->proginfo);
+		}
 	}
 
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
