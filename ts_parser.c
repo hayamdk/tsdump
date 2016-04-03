@@ -230,6 +230,7 @@ int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
 	if (tsh->adaptation_field_control & 0x02) {
 		/* have adaptation_field */
 		tsh->adaptation_field_len = packet[pos];
+		tsh->adaptation_field_pos = (uint8_t)pos + 1;
 		pos += 1 + tsh->adaptation_field_len;
 	}
 
@@ -373,6 +374,7 @@ void init_proginfo(proginfo_t *proginfo)
 {
 	proginfo->status = 0;
 	proginfo->last_desc = -1;
+	proginfo->PCR_base = 0;
 }
 
 void clear_proginfo_update_flag(proginfo_t *proginfo)
@@ -680,6 +682,57 @@ proginfo_t *find_curr_service(ts_service_list_t *sl, unsigned int service_id)
 	return NULL;
 }
 
+/*
+proginfo_t *find_curr_prog_from_PCR_pid(ts_service_list_t *sl, unsigned int pid)
+{
+	int i;
+	for (i = 0; i < sl->n_services; i++) {
+		if (pid == sl->proginfos[i].PCR_pid) {
+			return &sl->proginfos[i];
+		}
+	}
+	return NULL;
+}
+*/
+
+void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+{
+	int i, get = 0;
+	const uint8_t *p;
+	uint64_t PCR_base = 0, offset;
+	unsigned int PCR_ext = 0;
+
+	if ( !(tsh->adaptation_field_control & 0x02) ) {
+		return;
+	}
+
+	p = &packet[tsh->adaptation_field_pos];
+	if ( !get_bits(p, 3, 1) ) {
+		/* no PCR */
+		return;
+	}
+
+	for (i = 0; i < sl->n_services; i++) {
+		if (tsh->pid == sl->proginfos[i].PCR_pid) {
+			if (!get) {
+				PCR_base = get_bits64(p, 8, 33);
+				PCR_ext = get_bits(p, 47, 9);
+				get = 1;
+			}
+			offset = PCR_base - sl->proginfos[i].PCR_base;
+			if( 0 < offset && offset < 90*1000 ) {
+				sl->proginfos[i].status |= PGINFO_VALID_PCR;
+				printf("PCR %x: %I64d %d\n", sl->proginfos[i].service_id, PCR_base, PCR_ext);
+			} else {
+				/* ‘O‚ÌPCR‚©‚ç1•bˆÈ“à‚¶‚á‚È‚¢‚Æ—LŒø‚Æ‚ÍŒ©‚È‚³‚È‚¢ */
+				sl->proginfos[i].status &= ~PGINFO_VALID_PCR;
+			}
+			sl->proginfos[i].PCR_base = PCR_base;
+			sl->proginfos[i].PCR_ext = PCR_ext;
+		}
+	}
+}
+
 void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int len;
@@ -901,6 +954,7 @@ void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t 
 
 		len = sl->proginfos[i].PMT_payload.n_payload - 4/*crc32*/;
 		payload = sl->proginfos[i].PMT_payload.payload;
+		sl->proginfos[i].PCR_pid = get_bits(payload, 67, 13);
 		pos = 12 + get_bits(payload, 84, 12);
 		n_pids = 0;
 		while ( pos < len && n_pids <= MAX_PIDS_PER_SERVICE ) {

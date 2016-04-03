@@ -89,6 +89,7 @@ typedef struct{
 	uint8_t pointer_field;
 	unsigned int section_length : 12;
 
+	uint8_t adaptation_field_pos;
 	uint8_t payload_pos;
 	uint8_t payload_data_pos;
 } ts_header_t;
@@ -119,6 +120,21 @@ static inline unsigned int get_bits(const uint8_t *buf, size_t offset, size_t le
 	}
 	t <<= len3;
 	t += buf[offset_bytes + len2 + 1] >> (8 - len3);
+	return t;
+}
+
+static inline uint64_t get_bits64(const uint8_t *buf, size_t offset, size_t length)
+{
+	uint64_t t;
+	size_t length2;
+	if (length > 32) {
+		length2 = length - 32;
+		t = get_bits(buf, offset, 32);
+		t = t << length2;
+		t |= get_bits(buf, offset + 32, length2);
+	} else {
+		t = get_bits(buf, offset, length);
+	}
 	return t;
 }
 
@@ -243,6 +259,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 void parse_PMT(const uint8_t * packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 
 void clear_proginfo(proginfo_t *proginfo);
 void clear_proginfo_update_flag(proginfo_t *proginfo);

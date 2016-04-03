@@ -8,6 +8,7 @@
 #define PGINFO_UNKNOWN_STARTTIME	128
 #define PGINFO_UNKNOWN_DURATION		256
 #define PGINFO_READY_UPDATED		512
+#define PGINFO_VALID_PCR			1024
 
 #define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
 #define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
@@ -84,10 +85,15 @@ typedef struct {
 	int n_service_pids;
 	PMT_pid_def_t service_pids[MAX_PIDS_PER_SERVICE];
 	unsigned int service_id : 16;
+	unsigned int PCR_pid : 16;
+
+	/***** PCR *****/
+	uint64_t PCR_base;
+	unsigned int PCR_ext:9;
 
 	/***** SDT *****/
 	unsigned int network_id : 16;
-	unsigned int ts_id : 16;
+	unsigned int ts_id : 13;
 
 	Sd_string_t service_provider_name;
 	Sd_string_t service_name;

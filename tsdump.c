@@ -331,6 +331,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 					printservice = print_services(&service_list);
 				}
 			}
+			parse_PCR(packet, &tsh, &service_list);
 			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list);
 			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list);
 			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list);
