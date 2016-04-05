@@ -128,7 +128,8 @@ void init_tos(ts_output_stat_t *tos)
 
 	init_proginfo(&tos->last_proginfo);
 	tos->last_checkpi_time = gettime();
-	tos->retry_count = 0;
+	tos->proginfo_retry_count = 0;
+	tos->pcr_retry_count = 0;
 	tos->last_bufminimize_time = gettime();
 
 	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
@@ -399,6 +400,41 @@ void ts_check_extended_text(ts_output_stat_t *tos)
 	}
 }
 
+void check_stream_timeinfo(ts_output_stat_t *tos)
+{
+	uint64_t diff_prc;
+
+	/* check_piのインターバルごとにPCR,TOT関連のチェック、クリアを行う */
+	if ((tos->proginfo->status&PGINFO_TIMEINFO) == PGINFO_TIMEINFO) {
+
+		/* 1秒程度以上PCRの更新がなければ無効としてクリアする */
+		if (tos->proginfo->status & PGINFO_PCR_UPDATED) {
+			tos->pcr_retry_count = 0;
+		} else {
+			if (tos->pcr_retry_count > (1000 / CHECK_INTERVAL)) {
+				tos->proginfo->status &= ~PGINFO_VALID_PCR;
+			}
+			tos->pcr_retry_count++;
+			return;
+		}
+
+		/* 120秒以上古いTOTは無効としてクリアする(通常は30秒以下の間隔で送出) */
+		diff_prc = tos->proginfo->PCR_base - tos->proginfo->TOT_PCR;
+		if (tos->proginfo->PCR_wraparounded) {
+			diff_prc += PCR_BASE_MAX;
+		}
+
+		if (diff_prc > 120 * PCR_BASE_HZ) {
+			tos->proginfo->status &= ~PGINFO_GET_TOT;
+			tos->proginfo->status &= ~PGINFO_VALID_TOT_PCR;
+		}
+	} else {
+		tos->pcr_retry_count = 0;
+	}
+
+	tos->proginfo->status &= ~PGINFO_PCR_UPDATED;
+}
+
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0;
@@ -406,17 +442,19 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	int64_t starttime, endtime, last_starttime, last_endtime;
 	WCHAR msg1[64], msg2[64];
 
+	check_stream_timeinfo(tos);
+
 	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) ) {
 		/* 最新の番組情報が取得できていなくても15秒は判定を保留する */
-		if (tos->retry_count < 15 * 1000 / CHECK_INTERVAL) {
-			tos->retry_count++;
+		if (tos->proginfo_retry_count < 15 * 1000 / CHECK_INTERVAL) {
+			tos->proginfo_retry_count++;
 			return;
 		}
-		clear_proginfo(tos->proginfo);
+		clear_proginfo_all(tos->proginfo);
 	}
 
-	clear_proginfo_update_flag(tos->proginfo);
-	tos->retry_count = 0;
+	tos->proginfo->status &= ~PGINFO_READY_UPDATED;
+	tos->proginfo_retry_count = 0;
 
 	if ( PGINFO_READY(tos->proginfo->status) ) {
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {

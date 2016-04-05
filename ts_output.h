@@ -30,7 +30,8 @@ typedef struct
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
 	int64_t last_checkpi_time;
-	int retry_count;
+	int proginfo_retry_count;
+	int pcr_retry_count;
 
 	int64_t last_bufminimize_time;
 

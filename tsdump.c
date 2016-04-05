@@ -187,6 +187,8 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	static int cnt = 0;
 	COORD new_pos;
 	double rate;
+	JST_time_t time_jst;
+	unsigned int usec;
 
 	if(!tos) {
 		return;
@@ -230,8 +232,25 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 		}
 		*p = '\0';
 
-		memset(hor, '-', console_width - 1);
-		hor[console_width - 1] = '\0';
+		if (get_stream_timestamp(tos->proginfo, &time_jst, &usec)) {
+			snprintf(hor, sizeof(hor), "---- [%04d/%02d/%02d %02d:%02d:%02d.%03d] ",
+				time_jst.year,
+				time_jst.mon,
+				time_jst.day,
+				time_jst.hour,
+				time_jst.min,
+				time_jst.sec,
+				usec/1000
+			);
+		} else {
+			snprintf(hor, sizeof(hor), "---- [UNKNOWN TIMESTAMP] ");
+		}
+
+		width = strlen(hor);
+		if (console_width > width+1) {
+			memset(&hor[width], '-', console_width - width - 1);
+			hor[console_width - 1] = '\0';
+		}
 
 		tsd_printf(TSD_TEXT("%S\n%s\nbuf: %S"),hor, stat, line);
 		restore_line(new_pos);
@@ -250,6 +269,8 @@ void init_service_list(ts_service_list_t *service_list)
 	service_list->pid0x11.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x12.pid = 0x12;
 	service_list->pid0x12.stat = PAYLOAD_STAT_INIT;
+	service_list->pid0x14.pid = 0x14;
+	service_list->pid0x14.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x26.pid = 0x26;
 	service_list->pid0x26.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x27.pid = 0x27;
@@ -332,6 +353,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 			}
 			parse_PCR(packet, &tsh, &service_list);
+			parse_TOT_TDT(packet, &tsh, &service_list);
 			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list);
 			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list);
 			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list);

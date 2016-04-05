@@ -3,18 +3,18 @@
 
 #define BUFSIZE_DEFAULT			96
 #define OVERLAP_SEC_DEFAULT		15
-#define CHECK_INTERVAL_DEFAULT	500
+#define CHECK_INTERVAL_DEFAULT	250
 #define MAX_PGOVERLAP_DEFAULT	4
 
 #define MAX_SERVICES			32
+
+#define MAX_WRITE_SIZE			188*16*1024
+#define MIN_CLEAR_RATIO			0.05
 
 extern int CHECK_INTERVAL;
 extern int OVERLAP_SEC;
 extern int BUFSIZE;
 extern int MAX_PGOVERLAP;
-
-#define MAX_WRITE_SIZE			188*16*1024
-#define MIN_CLEAR_RATIO			0.05
 
 static inline int64_t gettime()
 {

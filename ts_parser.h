@@ -160,6 +160,7 @@ typedef struct {
 	PSI_parse_t pid0x00;
 	PSI_parse_t pid0x11;
 	PSI_parse_t pid0x12;
+	PSI_parse_t pid0x14;
 	PSI_parse_t pid0x26;
 	PSI_parse_t pid0x27;
 	int n_services;
@@ -260,7 +261,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 void parse_PMT(const uint8_t * packet, const ts_header_t *tsh, ts_service_list_t *sl);
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 
-void clear_proginfo(proginfo_t *proginfo);
-void clear_proginfo_update_flag(proginfo_t *proginfo);
+void clear_proginfo_all(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);

@@ -9,12 +9,20 @@
 #define PGINFO_UNKNOWN_DURATION		256
 #define PGINFO_READY_UPDATED		512
 #define PGINFO_VALID_PCR			1024
+#define PGINFO_PCR_UPDATED			2048
+#define PGINFO_GET_TOT				4096
+#define PGINFO_VALID_TOT_PCR		8192
 
 #define PGINFO_GET					(PGINFO_GET_PAT|PGINFO_GET_SERVICE_INFO|PGINFO_GET_EVENT_INFO|PGINFO_GET_SHORT_TEXT)
+#define PGINFO_GET_ALL				(PGINFO_GET|PGINFO_GET_EXTEND_TEXT|PGINFO_GET_GENRE)
+#define PGINFO_TIMEINFO				(PGINFO_VALID_PCR|PGINFO_GET_TOT|PGINFO_VALID_TOT_PCR)
 #define PGINFO_READY(status)		(( (status) & PGINFO_GET ) == PGINFO_GET)
 
 #define MAX_PIDS_PER_SERVICE		64
 #define MAX_SERVICES_PER_CH			32
+
+#define PCR_BASE_MAX				0x200000000
+#define PCR_BASE_HZ					(90*1000)
 
 #define ARIB_CHAR_SIZE_RATIO 1
 
@@ -76,6 +84,16 @@ typedef struct {
 } Cd_t;
 
 typedef struct {
+	unsigned int mjd;
+	int year;
+	int mon;
+	int day;
+	int hour;
+	int min;
+	int sec;
+} JST_time_t;
+
+typedef struct {
 
 	int status;
 
@@ -87,9 +105,16 @@ typedef struct {
 	unsigned int service_id : 16;
 	unsigned int PCR_pid : 16;
 
+	/* TOT,TDT */
+	JST_time_t TOT_time;
+	/* 本来はTOTはサービスごとのデータではないが、
+	proginfo全体のコピーなどが可能なように値として持たせている */
+	uint64_t TOT_PCR;
+
 	/***** PCR *****/
 	uint64_t PCR_base;
-	unsigned int PCR_ext:9;
+	unsigned int PCR_ext : 9;
+	unsigned int PCR_wraparounded : 1;
 
 	/***** SDT *****/
 	unsigned int network_id : 16;
@@ -130,3 +155,4 @@ typedef struct {
 MODULE_EXPORT_FUNC int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi);
 MODULE_EXPORT_FUNC void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item);
 MODULE_EXPORT_FUNC int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);
+MODULE_EXPORT_FUNC int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned int *p_usec);

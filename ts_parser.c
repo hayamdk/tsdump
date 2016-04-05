@@ -145,7 +145,7 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 	WCHAR et1[4096], et2[4096];
 	int i;
 
-	if (pi1->status != pi2->status) {
+	if ((pi1->status&PGINFO_GET_ALL) != (pi2->status&PGINFO_GET_ALL)) {
 		return 1;
 	}
 
@@ -201,6 +201,75 @@ static const char *get_stream_type_str(int stream_type) {
 	else {
 		return "unkonwn";
 	}
+}
+
+/* MJD(修正ユリウス日) -> YMD */
+void mjd_to_ymd(const unsigned int mjd16, int *year, int *mon, int *day)
+{
+	double mjd;
+	int y, m, d, k;
+
+	/*　2100年2月28日までの間有効な公式（ARIB STD-B10 第２部より）　*/
+	mjd = (double)mjd16;
+	y = (int)((mjd - 15078.2) / 365.25);
+	m = (int)((mjd - 14956.1 - (int)((double)y*365.25)) / 30.6001);
+	d = mjd16 - 14956 - (int)((double)y*365.25) - (int)((double)m*30.6001);
+	if (m == 14 || m == 15) {
+		k = 1;
+	}
+	else {
+		k = 0;
+	}
+	*year = 1900 + y + k;
+	*mon = m - 1 - k * 12;
+	*day = d;
+}
+
+int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned int *p_usec)
+{
+	int64_t diff_pcr, usec;
+	int sec, min, hour, day_diff;
+
+	if ( (pi->status&PGINFO_TIMEINFO) != PGINFO_TIMEINFO ) {
+		return 0;
+	}
+
+	diff_pcr = pi->PCR_base - pi->TOT_PCR;
+	if (pi->PCR_wraparounded) {
+		diff_pcr += PCR_BASE_MAX;
+	}
+	if (diff_pcr < 0) {
+		return 0;
+	}
+
+	usec = diff_pcr * 1000 * 1000 / PCR_BASE_HZ;
+	sec = (int)(usec/(1000*1000)) + pi->TOT_time.sec;
+	min = sec/60 + pi->TOT_time.min;
+	hour = min / 60 + pi->TOT_time.hour;
+	day_diff = hour / 24;
+
+	usec = usec % (1000 * 1000);
+	sec = sec % 60;
+	min = min % 60;
+	hour = hour % 24;
+
+	jst_time->mjd = pi->TOT_time.mjd + day_diff;
+	if (day_diff > 0) {
+		mjd_to_ymd(jst_time->mjd, &jst_time->year, &jst_time->mon, &jst_time->day);
+	} else {
+		jst_time->year = pi->TOT_time.year;
+		jst_time->mon = pi->TOT_time.mon;
+		jst_time->day = pi->TOT_time.day;
+	}
+	jst_time->hour = hour;
+	jst_time->min = min;
+	jst_time->sec = sec;
+
+	if (p_usec) {
+		*p_usec = (unsigned int)usec;
+	}
+
+	return 1;
 }
 
 int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
@@ -363,10 +432,12 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 	}
 }
 
-void clear_proginfo(proginfo_t *proginfo)
+void clear_proginfo_all(proginfo_t *proginfo)
 {
-	/* PAT、PMTの取得状況だけはイベントの切り替わりと無関係なのでクリアしない */
-	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT);
+	/* 最低限のものを除いたオールクリア */
+	/* PAT、PMTの取得状況はイベントの切り替わりと無関係なのでクリアしない */
+	/* TOTとPCRも同様 */
+	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT | PGINFO_TIMEINFO);
 	proginfo->last_desc = -1;
 }
 
@@ -375,11 +446,7 @@ void init_proginfo(proginfo_t *proginfo)
 	proginfo->status = 0;
 	proginfo->last_desc = -1;
 	proginfo->PCR_base = 0;
-}
-
-void clear_proginfo_update_flag(proginfo_t *proginfo)
-{
-	proginfo->status &= (~PGINFO_READY_UPDATED);
+	proginfo->PCR_wraparounded = 0;
 }
 
 int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
@@ -497,12 +564,9 @@ void store_EIT_Sed(const Sed_t *sed, proginfo_t *proginfo)
 
 void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 {
-	int y, m, d, k;
-	double mjd;
-
 	if (proginfo->status & PGINFO_GET_EVENT_INFO && proginfo->event_id != eit_b->event_id) {
 		/* 前回の取得から番組が切り替わった */
-		clear_proginfo(proginfo);
+		clear_proginfo_all(proginfo);
 	}
 	proginfo->event_id = eit_b->event_id;
 
@@ -515,22 +579,7 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 		proginfo->start_sec = 0;
 		proginfo->status |= PGINFO_UNKNOWN_STARTTIME;
 	} else {
-		/* MJD -> YMD */
-		/*　2100年2月28日までの間有効な公式（ARIB STD-B10 第２部より）　*/
-		mjd = (double)eit_b->start_time_mjd;
-		y = (int)((mjd - 15078.2) / 365.25);
-		m = (int)((mjd - 14956.1 - (int)((double)y*365.25)) / 30.6001);
-		d = eit_b->start_time_mjd - 14956 - (int)((double)y*365.25) - (int)((double)m*30.6001);
-		if (m == 14 || m == 15) {
-			k = 1;
-		}
-		else {
-			k = 0;
-		}
-		proginfo->start_year = 1900 + y + k;
-		proginfo->start_month = m - 1 - k * 12;
-		proginfo->start_day = d;
-
+		mjd_to_ymd(eit_b->start_time_mjd, &proginfo->start_year, &proginfo->start_month, &proginfo->start_day);
 		proginfo->start_hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
 			((eit_b->start_time_jtc >> 16) & 0x0f);
 		proginfo->start_min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
@@ -682,24 +731,12 @@ proginfo_t *find_curr_service(ts_service_list_t *sl, unsigned int service_id)
 	return NULL;
 }
 
-/*
-proginfo_t *find_curr_prog_from_PCR_pid(ts_service_list_t *sl, unsigned int pid)
-{
-	int i;
-	for (i = 0; i < sl->n_services; i++) {
-		if (pid == sl->proginfos[i].PCR_pid) {
-			return &sl->proginfos[i];
-		}
-	}
-	return NULL;
-}
-*/
-
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
-	int i, get = 0;
+	int i, get = 0, wraparounded;
 	const uint8_t *p;
-	uint64_t PCR_base = 0, offset;
+	uint64_t PCR_base = 0;
+	int64_t offset;
 	unsigned int PCR_ext = 0;
 
 	if ( !(tsh->adaptation_field_control & 0x02) ) {
@@ -719,17 +756,78 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t 
 				PCR_ext = get_bits(p, 47, 9);
 				get = 1;
 			}
-			offset = PCR_base - sl->proginfos[i].PCR_base;
-			if( 0 < offset && offset < 90*1000 ) {
+			offset = (int64_t)PCR_base - (int64_t)sl->proginfos[i].PCR_base;
+			wraparounded = 0;
+			if (offset < 0) {
+				/* wrap-around対策 */
+				offset += PCR_BASE_MAX;
+				wraparounded = 1;
+			}
+
+			if( offset < 1*PCR_BASE_HZ ) {
 				sl->proginfos[i].status |= PGINFO_VALID_PCR;
-				printf("PCR %x: %I64d %d\n", sl->proginfos[i].service_id, PCR_base, PCR_ext);
+				sl->proginfos[i].status |= PGINFO_PCR_UPDATED;
+				//output_message(MSG_DISP, L"PCR %x: %I64d %I64x %d %d",
+				//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
 			} else {
-				/* 前のPCRから1秒以内じゃないと有効とは見なさない */
+				/* 前のPCRから1秒以上差があれば有効とは見なさない */
 				sl->proginfos[i].status &= ~PGINFO_VALID_PCR;
 			}
 			sl->proginfos[i].PCR_base = PCR_base;
 			sl->proginfos[i].PCR_ext = PCR_ext;
+			sl->proginfos[i].PCR_wraparounded |= wraparounded;
 		}
+	}
+}
+
+void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+{
+	unsigned int slen, mjd;
+	uint8_t tid;
+	uint32_t bcd_jst;
+	int i, year, mon, day, hour, min, sec;
+
+	parse_PSI(packet, tsh, &sl->pid0x14);
+	if (sl->pid0x14.stat != PAYLOAD_STAT_FINISHED || sl->pid0x14.n_payload < 8) {
+		return;
+	}
+
+	tid = sl->pid0x14.payload[0];
+	slen = get_bits(sl->pid0x14.payload, 12, 12);
+	if (tid == 0x70) {
+		/* TDT */
+		if (slen != 5) {  return; }
+	} else if (tid == 0x73) {
+		/* TOT */
+		if (slen < 5) { return; }
+	} else { return; }
+
+	mjd = get_bits(sl->pid0x14.payload, 24, 16);
+	bcd_jst= get_bits(sl->pid0x14.payload, 40, 24);
+
+	mjd_to_ymd(mjd, &year, &mon, &day);
+	hour = (bcd_jst >> 20 & 0x0f) * 10 + ((bcd_jst >> 16) & 0x0f);
+	min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
+	sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
+
+	//output_message( MSG_DISP, L"TOT %04d/%02d/%02d %02d:%02d:%02d", year, mon, day, hour, min, sec );
+
+	for (i = 0; i < sl->n_services; i++) {
+		sl->proginfos[i].TOT_time.year = year;
+		sl->proginfos[i].TOT_time.mon = mon;
+		sl->proginfos[i].TOT_time.day = day;
+		sl->proginfos[i].TOT_time.hour = hour;
+		sl->proginfos[i].TOT_time.min = min;
+		sl->proginfos[i].TOT_time.sec = sec;
+
+		if (sl->proginfos[i].status & PGINFO_VALID_PCR) {
+			sl->proginfos[i].TOT_PCR = sl->proginfos[i].PCR_base;
+			sl->proginfos[i].status |= PGINFO_VALID_TOT_PCR;
+		} else {
+			sl->proginfos[i].status &= ~PGINFO_VALID_TOT_PCR;
+		}
+		sl->proginfos[i].PCR_wraparounded = 0;
+		sl->proginfos[i].status |= PGINFO_GET_TOT;
 	}
 }
 
