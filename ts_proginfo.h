@@ -91,7 +91,17 @@ typedef struct {
 	int hour;
 	int min;
 	int sec;
-} JST_time_t;
+	int usec;
+} time_mjd_t;
+
+typedef struct {
+	int sign;
+	int day;
+	int hour;
+	int min;
+	int sec;
+	int usec;
+} time_offset_t;
 
 typedef struct {
 
@@ -106,7 +116,7 @@ typedef struct {
 	unsigned int PCR_pid : 16;
 
 	/* TOT,TDT */
-	JST_time_t TOT_time;
+	time_mjd_t TOT_time;
 	/* 本来はTOTはサービスごとのデータではないが、
 	proginfo全体のコピーなどが可能なように値として持たせている */
 	uint64_t TOT_PCR;
@@ -129,10 +139,8 @@ typedef struct {
 	int curr_desc;
 	int last_desc;
 
-	JST_time_t start;
-	int dur_hour;
-	int dur_min;
-	int dur_sec;
+	time_mjd_t start;
+	time_offset_t dur;
 
 	/* 短形式イベント記述子 */
 	Sed_string_t event_name;
@@ -150,5 +158,5 @@ typedef struct {
 MODULE_EXPORT_FUNC int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi);
 MODULE_EXPORT_FUNC void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item);
 MODULE_EXPORT_FUNC int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);
-MODULE_EXPORT_FUNC int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned int *p_usec);
-MODULE_EXPORT_FUNC int get_time_offset(JST_time_t *offset, const JST_time_t *time_target, const JST_time_t *time_orig);
+MODULE_EXPORT_FUNC int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time);
+MODULE_EXPORT_FUNC int get_time_offset(time_offset_t *offset, const time_mjd_t *time_target, const time_mjd_t *time_orig);

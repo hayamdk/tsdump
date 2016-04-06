@@ -187,8 +187,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 	static int cnt = 0;
 	COORD new_pos;
 	double rate;
-	JST_time_t time_jst;
-	unsigned int usec;
+	time_mjd_t time_jst;
 
 	if(!tos) {
 		return;
@@ -232,7 +231,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 		}
 		*p = '\0';
 
-		if (get_stream_timestamp(tos->proginfo, &time_jst, &usec)) {
+		if (get_stream_timestamp(tos->proginfo, &time_jst)) {
 			snprintf(hor, sizeof(hor), "---- [%04d/%02d/%02d %02d:%02d:%02d.%03d] ",
 				time_jst.year,
 				time_jst.mon,
@@ -240,7 +239,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 				time_jst.hour,
 				time_jst.min,
 				time_jst.sec,
-				usec/1000
+				time_jst.usec/1000
 			);
 		} else {
 			snprintf(hor, sizeof(hor), "---- [UNKNOWN TIMESTAMP] ");
@@ -507,6 +506,24 @@ int wmain(int argc, WCHAR* argv[])
 	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
 
 	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
+
+	time_mjd_t t1 = { 0 }, t2 = { 0 };
+	time_offset_t t = { 0 };
+
+	t1.mjd = 200;
+	t2.mjd = 200;
+
+	t1.hour = 1;
+	t1.min = 0;
+	t1.sec = 0;
+
+	t2.hour = 0;
+	t2.min = 0;
+	t2.sec = 0;
+	t2.usec = 1;
+
+	get_time_offset(&t, &t2, &t1);
+
 
 	/* iniファイルをロード */
 	load_ini();

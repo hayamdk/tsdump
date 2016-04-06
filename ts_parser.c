@@ -149,9 +149,9 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 		return 1;
 	}
 
-	if (pi1->dur_hour != pi2->dur_hour ||
-		pi1->dur_min != pi2->dur_min ||
-		pi1->dur_sec != pi2->dur_sec ||
+	if (pi1->dur.hour != pi2->dur.hour ||
+		pi1->dur.min != pi2->dur.min ||
+		pi1->dur.sec != pi2->dur.sec ||
 		pi1->start.hour != pi2->start.hour ||
 		pi1->start.min != pi2->start.min ||
 		pi1->start.sec != pi2->start.sec ||
@@ -225,7 +225,7 @@ void mjd_to_ymd(const unsigned int mjd16, int *year, int *mon, int *day)
 	*day = d;
 }
 
-int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned int *p_usec)
+int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time)
 {
 	int64_t diff_pcr, usec;
 	int sec, min, hour, day_diff;
@@ -242,7 +242,7 @@ int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned in
 		return 0;
 	}
 
-	usec = diff_pcr * 1000 * 1000 / PCR_BASE_HZ;
+	usec = diff_pcr*1000*1000 / PCR_BASE_HZ + pi->TOT_time.usec;
 	sec = (int)(usec/(1000*1000)) + pi->TOT_time.sec;
 	min = sec/60 + pi->TOT_time.min;
 	hour = min / 60 + pi->TOT_time.hour;
@@ -264,51 +264,53 @@ int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned in
 	jst_time->hour = hour;
 	jst_time->min = min;
 	jst_time->sec = sec;
-
-	if (p_usec) {
-		*p_usec = (unsigned int)usec;
-	}
+	jst_time->usec = (int)usec;
 
 	return 1;
 }
 
-int get_time_offset(JST_time_t *offset, const JST_time_t *time_target, const JST_time_t *time_orig)
+int get_time_offset(time_offset_t *offset, const time_mjd_t *time_target, const time_mjd_t *time_orig)
 {
-	int offset_sec, offset_day, sign=0;
+	int64_t offset_usec;
+	int offset_day, sign = 0;
 
-	offset_sec = (time_target->hour - time_orig->hour);
-	offset_sec = offset_sec * 60 + (time_target->min - time_orig->min);
-	offset_sec = offset_sec * 60 + time_target->sec - time_orig->sec;
+	offset_usec = (time_target->hour - time_orig->hour);
+	offset_usec = offset_usec * 60 + (time_target->min - time_orig->min);
+	offset_usec = offset_usec * 60 + time_target->sec - time_orig->sec;
+	offset_usec = offset_usec * 1000 * 1000 + (time_target->usec - time_orig->usec);
 	offset_day = time_target->mjd - time_orig->mjd;
 
 	if (offset_day > 0) {
 		sign = 1;
-		if (offset_sec < 0) {
-			offset_sec += 60*60*24;
+		if (offset_usec < 0) {
+			offset_usec += (int64_t)1000*1000*60*60*24;
 			offset_day--;
 		}
 	} else if(offset_day == 0) {
-		if (offset_sec < 0) {
+		if (offset_usec < 0) {
 			sign = -1;
-			offset_sec = -offset_sec;
-		} else if(offset_sec > 0) {
+			offset_usec = -offset_usec;
+		} else if(offset_usec > 0) {
 			sign = 1;
 		}
 	} else {
 		sign = -1;
-		if (offset_sec > 0) {
-			offset_sec = -offset_sec + 60*60*24;
+		if (offset_usec > 0) {
+			offset_usec = -offset_usec + (int64_t)1000*1000*60*60*24;
 			offset_day = -offset_day - 1;
 		}
 	}
 
 	if (offset) {
+		offset->sign = sign;
 		offset->day = offset_day;
-		offset->sec = offset_sec % 60;
-		offset_sec /= 60;
-		offset->min = offset_sec % 60;
-		offset_sec /= 60;
-		offset->hour = offset_sec;
+		offset->usec = offset_usec % (1000*1000);
+		offset_usec /= 1000*1000;
+		offset->sec = offset_usec % 60;
+		offset_usec /= 60;
+		offset->min = offset_usec % 60;
+		offset_usec /= 60;
+		offset->hour = (int)offset_usec;
 	}
 
 	return sign;
@@ -612,7 +614,13 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	}
 	proginfo->event_id = eit_b->event_id;
 
+	/* EIT‚Å‚ÍŽg‚í‚ê‚È‚¢€–Ú */
+	proginfo->start.usec = 0;
+	proginfo->dur.sign = 1;
+	proginfo->dur.usec = 0;
+
 	if (eit_b->start_time_mjd == 0xffff && eit_b->start_time_jtc == 0xffffff) {
+		proginfo->start.mjd = 0;
 		proginfo->start.year = 0;
 		proginfo->start.mon = 0;
 		proginfo->start.day = 0;
@@ -621,7 +629,8 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 		proginfo->start.sec = 0;
 		proginfo->status |= PGINFO_UNKNOWN_STARTTIME;
 	} else {
-		mjd_to_ymd(eit_b->start_time_mjd, &proginfo->start.year, &proginfo->start.mon, &proginfo->start.day);
+		proginfo->start.mjd = eit_b->start_time_mjd;
+		mjd_to_ymd(proginfo->start.mjd, &proginfo->start.year, &proginfo->start.mon, &proginfo->start.day);
 		proginfo->start.hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
 			((eit_b->start_time_jtc >> 16) & 0x0f);
 		proginfo->start.min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
@@ -636,20 +645,20 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	}
 
 	if (eit_b->duration == 0xffffff) {
-		proginfo->dur_hour = 0;
-		proginfo->dur_min = 0;
-		proginfo->dur_sec = 0;
+		proginfo->dur.hour = 0;
+		proginfo->dur.min = 0;
+		proginfo->dur.sec = 0;
 		proginfo->status |= PGINFO_UNKNOWN_DURATION;
 	} else {
-		proginfo->dur_hour = (eit_b->duration >> 20 & 0x0f) * 10 +
+		proginfo->dur.hour = (eit_b->duration >> 20 & 0x0f) * 10 +
 			((eit_b->duration >> 16) & 0x0f);
-		proginfo->dur_min = (eit_b->duration >> 12 & 0x0f) * 10 +
+		proginfo->dur.min = (eit_b->duration >> 12 & 0x0f) * 10 +
 			((eit_b->duration >> 8) & 0x0f);
-		proginfo->dur_sec = (eit_b->duration >> 4 & 0x0f) * 10 +
+		proginfo->dur.sec = (eit_b->duration >> 4 & 0x0f) * 10 +
 			(eit_b->duration & 0x0f);
-		if (proginfo->dur_hour >= 24) { proginfo->dur_hour = 23; }
-		if (proginfo->dur_min >= 60) { proginfo->dur_min = 59; }
-		if (proginfo->dur_sec >= 60) { proginfo->dur_sec = 59; }
+		if (proginfo->dur.hour >= 24) { proginfo->dur.hour = 23; }
+		if (proginfo->dur.min >= 60) { proginfo->dur.min = 59; }
+		if (proginfo->dur.sec >= 60) { proginfo->dur.sec = 59; }
 		proginfo->status &= ~PGINFO_UNKNOWN_DURATION;
 	}
 
@@ -861,6 +870,7 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_lis
 		sl->proginfos[i].TOT_time.hour = hour;
 		sl->proginfos[i].TOT_time.min = min;
 		sl->proginfos[i].TOT_time.sec = sec;
+		sl->proginfos[i].TOT_time.usec = 0;
 
 		if (sl->proginfos[i].status & PGINFO_VALID_PCR) {
 			sl->proginfos[i].TOT_PCR = sl->proginfos[i].PCR_base;

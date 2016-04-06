@@ -42,9 +42,9 @@ static inline int64_t timenum_end_sec(const proginfo_t *pi, int *psec)
 		return 0;
 	}
 
-	sec = pi->start.sec + pi->dur_sec;
-	min = pi->start.min + pi->dur_min;
-	hour = pi->start.hour + pi->dur_hour;
+	sec = pi->start.sec + pi->dur.sec;
+	min = pi->start.min + pi->dur.min;
+	hour = pi->start.hour + pi->dur.hour;
 	day_diff = 0;
 
 	if (sec >= 60) {

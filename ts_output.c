@@ -437,7 +437,8 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 
 void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
-	JST_time_t curr_time, offset;
+	time_mjd_t curr_time;
+	time_offset_t offset;
 	pgoutput_stat_t *pgos;
 
 	/* print */
@@ -463,11 +464,11 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			pgos[-1].final_pi = tos->last_proginfo;
 
 			if (pi_endtime_unknown(&pgos[-1].final_pi) && 
-					get_stream_timestamp(&pgos[-1].final_pi, &curr_time, NULL)) {
+					get_stream_timestamp(&pgos[-1].final_pi, &curr_time)) {
 				get_time_offset(&offset, &curr_time, &pgos[-1].final_pi.start);
-				pgos[-1].final_pi.dur_hour = offset.hour;
-				pgos[-1].final_pi.dur_min = offset.min;
-				pgos[-1].final_pi.dur_sec = offset.sec;
+				pgos[-1].final_pi.dur.hour = offset.hour;
+				pgos[-1].final_pi.dur.min = offset.min;
+				pgos[-1].final_pi.dur.sec = offset.sec;
 				pgos[-1].final_pi.status &= ~PGINFO_UNKNOWN_DURATION;
 				output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
 			}
