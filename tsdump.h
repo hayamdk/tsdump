@@ -42,9 +42,9 @@ static inline int64_t timenum_end_sec(const proginfo_t *pi, int *psec)
 		return 0;
 	}
 
-	sec = pi->start_sec + pi->dur_sec;
-	min = pi->start_min + pi->dur_min;
-	hour = pi->start_hour + pi->dur_hour;
+	sec = pi->start.sec + pi->dur_sec;
+	min = pi->start.min + pi->dur_min;
+	hour = pi->start.hour + pi->dur_hour;
 	day_diff = 0;
 
 	if (sec >= 60) {
@@ -61,9 +61,9 @@ static inline int64_t timenum_end_sec(const proginfo_t *pi, int *psec)
 	}
 
 	memset(&t, 0, sizeof(struct tm));
-	t.tm_mday = pi->start_day;
-	t.tm_mon = pi->start_month - 1;
-	t.tm_year = pi->start_year - 1900;
+	t.tm_mday = pi->start.day;
+	t.tm_mon = pi->start.mon - 1;
+	t.tm_year = pi->start.year - 1900;
 
 	tt = mktime(&t);
 	if (tt != -1) {
@@ -111,15 +111,15 @@ static inline int64_t timenum_start(const proginfo_t *pi)
 		return 0;
 	}
 
-	tn = pi->start_year;
+	tn = pi->start.year;
 	tn *= 100;
-	tn += pi->start_month;
+	tn += pi->start.mon;
 	tn *= 100;
-	tn += pi->start_day;
+	tn += pi->start.day;
 	tn *= 100;
-	tn += pi->start_hour;
+	tn += pi->start.hour;
 	tn *= 100;
-	tn += pi->start_min;
+	tn += pi->start.min;
 	//tn *= 100;
 	//tn += pi->recsec;
 	return tn;

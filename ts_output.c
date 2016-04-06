@@ -37,8 +37,8 @@ void printpi(const proginfo_t *pi)
 		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
 			L"[%d/%02d/%02d %02d:%02d:%02d～ +未定]\n%s:%s\n「%s」\n"
 			L"---------------------------------- >>>",
-			pi->start_year, pi->start_month, pi->start_day,
-			pi->start_hour, pi->start_min, pi->start_sec,
+			pi->start.year, pi->start.mon, pi->start.day,
+			pi->start.hour, pi->start.min, pi->start.sec,
 			pi->service_name.str,
 			pi->event_name.str,
 			et
@@ -51,8 +51,8 @@ void printpi(const proginfo_t *pi)
 		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
 			L"[%d/%02d/%02d %02d:%02d:%02d～%02d:%02d:%02d]\n%s:%s\n「%s」\n"
 			L"---------------------------------- >>>",
-			pi->start_year, pi->start_month, pi->start_day,
-			pi->start_hour, pi->start_min, pi->start_sec,
+			pi->start.year, pi->start.mon, pi->start.day,
+			pi->start.hour, pi->start.min, pi->start.sec,
 			endhour, endmin, endsec,
 			pi->service_name.str,
 			pi->event_name.str,
@@ -435,10 +435,51 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 	tos->proginfo->status &= ~PGINFO_PCR_UPDATED;
 }
 
+void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
+{
+	JST_time_t curr_time, offset;
+	pgoutput_stat_t *pgos;
+
+	/* print */
+	printpi(tos->proginfo);
+
+	/* split! */
+	if (tos->n_pgos >= MAX_PGOVERLAP) {
+		output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
+	} else {
+		pgos = &(tos->pgos[tos->n_pgos]);
+
+		pgos->initial_pi_status = tos->proginfo->status;
+		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
+		pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info); /* ここでch_infoにアクセス */
+		pgos->closetime = -1;
+		pgos->close_flag = 0;
+		pgos->close_remain = 0;
+		pgos->delay_remain = 0;
+
+		ts_copy_backward(tos, nowtime);
+		if (tos->n_pgos >= 1) {
+			pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
+			pgos[-1].final_pi = tos->last_proginfo;
+
+			if (pi_endtime_unknown(&pgos[-1].final_pi) && 
+					get_stream_timestamp(&pgos[-1].final_pi, &curr_time, NULL)) {
+				get_time_offset(&offset, &curr_time, &pgos[-1].final_pi.start);
+				pgos[-1].final_pi.dur_hour = offset.hour;
+				pgos[-1].final_pi.dur_min = offset.min;
+				pgos[-1].final_pi.dur_sec = offset.sec;
+				pgos[-1].final_pi.status &= ~PGINFO_UNKNOWN_DURATION;
+				output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
+			}
+
+		}
+		tos->n_pgos++;
+	}
+}
+
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0;
-	pgoutput_stat_t *pgos;
 	int64_t starttime, endtime, last_starttime, last_endtime;
 	WCHAR msg1[64], msg2[64];
 
@@ -476,72 +517,44 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	}
 
 	if (changed) {
-		/* print */
-		printpi(tos->proginfo);
+		/* 番組が切り替わった */
+		ts_prog_changed(tos, nowtime, ch_info);
+	} else if( PGINFO_READY(tos->proginfo->status) && PGINFO_READY(tos->last_proginfo.status) ) {
+		/* 番組の時間が途中で変更された場合 */
 
-		/* split! */
-		if (tos->n_pgos >= MAX_PGOVERLAP) {
-			output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
-		} else {
-			pgos = &(tos->pgos[tos->n_pgos]);
+		starttime = timenum_start(tos->proginfo);
+		endtime = timenum_end(tos->proginfo);
+		last_starttime = timenum_start(&tos->last_proginfo);
+		last_endtime = timenum_end(&tos->last_proginfo);
 
-			pgos->initial_pi_status = tos->proginfo->status;
-
-			//ch_info->service_id = tos->service_id; /* ここでch_infoの中身を書き換えている */
-
-			pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-			pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-			pgos->closetime = -1;
-			pgos->close_flag = 0;
-			pgos->close_remain = 0;
-			pgos->delay_remain = 0;
-
-			ts_copy_backward(tos, nowtime);
-			if (tos->n_pgos >= 1) {
-				pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
-				pgos[-1].final_pi = tos->last_proginfo;
+		if ( starttime != last_starttime ) {
+			if (tos->n_tos <= 1) {
+				tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
+			} else {
+				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
 			}
-			tos->n_pgos++;
-			//tos->pi_last = tos->pi;
-		}
-	} else if( PGINFO_READY(tos->proginfo->status) ) {
-		if ( PGINFO_READY(tos->last_proginfo.status) ) {
-			/* 番組の時間が途中で変更された場合 */
 
-			starttime = timenum_start(tos->proginfo);
-			endtime = timenum_end(tos->proginfo);
-			last_starttime = timenum_start(&tos->last_proginfo);
-			last_endtime = timenum_end(&tos->last_proginfo);
+			output_message( MSG_NOTIFY, L"%s: %02d:%02d → %02d:%02d", msg1,
+				(int)(last_starttime/100%100), (int)(last_starttime%100),
+				(int)(starttime/100%100), (int)(starttime%100) );
+		} else if ( endtime != last_endtime ) {
+			if (tos->n_tos <= 1) {
+				tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
+			} else {
+				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
+			}
 
-			if ( starttime != last_starttime ) {
-				if (tos->n_tos <= 1) {
-					tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
-				} else {
-					swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
-				}
+			if (last_endtime == 0 ) {
+				tsd_strcpy(msg2, TSD_TEXT("未定 → "));
+			} else {
+				wsprintf( msg2, L"%02d:%02d → ", (int)(last_endtime / 100 % 100), (int)(last_endtime % 100) );
+			}
 
-				output_message( MSG_NOTIFY, L"%s: %02d:%02d → %02d:%02d", msg1,
-					(int)(last_starttime/100%100), (int)(last_starttime%100),
-					(int)(starttime/100%100), (int)(starttime%100) );
-			} else if ( endtime != last_endtime ) {
-				if (tos->n_tos <= 1) {
-					tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
-				} else {
-					swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
-				}
-
-				if (last_endtime == 0 ) {
-					tsd_strcpy(msg2, TSD_TEXT("未定 → "));
-				} else {
-					wsprintf( msg2, L"%02d:%02d → ", (int)(last_endtime / 100 % 100), (int)(last_endtime % 100) );
-				}
-
-				if ( endtime == 0 ) {
-					output_message(MSG_NOTIFY, L"%s: %s未定", msg1, msg2);
-				} else {
-					output_message( MSG_NOTIFY, L"%s: %s%02d:%02d",
-						msg1, msg2, (int)(endtime / 100 % 100), (int)(endtime % 100) );
-				}
+			if ( endtime == 0 ) {
+				output_message(MSG_NOTIFY, L"%s: %s未定", msg1, msg2);
+			} else {
+				output_message( MSG_NOTIFY, L"%s: %s%02d:%02d",
+					msg1, msg2, (int)(endtime / 100 % 100), (int)(endtime % 100) );
 			}
 		}
 	}

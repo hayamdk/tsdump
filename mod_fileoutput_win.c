@@ -61,8 +61,8 @@ static WCHAR* create_proginfo_file(const WCHAR *fname_ts, const proginfo_t *pi)
 		return NULL;
 	}
 
-	fwprintf(fp, L"%d%02d%02d\n%02d%02d%02d\n", pi->start_year, pi->start_month, pi->start_day,
-		pi->start_hour, pi->start_min, pi->start_sec);
+	fwprintf(fp, L"%d%02d%02d\n%02d%02d%02d\n", pi->start.year, pi->start.mon, pi->start.day,
+		pi->start.hour, pi->start.min, pi->start.sec);
 	fwprintf(fp, L"%02d%02d%02d\n", pi->dur_hour, pi->dur_min, pi->dur_sec);
 	fwprintf(fp, L"%s\n", pi->service_name.str);
 	fwprintf(fp, L"%s\n----------------\n", pi->event_name.str);

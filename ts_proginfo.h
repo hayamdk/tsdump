@@ -129,12 +129,7 @@ typedef struct {
 	int curr_desc;
 	int last_desc;
 
-	int start_year;
-	int start_month;
-	int start_day;
-	int start_hour;
-	int start_min;
-	int start_sec;
+	JST_time_t start;
 	int dur_hour;
 	int dur_min;
 	int dur_sec;
@@ -156,3 +151,4 @@ MODULE_EXPORT_FUNC int get_extended_text(WCHAR *dst, size_t n, const proginfo_t 
 MODULE_EXPORT_FUNC void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item);
 MODULE_EXPORT_FUNC int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);
 MODULE_EXPORT_FUNC int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned int *p_usec);
+MODULE_EXPORT_FUNC int get_time_offset(JST_time_t *offset, const JST_time_t *time_target, const JST_time_t *time_orig);

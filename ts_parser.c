@@ -152,12 +152,12 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 	if (pi1->dur_hour != pi2->dur_hour ||
 		pi1->dur_min != pi2->dur_min ||
 		pi1->dur_sec != pi2->dur_sec ||
-		pi1->start_hour != pi2->start_hour ||
-		pi1->start_min != pi2->start_min ||
-		pi1->start_sec != pi2->start_sec ||
-		pi1->start_year != pi2->start_year ||
-		pi1->start_month != pi2->start_month ||
-		pi1->start_day != pi2->start_day) {
+		pi1->start.hour != pi2->start.hour ||
+		pi1->start.min != pi2->start.min ||
+		pi1->start.sec != pi2->start.sec ||
+		pi1->start.year != pi2->start.year ||
+		pi1->start.mon != pi2->start.mon ||
+		pi1->start.day != pi2->start.day) {
 		return 1;
 	}
 
@@ -270,6 +270,48 @@ int get_stream_timestamp(const proginfo_t *pi, JST_time_t *jst_time, unsigned in
 	}
 
 	return 1;
+}
+
+int get_time_offset(JST_time_t *offset, const JST_time_t *time_target, const JST_time_t *time_orig)
+{
+	int offset_sec, offset_day, sign=0;
+
+	offset_sec = (time_target->hour - time_orig->hour);
+	offset_sec = offset_sec * 60 + (time_target->min - time_orig->min);
+	offset_sec = offset_sec * 60 + time_target->sec - time_orig->sec;
+	offset_day = time_target->mjd - time_orig->mjd;
+
+	if (offset_day > 0) {
+		sign = 1;
+		if (offset_sec < 0) {
+			offset_sec += 60*60*24;
+			offset_day--;
+		}
+	} else if(offset_day == 0) {
+		if (offset_sec < 0) {
+			sign = -1;
+			offset_sec = -offset_sec;
+		} else if(offset_sec > 0) {
+			sign = 1;
+		}
+	} else {
+		sign = -1;
+		if (offset_sec > 0) {
+			offset_sec = -offset_sec + 60*60*24;
+			offset_day = -offset_day - 1;
+		}
+	}
+
+	if (offset) {
+		offset->day = offset_day;
+		offset->sec = offset_sec % 60;
+		offset_sec /= 60;
+		offset->min = offset_sec % 60;
+		offset_sec /= 60;
+		offset->hour = offset_sec;
+	}
+
+	return sign;
 }
 
 int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
@@ -571,24 +613,24 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	proginfo->event_id = eit_b->event_id;
 
 	if (eit_b->start_time_mjd == 0xffff && eit_b->start_time_jtc == 0xffffff) {
-		proginfo->start_year = 0;
-		proginfo->start_month = 0;
-		proginfo->start_day = 0;
-		proginfo->start_hour = 0;
-		proginfo->start_min = 0;
-		proginfo->start_sec = 0;
+		proginfo->start.year = 0;
+		proginfo->start.mon = 0;
+		proginfo->start.day = 0;
+		proginfo->start.hour = 0;
+		proginfo->start.min = 0;
+		proginfo->start.sec = 0;
 		proginfo->status |= PGINFO_UNKNOWN_STARTTIME;
 	} else {
-		mjd_to_ymd(eit_b->start_time_mjd, &proginfo->start_year, &proginfo->start_month, &proginfo->start_day);
-		proginfo->start_hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
+		mjd_to_ymd(eit_b->start_time_mjd, &proginfo->start.year, &proginfo->start.mon, &proginfo->start.day);
+		proginfo->start.hour = (eit_b->start_time_jtc >> 20 & 0x0f) * 10 +
 			((eit_b->start_time_jtc >> 16) & 0x0f);
-		proginfo->start_min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
+		proginfo->start.min = (eit_b->start_time_jtc >> 12 & 0x0f) * 10 +
 			((eit_b->start_time_jtc >> 8) & 0x0f);
-		proginfo->start_sec = (eit_b->start_time_jtc >> 4 & 0x0f) * 10 +
+		proginfo->start.sec = (eit_b->start_time_jtc >> 4 & 0x0f) * 10 +
 			(eit_b->start_time_jtc & 0x0f);
-		if (proginfo->start_hour >= 24) { proginfo->start_hour = 23; }
-		if (proginfo->start_min >= 60) { proginfo->start_min = 59; }
-		if (proginfo->start_sec >= 60) { proginfo->start_sec = 59; }
+		if (proginfo->start.hour >= 24) { proginfo->start.hour = 23; }
+		if (proginfo->start.min >= 60) { proginfo->start.min = 59; }
+		if (proginfo->start.sec >= 60) { proginfo->start.sec = 59; }
 
 		proginfo->status &= ~PGINFO_UNKNOWN_STARTTIME;
 	}
