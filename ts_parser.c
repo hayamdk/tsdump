@@ -316,6 +316,61 @@ int get_time_offset(time_offset_t *offset, const time_mjd_t *time_target, const 
 	return sign;
 }
 
+void time_add_offset(time_mjd_t *dst, const time_mjd_t *orig, const time_offset_t *offset)
+{
+	int sign;
+	int mjd, hour, min, sec, usec;
+
+	if (offset->sign < 0) { sign = -1; }
+	else if (offset->sign == 0) { sign = 0; }
+	else { sign = 1; }
+
+	mjd = orig->mjd + offset->day * sign;
+	usec = orig->usec + offset->usec * sign;
+	sec = orig->sec + offset->sec * sign;
+	min = orig->min + offset->min * sign;
+	hour = orig->hour + offset->hour * sign;
+
+	if (usec < 0) {
+		usec += 1000 * 1000;
+		sec -= 1;
+	} else if (usec >= 1000 * 1000) {
+		usec -= 1000 * 1000;
+		sec += 1;
+	}
+
+	if (sec < 0) {
+		sec += 60;
+		min -= 1;
+	} else if(sec >= 60) {
+		sec -= 60;
+		min += 1;
+	}
+
+	if (min < 0) {
+		min += 60;
+		hour -= 1;
+	} else if (min >= 60) {
+		min -= 60;
+		hour += 1;
+	}
+
+	if (hour < 0) {
+		hour += 24;
+		mjd -= 1;
+	} else if(hour >= 24) {
+		hour -= 24;
+		mjd += 1;
+	}
+
+	dst->mjd = (unsigned int)mjd;
+	mjd_to_ymd(dst->mjd, &dst->year, &dst->mon, &dst->day);
+	dst->hour = hour;
+	dst->min = min;
+	dst->sec = sec;
+	dst->usec = usec;
+}
+
 int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
 {
 	int pos;

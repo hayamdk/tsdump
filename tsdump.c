@@ -507,24 +507,6 @@ int wmain(int argc, WCHAR* argv[])
 
 	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
 
-	time_mjd_t t1 = { 0 }, t2 = { 0 };
-	time_offset_t t = { 0 };
-
-	t1.mjd = 200;
-	t2.mjd = 200;
-
-	t1.hour = 1;
-	t1.min = 0;
-	t1.sec = 0;
-
-	t2.hour = 0;
-	t2.min = 0;
-	t2.sec = 0;
-	t2.usec = 1;
-
-	get_time_offset(&t, &t2, &t1);
-
-
 	/* iniファイルをロード */
 	load_ini();
 
