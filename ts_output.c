@@ -555,7 +555,8 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			if ( pi_endtime_unknown(tos->proginfo) ) {
 				output_message(MSG_NOTIFY, L"%s: %s –¢’è", msg1, msg2);
 			} else {
-				output_message( MSG_NOTIFY, L"%s: %s %02d:%02d:%02d", endtime.hour, endtime.min, endtime.sec );
+				output_message( MSG_NOTIFY, L"%s: %s %02d:%02d:%02d", msg1, msg2,
+					endtime.hour, endtime.min, endtime.sec );
 			}
 		}
 	}
