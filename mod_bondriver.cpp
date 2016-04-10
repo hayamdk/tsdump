@@ -162,6 +162,7 @@ static void hook_stream_generator_close(void *param)
 {
 	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
 	pstat->pBon2->CloseTuner();
+	pstat->pBon2->Release();
 	FreeLibrary(pstat->hdll);
 }
 
