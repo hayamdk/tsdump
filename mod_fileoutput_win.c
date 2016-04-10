@@ -181,8 +181,6 @@ static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, cons
 	fos->initial_pi = *pi;
 	fos->fn_pi = create_proginfo_file(fname, pi);
 
-	create_proginfo_file(fname, pi);
-
 	output_message(MSG_NOTIFY, L"[˜^‰æŠJn]: %s", fos->fn);
 	return fos;
 }
