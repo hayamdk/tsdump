@@ -103,8 +103,15 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	int payload_pos, table_pos, section_len, n;
 
 	if (!parse_ts_header(old_packet, &tsh)) {
-		output_message(MSG_PACKETERROR, L"Invalid ts header!");
-		return 0; /* pass */
+		if (tsh.valid_sync_byte) {
+			/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+				PESパケットの規格を要調査 */
+			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+			return 0; /* pass */
+		} else {
+			output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+			return 0; /* pass */
+		}
 	}
 
 	/* 複数パケットにまたがるPATには未対応 */
@@ -166,8 +173,14 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service
 	ts_header_t tsh;
 
 	if (!parse_ts_header(packet, &tsh)) {
-		output_message(MSG_PACKETERROR, L"Invalid ts header!");
-		return; /* pass */
+		if (tsh.valid_sync_byte) {
+			/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+				PESパケットの規格を要調査 */
+			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+		} else {
+			output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+			return;
+		}
 	}
 
 	pid = tsh.pid;
