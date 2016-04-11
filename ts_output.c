@@ -474,16 +474,30 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	}
 }
 
+/* 最低でもTOTがあればタイムスタンプを返す */
+int get_stream_timestamp_rough(time_mjd_t *time_mjd, const proginfo_t *pi)
+{
+	if (PGINFO_READY_TIMESTAMP(pi->status)) {
+		get_stream_timestamp(pi, time_mjd);
+		return 1;
+	}
+	if (pi->status & PGINFO_GET_TOT) {
+		*time_mjd = pi->TOT_time;
+		return 2;
+	}
+	return 0;
+}
+
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0;
-	//int64_t starttime, endtime, last_starttime, last_endtime;
-	time_mjd_t endtime, last_endtime;
+	time_mjd_t endtime, last_endtime, time1, time2;
 	WCHAR msg1[64], msg2[64];
 
 	check_stream_timeinfo(tos);
 
-	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) ) {
+	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) && 
+			( (PGINFO_READY(tos->last_proginfo.status) && tos->n_pgos > 0) || tos->n_pgos == 0 ) ) {
 		/* 最新の番組情報が取得できていなくても15秒は判定を保留する */
 		if (tos->proginfo_retry_count < 15 * 1000 / CHECK_INTERVAL) {
 			tos->proginfo_retry_count++;
@@ -497,16 +511,27 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 	if ( PGINFO_READY(tos->proginfo->status) ) {
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {
+			/* 番組情報あり→ありの場合イベントIDを比較 */
 			if (tos->last_proginfo.event_id != (int)tos->proginfo->event_id) {
 				changed = 1;
 			}
 		} else {
+			/* 番組情報なし→ありの変化 */
 			changed = 1;
 		}
 	} else {
 		if (PGINFO_READY(tos->last_proginfo.status)) {
+			/* 番組情報あり→なしの変化 */
 			changed = 1;
-		} else if( timenum64(nowtime) / 100 != timenum64(tos->last_checkpi_time) / 100 ) {
+		/* 番組情報がなくても1時間おきに番組を切り替える */
+		} else if( get_stream_timestamp_rough(&time1, tos->proginfo) &&
+				get_stream_timestamp_rough(&time2, &tos->last_proginfo) ) {
+			/* ストリームのタイムスタンプが正常に取得できていればそれを比較 */
+			if (time1.hour > time2.hour) {
+				changed = 1;
+			}
+		} else if( timenum64(nowtime) / 100 > timenum64(tos->last_checkpi_time) / 100 ) {
+			/* そうでなければPCの現在時刻を比較 */
 			changed = 1;
 		} else if (tos->n_pgos == 0) {
 			/* まだ出力が始まっていなかったら強制開始 */
@@ -519,12 +544,6 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		ts_prog_changed(tos, nowtime, ch_info);
 	} else if( PGINFO_READY(tos->proginfo->status) && PGINFO_READY(tos->last_proginfo.status) ) {
 		/* 番組の時間が途中で変更された場合 */
-
-		//starttime = timenum_start(tos->proginfo);
-		//endtime = timenum_end(tos->proginfo);
-		//last_starttime = timenum_start(&tos->last_proginfo);
-		//last_endtime = timenum_end(&tos->last_proginfo);
-
 		time_add_offset(&endtime, &tos->proginfo->start, &tos->proginfo->dur);
 		time_add_offset(&last_endtime, &tos->last_proginfo.start, &tos->last_proginfo.dur);
 
