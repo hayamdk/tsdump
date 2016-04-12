@@ -47,16 +47,19 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 {
 	int64_t tn;
 	int i, isok = 0;
+	const WCHAR *chname, *pname;
+	time_mjd_t time_mjd;
 
 	if (PGINFO_READY(pi->status)) {
-		isok = 1;
-	}
-
-	const WCHAR *chname, *pname;
-	if (isok) {
 		tn = timenum_start(pi);
 		chname = pi->service_name.str;
 		pname = pi->event_name.str;
+		isok = 1;
+	} else if ((pi->status&PGINFO_GET_SERVICE_INFO) && get_stream_timestamp_rough(pi, &time_mjd)) {
+		tn = timenum_timemjd(time_mjd);
+		chname = pi->service_name.str;
+		pname = L"”Ô‘gî•ñ‚È‚µ";
+		isok = 1;
 	} else {
 		tn = timenumnow();
 		chname = ch_info->ch_str;

@@ -30,6 +30,20 @@ void printpi(const proginfo_t *pi)
 	time_mjd_t endtime;
 	WCHAR et[4096];
 
+	if (!PGINFO_READY(pi->status)) {
+		if (pi->status & PGINFO_GET_SERVICE_INFO) {
+			output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
+				L"[番組情報なし]\n%s\n"
+				L"---------------------------------- >>>", pi->service_name.str);
+			return;
+		} else {
+			output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
+				L"[番組情報なし]\n"
+				L"---------------------------------- >>>");
+			return;
+		}
+	}
+
 	get_extended_text(et, sizeof(et) / sizeof(WCHAR), pi);
 
 	if ( pi_endtime_unknown(pi) ) {
@@ -474,20 +488,6 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	}
 }
 
-/* 最低でもTOTがあればタイムスタンプを返す */
-int get_stream_timestamp_rough(time_mjd_t *time_mjd, const proginfo_t *pi)
-{
-	if (PGINFO_READY_TIMESTAMP(pi->status)) {
-		get_stream_timestamp(pi, time_mjd);
-		return 1;
-	}
-	if (pi->status & PGINFO_GET_TOT) {
-		*time_mjd = pi->TOT_time;
-		return 2;
-	}
-	return 0;
-}
-
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0;
@@ -524,8 +524,8 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			/* 番組情報あり→なしの変化 */
 			changed = 1;
 		/* 番組情報がなくても1時間おきに番組を切り替える */
-		} else if( get_stream_timestamp_rough(&time1, tos->proginfo) &&
-				get_stream_timestamp_rough(&time2, &tos->last_proginfo) ) {
+		} else if( get_stream_timestamp_rough(tos->proginfo, &time1) &&
+				get_stream_timestamp_rough(&tos->last_proginfo, &time2) ) {
 			/* ストリームのタイムスタンプが正常に取得できていればそれを比較 */
 			if (time1.hour > time2.hour) {
 				changed = 1;

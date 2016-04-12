@@ -269,6 +269,20 @@ int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time)
 	return 1;
 }
 
+/* 最低でもTOTがあればタイムスタンプを返す */
+int get_stream_timestamp_rough(const proginfo_t *pi, time_mjd_t *time_mjd)
+{
+	if (PGINFO_READY_TIMESTAMP(pi->status)) {
+		get_stream_timestamp(pi, time_mjd);
+		return 1;
+	}
+	if (pi->status & PGINFO_GET_TOT) {
+		*time_mjd = pi->TOT_time;
+		return 2;
+	}
+	return 0;
+}
+
 int get_time_offset(time_offset_t *offset, const time_mjd_t *time_target, const time_mjd_t *time_orig)
 {
 	int64_t offset_usec;
@@ -534,9 +548,9 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 void clear_proginfo_all(proginfo_t *proginfo)
 {
 	/* 最低限のものを除いたオールクリア */
-	/* PAT、PMTの取得状況はイベントの切り替わりと無関係なのでクリアしない */
+	/* PAT、PMT、SDTの取得状況はイベントの切り替わりと無関係なのでクリアしない */
 	/* TOTとPCRも同様 */
-	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT | PGINFO_TIMEINFO);
+	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT | PGINFO_GET_SERVICE_INFO | PGINFO_TIMEINFO);
 	proginfo->last_desc = -1;
 }
 

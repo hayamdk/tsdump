@@ -28,26 +28,29 @@ static inline int64_t gettime()
 	return result;
 }
 
-static inline int64_t timenum_start(const proginfo_t *pi)
+static inline int64_t timenum_timemjd(const time_mjd_t timemjd)
 {
 	int64_t tn;
+	tn = timemjd.year;
+	tn *= 100;
+	tn += timemjd.mon;
+	tn *= 100;
+	tn += timemjd.day;
+	tn *= 100;
+	tn += timemjd.hour;
+	tn *= 100;
+	tn += timemjd.min;
+	//tn *= 100;
+	//tn += timemjd.sec;
+	return tn;
+}
 
+static inline int64_t timenum_start(const proginfo_t *pi)
+{
 	if (pi->status & PGINFO_UNKNOWN_STARTTIME) {
 		return 0;
 	}
-
-	tn = pi->start.year;
-	tn *= 100;
-	tn += pi->start.mon;
-	tn *= 100;
-	tn += pi->start.day;
-	tn *= 100;
-	tn += pi->start.hour;
-	tn *= 100;
-	tn += pi->start.min;
-	//tn *= 100;
-	//tn += pi->recsec;
-	return tn;
+	return timenum_timemjd(pi->start);
 }
 
 static inline int64_t timenumtt(time_t t)
