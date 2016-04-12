@@ -197,7 +197,7 @@ void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime)
 	}
 	if ( tos->n_pgos > 0 && start_pos > tos->pos_write ) {
 		tos->pgos[tos->n_pgos].delay_remain = start_pos - tos->pos_write;
-	} else if ( tos->pos_write - start_pos ) {
+	} else if ( tos->pos_write > start_pos ) {
 		do_pgoutput(tos->pgos[tos->n_pgos].modulestats, &(tos->buf[start_pos]), tos->pos_write - start_pos);
 		tos->write_busy = 1;
 	}
