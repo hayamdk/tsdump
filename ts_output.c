@@ -447,9 +447,11 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 
 void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
+	int i;
 	time_mjd_t curr_time;
 	time_offset_t offset;
 	pgoutput_stat_t *pgos;
+	proginfo_t *final_pi, tmp_pi;
 
 	/* print */
 	printpi(tos->proginfo);
@@ -458,8 +460,29 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	if (tos->n_pgos >= MAX_PGOVERLAP) {
 		output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
 	} else {
-		pgos = &(tos->pgos[tos->n_pgos]);
+		/* 番組終了時間をタイムスタンプから得るかどうか */
+		if ( !(tos->last_proginfo.status & PGINFO_UNKNOWN_STARTTIME) &&		/* 開始時間が既知かつ */
+				(tos->last_proginfo.status & PGINFO_UNKNOWN_DURATION) &&	/* 持続時刻が未知かつ */
+				get_stream_timestamp(&tos->last_proginfo, &curr_time) ) {	/* タイムスタンプは正常 */
+			get_time_offset(&offset, &curr_time, &tos->last_proginfo.start);
+			tmp_pi = tos->last_proginfo;
+			tmp_pi.dur.hour = offset.hour;
+			tmp_pi.dur.min = offset.min;
+			tmp_pi.dur.sec = offset.sec;
+			tmp_pi.status &= ~PGINFO_UNKNOWN_DURATION;
+			final_pi = &tmp_pi;
+			output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
+		} else {
+			final_pi = &tos->last_proginfo;
+		}
 
+		/* endフックを呼び出す */
+		for (i = 0; i < tos->n_pgos; i++) {
+			do_pgoutput_end(tos->pgos[i].modulestats, final_pi);
+		}
+
+		/* pgosの追加 */
+		pgos = &(tos->pgos[tos->n_pgos]);
 		pgos->initial_pi_status = tos->proginfo->status;
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
 		pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info); /* ここでch_infoにアクセス */
@@ -467,22 +490,11 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		pgos->close_flag = 0;
 		pgos->close_remain = 0;
 		pgos->delay_remain = 0;
-
 		ts_copy_backward(tos, nowtime);
+
 		if (tos->n_pgos >= 1) {
 			pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
-			pgos[-1].final_pi = tos->last_proginfo;
-
-			if (pi_endtime_unknown(&pgos[-1].final_pi) && 
-					get_stream_timestamp(&pgos[-1].final_pi, &curr_time)) {
-				get_time_offset(&offset, &curr_time, &pgos[-1].final_pi.start);
-				pgos[-1].final_pi.dur.hour = offset.hour;
-				pgos[-1].final_pi.dur.min = offset.min;
-				pgos[-1].final_pi.dur.sec = offset.sec;
-				pgos[-1].final_pi.status &= ~PGINFO_UNKNOWN_DURATION;
-				output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
-			}
-
+			pgos[-1].final_pi = *final_pi;
 		}
 		tos->n_pgos++;
 	}

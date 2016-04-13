@@ -23,6 +23,7 @@ typedef struct {
 	hook_pgoutput_t hook_pgoutput;
 	hook_pgoutput_check_t hook_pgoutput_check;
 	hook_pgoutput_wait_t hook_pgoutput_wait;
+	hook_pgoutput_end_t hook_pgoutput_end;
 	hook_pgoutput_close_t hook_pgoutput_close;
 	hook_pgoutput_postclose_t hook_pgoutput_postclose;
 	hook_postconfig_t hook_postconfig;
@@ -77,6 +78,11 @@ void register_hook_pgoutput_check(hook_pgoutput_check_t handler)
 void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler)
 {
 	module_hooks_current->hook_pgoutput_wait = handler;
+}
+
+void register_hook_pgoutput_end(hook_pgoutput_end_t handler)
+{
+	module_hooks_current->hook_pgoutput_end = handler;
 }
 
 void register_hook_pgoutput_close(hook_pgoutput_close_t handler)
@@ -201,6 +207,16 @@ int do_pgoutput_wait(void **modulestats)
 		}
 	}
 	return err;
+}
+
+void do_pgoutput_end(void **modulestats, const proginfo_t *pi)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_pgoutput_end) {
+			modules[i].hooks.hook_pgoutput_end(modulestats[i], pi);
+		}
+	}
 }
 
 void do_pgoutput_close(void **modulestats, const proginfo_t *pi)
