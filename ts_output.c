@@ -447,7 +447,7 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 
 void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
-	int i;
+	int i, actually_start = 0;
 	time_mjd_t curr_time;
 	time_offset_t offset;
 	pgoutput_stat_t *pgos;
@@ -483,19 +483,21 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 		/* pgosの追加 */
 		pgos = &(tos->pgos[tos->n_pgos]);
+		if (tos->n_pgos >= 1) {
+			actually_start = 1; /* 前の番組があるということは本当のスタート */
+			pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
+			pgos[-1].final_pi = *final_pi;
+		}
+
 		pgos->initial_pi_status = tos->proginfo->status;
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-		pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info); /* ここでch_infoにアクセス */
+		pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
 		pgos->close_flag = 0;
 		pgos->close_remain = 0;
 		pgos->delay_remain = 0;
 		ts_copy_backward(tos, nowtime);
 
-		if (tos->n_pgos >= 1) {
-			pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
-			pgos[-1].final_pi = *final_pi;
-		}
 		tos->n_pgos++;
 	}
 }

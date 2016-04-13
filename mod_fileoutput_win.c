@@ -153,9 +153,10 @@ static int check_io_status(file_output_stat_t *fos, BOOL wait_mode)
 	return 0;
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info)
+static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info, const int actually_start)
 {
 	UNREF_ARG(ch_info);
+	UNREF_ARG(actually_start);
 
 	HANDLE fh = CreateFile(
 		fname,

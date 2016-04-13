@@ -34,7 +34,7 @@ typedef struct{
 	const WCHAR *ch_str;
 } ch_info_t;
 
-typedef void* (*hook_pgoutput_create_t)(const WCHAR*, const proginfo_t*, const ch_info_t *ch_info);
+typedef void* (*hook_pgoutput_create_t)(const WCHAR*, const proginfo_t*, const ch_info_t*, const int);
 typedef void(*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int(*hook_pgoutput_check_t)(void*);
 typedef const int(*hook_pgoutput_wait_t)(void*);

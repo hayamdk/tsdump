@@ -163,13 +163,13 @@ int register_hook_path_resolver(hook_path_resolver_t handler)
 	return 1;
 }
 
-void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info)
+void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
 {
 	int i;
 	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
 	for ( i = 0; i < n_modules; i++ ) {
 		if (modules[i].hooks.hook_pgoutput_create) {
-			modulestats[i] = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info);
+			modulestats[i] = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info, actually_start);
 		}
 	}
 	return modulestats;

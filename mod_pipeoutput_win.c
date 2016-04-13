@@ -261,11 +261,12 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 	return;
 }
 
-static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t)
+static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t, const int actually_start)
 {
 	int i;
 	UNREF_ARG(pi);
 	UNREF_ARG(ch_info_t);
+	UNREF_ARG(actually_start);
 	pipestat_t *ps = (pipestat_t*)malloc( sizeof(pipestat_t) * n_pipecmds );
 	for (i = 0; i < n_pipecmds; i++) {
 		create_pipe(&ps[i], pipecmds[i], fname);

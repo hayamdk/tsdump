@@ -3,7 +3,7 @@ int init_modules(int argc, WCHAR* argv[]);
 int load_modules();
 void free_modules();
 
-void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info);
+void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start);
 void do_pgoutput(void **modulestats, unsigned char *buf, size_t size);
 int do_pgoutput_check(void **modulestats);
 int do_pgoutput_wait(void **modulestats);

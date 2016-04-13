@@ -16,11 +16,12 @@ static int n_execcmds = 0;
 static WCHAR *execcmds[MAX_EXECCMDS];
 static int cwindow_min = 0;
 
-static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t* pi, const ch_info_t *ch_info)
+static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t* pi, const ch_info_t *ch_info, const int actually_start)
 {
-	WCHAR *fname_dup = _wcsdup(fname);
-	UNREF_ARG(ch_info);
 	UNREF_ARG(pi);
+	UNREF_ARG(ch_info);
+	UNREF_ARG(actually_start);
+	WCHAR *fname_dup = _wcsdup(fname);
 	return (void*)fname_dup;
 }
 
