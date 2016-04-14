@@ -686,6 +686,7 @@ void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 	/* EIT‚Å‚ÍŽg‚í‚ê‚È‚¢€–Ú */
 	proginfo->start.usec = 0;
 	proginfo->dur.sign = 1;
+	proginfo->dur.day = 0;
 	proginfo->dur.usec = 0;
 
 	if (eit_b->start_time_mjd == 0xffff && eit_b->start_time_jtc == 0xffffff) {
@@ -933,6 +934,7 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_lis
 	//output_message( MSG_DISP, L"TOT %04d/%02d/%02d %02d:%02d:%02d", year, mon, day, hour, min, sec );
 
 	for (i = 0; i < sl->n_services; i++) {
+		sl->proginfos[i].TOT_time.mjd = mjd;
 		sl->proginfos[i].TOT_time.year = year;
 		sl->proginfos[i].TOT_time.mon = mon;
 		sl->proginfos[i].TOT_time.day = day;

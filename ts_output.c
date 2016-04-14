@@ -466,9 +466,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 				get_stream_timestamp(&tos->last_proginfo, &curr_time) ) {	/* タイムスタンプは正常 */
 			get_time_offset(&offset, &curr_time, &tos->last_proginfo.start);
 			tmp_pi = tos->last_proginfo;
-			tmp_pi.dur.hour = offset.hour;
-			tmp_pi.dur.min = offset.min;
-			tmp_pi.dur.sec = offset.sec;
+			tmp_pi.dur = offset;
 			tmp_pi.status &= ~PGINFO_UNKNOWN_DURATION;
 			final_pi = &tmp_pi;
 			output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
