@@ -128,11 +128,11 @@ int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
 	}
 
 	for (i = 0; i < pi->n_items && p < end; i++) {
-		wcscpy_s(p, end - p, pi->items[i].desc);
+		wcscpy_s(p, end - p, pi->items[i].desc.str);
 		while (*p != L'\0') { p++; }
 		wcscpy_s(p, end - p, L"\n");
 		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, pi->items[i].item);
+		wcscpy_s(p, end - p, pi->items[i].item.str);
 		while (*p != L'\0') { p++; }
 		wcscpy_s(p, end - p, L"\n");
 		while (*p != L'\0') { p++; }
@@ -140,52 +140,113 @@ int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
 	return 1;
 }
 
+int cmp_offset(const time_offset_t *offset1, const time_offset_t *offset2)
+{
+	if (offset1->sign != offset2->sign) {
+		return 1;
+	} else if (offset1->sign != 0) {
+		if ( offset1->day != offset2->day ||
+				offset1->hour != offset2->hour ||
+				offset1->min != offset2->min ||
+				offset1->sec != offset2->sec ||
+				offset1->usec != offset2->usec ) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int cmp_time(const time_mjd_t *offset1, const time_mjd_t *offset2)
+{
+	if( offset1->mjd != offset2->mjd ||
+			offset1->hour != offset2->hour ||
+			offset1->min != offset2->min ||
+			offset1->sec != offset2->sec ||
+			offset1->usec != offset2->usec ) {
+		return 1;
+	}
+	return 0;
+}
+
+/* 論理OR演算子は副作用完了点なので不正なメモリ参照は無い */
+#define cmp_aribstr(x, y) ( ((x)->aribstr_len != (y)->aribstr_len) || \
+	(((x)->aribstr_len > 0) && memcmp((x)->aribstr, (y)->aribstr, (x)->aribstr_len)) )
+
+int cmp_genre(const Cd_t *genre1, const Cd_t *genre2)
+{
+	int i;
+	if (genre1->n_items != genre2->n_items) {
+		return 1;
+	}
+	for (i = 0; i < genre1->n_items; i++) {
+		if( genre1->items[i].content_nibble_level_1 != genre2->items[i].content_nibble_level_1 ||
+				genre1->items[i].content_nibble_level_2 != genre1->items[i].content_nibble_level_2 ||
+				genre1->items[i].user_nibble_1 != genre1->items[i].user_nibble_1 ||
+				genre1->items[i].user_nibble_2 != genre1->items[i].user_nibble_2 ) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int cmp_extended_text(const proginfo_t *pi1, const proginfo_t *pi2)
+{
+	int i;
+	if (pi1->n_items != pi2->n_items) {
+		return 1;
+	}
+	for (i = 0; i < pi1->n_items; i++) {
+		if ( cmp_aribstr(&pi1->items[i].desc, &pi2->items[i].desc) ||
+				cmp_aribstr(&pi1->items[i].item, &pi2->items[i].item) ) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 {
-	WCHAR et1[4096], et2[4096];
-	int i;
-
-	if ((pi1->status&PGINFO_GET_ALL) != (pi2->status&PGINFO_GET_ALL)) {
+	if ( (pi1->status&PGINFO_GET_ALL) != (pi2->status&PGINFO_GET_ALL) ) {
 		return 1;
 	}
 
-	if (pi1->dur.hour != pi2->dur.hour ||
-		pi1->dur.min != pi2->dur.min ||
-		pi1->dur.sec != pi2->dur.sec ||
-		pi1->start.hour != pi2->start.hour ||
-		pi1->start.min != pi2->start.min ||
-		pi1->start.sec != pi2->start.sec ||
-		pi1->start.year != pi2->start.year ||
-		pi1->start.mon != pi2->start.mon ||
-		pi1->start.day != pi2->start.day) {
+	if ( pi1->status & PGINFO_GET_PAT && pi1->service_id != pi2->service_id ) {
 		return 1;
+	}
+
+	if ( pi1->status == PGINFO_GET_SERVICE_INFO ) {
+		if ( pi1->network_id != pi2->network_id ||
+				pi1->ts_id != pi2->ts_id ) {
+			return 1;
+		}
+	}
+
+	if (pi1->status&PGINFO_GET_EVENT_INFO) {
+		if ( !(pi1->status&PGINFO_UNKNOWN_STARTTIME) && cmp_time(&pi1->start, &pi2->start) ) {
+			return 1;
+		}
+		if ( !(pi1->status&PGINFO_UNKNOWN_DURATION) && cmp_offset(&pi1->dur, &pi2->dur) ) {
+			return 1;
+		}
 	}
 
 	if ( pi1->status & PGINFO_GET_SHORT_TEXT ) {
-		if (wcscmp(pi1->event_text.str, pi2->event_text.str) != 0) {
+		if ( cmp_aribstr(&pi1->event_text, &pi2->event_text) != 0 || 
+				cmp_aribstr(&pi1->event_name, &pi2->event_name) ) {
 			return 1;
 		}
 	}
 
 	if ( pi1->status & PGINFO_GET_GENRE ) {
-		if( pi1->genre_info.n_items != pi2->genre_info.n_items ) {
+		if (cmp_genre(&pi1->genre_info, &pi2->genre_info)) {
 			return 1;
-		}
-		for (i = 0; i < pi1->genre_info.n_items; i++) {
-			if ( memcmp(&pi1->genre_info.items[i], 
-						&pi2->genre_info.items[i],
-						sizeof(pi1->genre_info.items[i]) ) != 0 ) {
-				return 1;
-			}
 		}
 	}
 
-	if ( get_extended_text(et1, sizeof(et1) / sizeof(WCHAR), pi1) !=
-		get_extended_text(et2, sizeof(et2) / sizeof(WCHAR), pi2) ) {
-		return 1;
-	}
-	if (wcscmp(et1, et2) != 0) {
-		return 1;
+	if ( pi1->status & PGINFO_GET_EXTEND_TEXT ) {
+		if (cmp_extended_text(pi1, pi2)) {
+			return 1;
+		}
 	}
 
 	return 0;
@@ -739,7 +800,7 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 {
 	int i;
 	int item_len;
-	Eed_item_string_t *curr_item;
+	Eed_itemset_t *curr_item;
 
 	if (proginfo->last_desc != -1) {
 		/* 連続性チェック */
@@ -776,14 +837,14 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 		curr_item = &proginfo->items[proginfo->n_items];
 		if (proginfo->n_items < sizeof(proginfo->items) / sizeof(proginfo->items[0])) {
 			proginfo->n_items++;
-			if (eed_item->item_description_length <= sizeof(curr_item->aribdesc)) {
-				curr_item->aribdesc_len = eed_item->item_description_length;
+			if (eed_item->item_description_length <= sizeof(curr_item->desc.aribstr)) {
+				curr_item->desc.aribstr_len = eed_item->item_description_length;
 			} else {
 				/* サイズオーバーなので切り詰める */
-				curr_item->aribdesc_len = sizeof(curr_item->aribdesc);
+				curr_item->desc.aribstr_len = sizeof(curr_item->desc.aribstr);
 			}
-			memcpy(curr_item->aribdesc, eed_item->item_description_char, eed_item->item_description_length);
-			curr_item->aribitem_len = 0;
+			memcpy(curr_item->desc.aribstr, eed_item->item_description_char, eed_item->item_description_length);
+			curr_item->item.aribstr_len = 0;
 		} else {
 			/* これ以上itemを追加できない */
 			return;
@@ -798,27 +859,27 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 		}
 	}
 
-	item_len = curr_item->aribitem_len + eed_item->item_length;
-	if ( item_len > sizeof(curr_item->aribitem) ) {
+	item_len = curr_item->item.aribstr_len + eed_item->item_length;
+	if ( item_len > sizeof(curr_item->item.aribstr) ) {
 		/* サイズオーバーなので切り詰める */
-		item_len = sizeof(curr_item->aribitem);
+		item_len = sizeof(curr_item->item.aribstr);
 	}
-	memcpy(&curr_item->aribitem[curr_item->aribitem_len], eed_item->item_char, eed_item->item_length);
-	curr_item->aribitem_len = item_len;
+	memcpy(&curr_item->item.aribstr[curr_item->item.aribstr_len], eed_item->item_char, eed_item->item_length);
+	curr_item->item.aribstr_len = item_len;
 
 	if (proginfo->curr_desc == proginfo->last_desc) {
 		for (i = 0; i < proginfo->n_items; i++) {
-			proginfo->items[i].desc_len = AribToString(
-					proginfo->items[i].desc,
-					sizeof(proginfo->items[i].desc),
-					proginfo->items[i].aribdesc,
-					proginfo->items[i].aribdesc_len
+			proginfo->items[i].desc.str_len = AribToString(
+					proginfo->items[i].desc.str,
+					sizeof(proginfo->items[i].desc.str),
+					proginfo->items[i].desc.aribstr,
+					proginfo->items[i].desc.aribstr_len
 				);
-			proginfo->items[i].item_len = AribToString(
-					proginfo->items[i].item,
-					sizeof(proginfo->items[i].item),
-					proginfo->items[i].aribitem,
-					proginfo->items[i].aribitem_len
+			proginfo->items[i].item.str_len = AribToString(
+					proginfo->items[i].item.str,
+					sizeof(proginfo->items[i].item.str),
+					proginfo->items[i].item.aribstr,
+					proginfo->items[i].item.aribstr_len
 				);
 		}
 		proginfo->status |= PGINFO_GET_EXTEND_TEXT;

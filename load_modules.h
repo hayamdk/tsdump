@@ -7,6 +7,7 @@ void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *c
 void do_pgoutput(void **modulestats, unsigned char *buf, size_t size);
 int do_pgoutput_check(void **modulestats);
 int do_pgoutput_wait(void **modulestats);
+int do_pgoutput_changed(void **modulestats, const proginfo_t *old_pi, const proginfo_t *new_pi);
 void do_pgoutput_end(void **modulestats, const proginfo_t *pi);
 void do_pgoutput_close(void **modulestats, const proginfo_t *pi);
 int do_postconfig();

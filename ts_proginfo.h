@@ -67,6 +67,25 @@ typedef struct {
 } Eed_item_string_t;
 
 typedef struct {
+	int aribstr_len;
+	uint8_t aribstr[20]; /* ARIB TR-B14において上限が16bytesと定められている */
+	int str_len;
+	WCHAR str[20*ARIB_CHAR_SIZE_RATIO+1];
+} Eed_desc_t;
+
+typedef struct {
+	int aribstr_len;
+	uint8_t aribstr[480]; /* ARIB TR-B14において上限が440bytesと定められている */
+	int str_len;
+	WCHAR str[480*ARIB_CHAR_SIZE_RATIO+1];
+} Eed_text_t;
+
+typedef struct {
+	Eed_desc_t desc;
+	Eed_text_t item;
+} Eed_itemset_t;
+
+typedef struct {
 	unsigned int stream_type : 8;
 	unsigned int pid : 16;
 } PMT_pid_def_t;
@@ -149,7 +168,8 @@ typedef struct {
 
 	/* 拡張形式イベント記述子 */
 	int n_items;
-	Eed_item_string_t items[8];
+	//Eed_item_string_t items[8];
+	Eed_itemset_t items[8];
 
 	/* コンテント記述子 */
 	Cd_t genre_info;

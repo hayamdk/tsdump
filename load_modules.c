@@ -23,6 +23,7 @@ typedef struct {
 	hook_pgoutput_t hook_pgoutput;
 	hook_pgoutput_check_t hook_pgoutput_check;
 	hook_pgoutput_wait_t hook_pgoutput_wait;
+	hook_pgoutput_changed_t hook_pgoutput_changed;
 	hook_pgoutput_end_t hook_pgoutput_end;
 	hook_pgoutput_close_t hook_pgoutput_close;
 	hook_pgoutput_postclose_t hook_pgoutput_postclose;
@@ -78,6 +79,11 @@ void register_hook_pgoutput_check(hook_pgoutput_check_t handler)
 void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler)
 {
 	module_hooks_current->hook_pgoutput_wait = handler;
+}
+
+void register_hook_pgoutput_changed(hook_pgoutput_changed_t handler)
+{
+	module_hooks_current->hook_pgoutput_changed = handler;
 }
 
 void register_hook_pgoutput_end(hook_pgoutput_end_t handler)
@@ -204,6 +210,18 @@ int do_pgoutput_wait(void **modulestats)
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_pgoutput_wait) {
 			err |= modules[i].hooks.hook_pgoutput_wait(modulestats[i]);
+		}
+	}
+	return err;
+}
+
+int do_pgoutput_changed(void **modulestats, const proginfo_t *old_pi, const proginfo_t *new_pi)
+{
+	int i;
+	int err = 0;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_pgoutput_changed) {
+			modules[i].hooks.hook_pgoutput_changed(modulestats[i], old_pi, new_pi);
 		}
 	}
 	return err;
