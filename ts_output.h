@@ -44,7 +44,6 @@ typedef struct
 	int PAT_packet_counter;
 	int dropped_bytes;
 
-	int n_tos;
 } ts_output_stat_t;
 
 void init_tos(ts_output_stat_t *tos);

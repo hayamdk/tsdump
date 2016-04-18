@@ -567,11 +567,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			time_add_offset(&last_endtime, &tos->last_proginfo.start, &tos->last_proginfo.dur);
 
 			if ( get_time_offset(NULL, &tos->proginfo->start, &tos->last_proginfo.start) != 0 ) {
-				if (tos->n_tos <= 1) {
-					tsd_strcpy(msg1, TSD_TEXT("番組開始時間の変更"));
-				} else {
-					swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
-				}
+				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
 
 				time_changed = 1;
 				output_message( MSG_NOTIFY, L"%s: %02d:%02d:%02d → %02d:%02d:%02d", msg1,
@@ -579,11 +575,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 					tos->last_proginfo.start.hour, tos->last_proginfo.start.min, tos->last_proginfo.start.sec );
 			}
 			if ( get_time_offset(NULL, &endtime, &last_endtime) != 0 ) {
-				if (tos->n_tos <= 1) {
-					tsd_strcpy(msg1, TSD_TEXT("番組終了時間の変更"));
-				} else {
-					swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
-				}
+				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
 
 				if ( pi_endtime_unknown(&tos->last_proginfo) ) {
 					tsd_strcpy(msg2, TSD_TEXT("未定 →"));

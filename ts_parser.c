@@ -206,7 +206,8 @@ int cmp_extended_text(const proginfo_t *pi1, const proginfo_t *pi2)
 
 int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 {
-	if ( (pi1->status&PGINFO_GET_ALL) != (pi2->status&PGINFO_GET_ALL) ) {
+	if ( (pi1->status & (PGINFO_GET_ALL|PGINFO_UNKNOWN_STARTTIME|PGINFO_UNKNOWN_DURATION)) !=
+			(pi2->status & (PGINFO_GET_ALL|PGINFO_UNKNOWN_STARTTIME|PGINFO_UNKNOWN_DURATION)) ) {
 		return 1;
 	}
 
@@ -222,6 +223,9 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 	}
 
 	if (pi1->status&PGINFO_GET_EVENT_INFO) {
+		if (pi1->event_id != pi2->event_id) {
+			return 1;
+		}
 		if ( !(pi1->status&PGINFO_UNKNOWN_STARTTIME) && cmp_time(&pi1->start, &pi2->start) ) {
 			return 1;
 		}
