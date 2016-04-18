@@ -50,20 +50,26 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	const WCHAR *chname, *pname;
 	time_mjd_t time_mjd;
 
+	pname = L"”Ô‘gî•ñ‚È‚µ";
+
 	if (PGINFO_READY(pi->status)) {
 		tn = timenum_start(pi);
 		chname = pi->service_name.str;
 		pname = pi->event_name.str;
 		isok = 1;
-	} else if ((pi->status&PGINFO_GET_SERVICE_INFO) && get_stream_timestamp_rough(pi, &time_mjd)) {
-		tn = timenum_timemjd(time_mjd);
-		chname = pi->service_name.str;
-		pname = L"”Ô‘gî•ñ‚È‚µ";
-		isok = 1;
 	} else {
-		tn = timenumnow();
-		chname = ch_info->ch_str;
-		pname = L"”Ô‘gî•ñ‚È‚µ";
+		if ((pi->status&PGINFO_GET_SERVICE_INFO)) {
+			chname = pi->service_name.str;
+			isok = 1;
+		} else {
+			chname = ch_info->ch_str;
+		}
+
+		if (get_stream_timestamp_rough(pi, &time_mjd)) {
+			tn = timenum_timemjd(time_mjd);
+		} else {
+			tn = timenumnow();
+		}
 	}
 
 	WCHAR *pname_n = _wcsdup(pname);
