@@ -448,7 +448,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 
 static int load_module(module_def_t *mod, HMODULE hdll)
 {
-	if ( mod->mod_ver != TSDUMP_MODULE_V3 ) {
+	if ( mod->mod_ver != TSDUMP_MODULE_V4 ) {
 		output_message(MSG_ERROR, L"ŒÝŠ·«‚Ì–³‚¢ƒ‚ƒWƒ…[ƒ‹‚Å‚·: %s", mod->modname);
 		return 0;
 	}

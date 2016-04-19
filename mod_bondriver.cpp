@@ -213,7 +213,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_bondriver = {
-	TSDUMP_MODULE_V3,
+	TSDUMP_MODULE_V4,
 	L"mod_bondriver",
 	register_hooks,
 	cmds

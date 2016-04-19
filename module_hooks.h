@@ -5,8 +5,9 @@ typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);
 typedef enum {
 	TSDUMP_MODULE_NONE = 0,
 /*	TSDUMP_MODULE_V1 = 1,
-	TSDUMP_MODULE_V2 = 2,*/
-	TSDUMP_MODULE_V3 = 3,
+	TSDUMP_MODULE_V2 = 2,
+	TSDUMP_MODULE_V3 = 3,*/
+	TSDUMP_MODULE_V4 = 4,
 } module_ver;
 
 typedef struct{

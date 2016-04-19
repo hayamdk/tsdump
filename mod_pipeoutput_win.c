@@ -392,7 +392,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_pipeoutput_win = {
-	TSDUMP_MODULE_V3,
+	TSDUMP_MODULE_V4,
 	L"mod_pipeoutput_win",
 	register_hooks,
 	cmds
