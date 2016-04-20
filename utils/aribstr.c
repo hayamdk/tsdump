@@ -25,8 +25,8 @@ epgdumpライセンス(Solaris版より引用) :
 
 #define WCHAR wchar_t
 
-#include "strfuncs.h"
-#include "aribstr.h"
+#include "utils/tsdstr.h"
+#include "utils/aribstr.h"
 
 #define CODE_UNKNOWN 		0	// 不明なグラフィックセット(非対応)
 #define CODE_KANJI 		1	// Kanji

@@ -9,10 +9,10 @@
 
 #include <shlwapi.h>
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
-#include "strfuncs.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
+#include "utils/tsdstr.h"
 
 typedef struct {
 	WCHAR *fn;

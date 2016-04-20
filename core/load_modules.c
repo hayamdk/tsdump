@@ -8,13 +8,13 @@
 #include <inttypes.h>
 #include <process.h>
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
-#include "tsdump.h"
-#include "load_modules.h"
-#include "default_decoder.h"
-#include "modules.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
+#include "core/tsdump.h"
+#include "core/load_modules.h"
+#include "core/default_decoder.h"
+#include "modules/modules.h"
 
 #define MAX_HOOKS_NUM 256
 

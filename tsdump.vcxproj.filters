@@ -15,87 +15,87 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ts_output.c">
+    <ClCompile Include="core/tsdump.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="ts_parser.c">
+    <ClCompile Include="core/ts_output.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="tsdump.c">
+    <ClCompile Include="core/default_decoder.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="load_modules.c">
+    <ClCompile Include="core/load_modules.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_pipeoutput_win.c">
+    <ClCompile Include="modules/mod_b25decoder.cpp" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_cmdexec_win.c">
+    <ClCompile Include="modules/mod_bondriver.cpp" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_fileoutput_win.c">
+    <ClCompile Include="modules/mod_cmdexec_win.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_bondriver.cpp">
+    <ClCompile Include="modules/mod_fileoutput_win.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_b25decoder.cpp">
+    <ClCompile Include="modules/mod_path_resolver.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="default_decoder.c">
+    <ClCompile Include="modules/mod_pipeoutput_win.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_path_resolver.c">
+    <ClCompile Include="modules/mod_log.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="mod_log.c">
+    <ClCompile Include="utils/aribstr.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="strfuncs.c">
+    <ClCompile Include="utils/tsdstr.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="aribstr.c">
+    <ClCompile Include="utils/ts_parser.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IB25Decoder.h">
+    <ClInclude Include="core/tsdump.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="IBonDriver2.h">
+    <ClInclude Include="core/ts_output.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ts_output.h">
+    <ClInclude Include="core/default_decoder.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ts_parser.h">
+    <ClInclude Include="core/load_modules.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ts_proginfo.h">
+    <ClInclude Include="core/module_def.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="tsdump.h">
+    <ClInclude Include="core/module_hooks.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="load_modules.h">
+    <ClInclude Include="modules/modules.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="modules.h">
+    <ClInclude Include="modules/IB25Decoder.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="module_def.h">
+    <ClInclude Include="modules/IBonDriver2.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="module_hooks.h">
+    <ClInclude Include="utils/aribstr.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="default_decoder.h">
+    <ClInclude Include="utils/arib_proginfo.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="strfuncs.h">
+    <ClInclude Include="utils/tsdstr.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="aribstr.h">
+    <ClInclude Include="utils/ts_parser.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,9 +6,9 @@
 #include <sys/timeb.h>
 #include <share.h>
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
 
 static int output_log = 0;
 static const WCHAR *log_fname = NULL;

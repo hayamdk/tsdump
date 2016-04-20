@@ -6,14 +6,14 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
-#include "ts_parser.h"
-#include "tsdump.h"
-#include "ts_output.h"
-#include "load_modules.h"
-#include "strfuncs.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
+#include "utils/ts_parser.h"
+#include "core/tsdump.h"
+#include "core/ts_output.h"
+#include "core/load_modules.h"
+#include "utils/tsdstr.h"
 
 //#include "timecalc.h"
 

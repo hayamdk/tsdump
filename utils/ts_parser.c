@@ -9,12 +9,12 @@ typedef wchar_t			WCHAR;
 typedef long			BOOL;
 typedef unsigned long	DWORD;
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
-#include "ts_parser.h"
-#include "aribstr.h"
-#include "tsdump.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
+#include "utils/ts_parser.h"
+#include "utils/aribstr.h"
+#include "core/tsdump.h"
 
 const WCHAR *genre_main[] = {
 	L"ニュース／報道",			L"スポーツ",	L"情報／ワイドショー",	L"ドラマ",

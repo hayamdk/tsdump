@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#include "module_def.h"
-#include "ts_proginfo.h"
-#include "module_hooks.h"
+#include "core/module_def.h"
+#include "utils/arib_proginfo.h"
+#include "core/module_hooks.h"
+
 #include "IB25Decoder.h"
 
 typedef IB25Decoder2* (pCreateB25Decoder2_t)(void);

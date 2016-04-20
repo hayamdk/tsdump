@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <wtypes.h>
 
-#include "strfuncs.h"
+#include "utils/tsdstr.h"
 
 const WCHAR* tsd_strncpy(WCHAR *dst, const WCHAR *src, size_t n)
 {
