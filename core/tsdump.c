@@ -12,7 +12,7 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
-#include "core/module_def.h"
+#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"

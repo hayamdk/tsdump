@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 
-#include "core/module_def.h"
+#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "core/tsdump.h"

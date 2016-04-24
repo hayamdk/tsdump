@@ -100,7 +100,7 @@
     <ClInclude Include="core/ts_output.h" />
     <ClInclude Include="core/default_decoder.h" />
     <ClInclude Include="core/load_modules.h" />
-    <ClInclude Include="core/module_def.h" />
+    <ClInclude Include="core/tsdump_def.h" />
     <ClInclude Include="core/module_hooks.h" />
     <ClInclude Include="modules/modules.h" />
     <ClInclude Include="modules/IB25Decoder.h" />

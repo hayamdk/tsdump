@@ -71,7 +71,7 @@
     <ClInclude Include="core/load_modules.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/module_def.h" >
+    <ClInclude Include="core/tsdump_def.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="core/module_hooks.h" >
