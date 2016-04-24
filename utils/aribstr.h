@@ -5,7 +5,7 @@
 extern "C"{
 #endif /* __cplusplus */
 
-	int AribToString(WCHAR *dst, const int dst_maxlen, const uint8_t *src, const int src_len);
+	int AribToString(TSDCHAR *dst, const int dst_maxlen, const uint8_t *src, const int src_len);
 
 #ifdef __cplusplus
 }

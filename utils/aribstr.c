@@ -1,6 +1,4 @@
-﻿//#include "config.h"
-
-/* epgdump由来のコード */
+﻿/* epgdump由来のコード */
 /*
 epgdumpライセンス(Solaris版より引用) :
 >epgdumpに関しては、BonTest Ver.1.40からそのままソースを持ってきている部分も
@@ -14,16 +12,19 @@ epgdumpライセンス(Solaris版より引用) :
 >> ・このとき本ソフトウェアの著作権表示を行うかどうかは任意です。
 */
 
+#include "core/tsdump_def.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-//#include <unistd.h>
 #include <string.h>
 #include <inttypes.h>
-//#include <iconv.h>
 
+#ifdef TSD_PLATFORM_MSVC
 #include <wchar.h>
-
-#define WCHAR wchar_t
+#else
+#include <unistd.h>
+#include <iconv.h>
+#endif
 
 #include "utils/tsdstr.h"
 #include "utils/aribstr.h"
@@ -45,17 +46,13 @@ epgdumpライセンス(Solaris版より引用) :
 #define CODE_JIS_KANJI_PLANE_2 	14	// JIS compatible Kanji Plane 2
 #define CODE_ADDITIONAL_SYMBOLS	15	// Additional symbols
 
-
-//#define WCHAR char
 #define BYTE  char
 #define WORD  int16_t
 #define DWORD int32_t
 #define bool  int
 #define true  1
 #define false 0
-//#define TEXT(a) a
 #define TEXT(a) TSD_TEXT(a)
-//#define _T(a) a
 #define _T(a) TSD_TEXT(a)
 #define CODE_SET int
 
@@ -68,16 +65,16 @@ static	BYTE m_byEscSeqCount;
 static	BYTE m_byEscSeqIndex;
 static	bool m_bIsEscSeqDrcs;
 
-static  const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen, const uint8_t *pSrcData, const int dwSrcLen);
-static	const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET CodeSet);
+static  const DWORD AribToStringInternal(TSDCHAR *lpszDst, const int dst_maxlen, const uint8_t *pSrcData, const int dwSrcLen);
+static	const DWORD ProcessCharCode(TSDCHAR *lpszDst, const WORD wCode, const CODE_SET CodeSet);
 
-static	const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode);
-static	const DWORD PutAlphanumericChar(WCHAR *lpszDst, const WORD wCode);
-//static	const DWORD PutAlphanumericHankakuChar(WCHAR *lpszDst, const WORD wCode);
-static	const DWORD PutHiraganaChar(WCHAR *lpszDst, const WORD wCode);
-static	const DWORD PutKatakanaChar(WCHAR *lpszDst, const WORD wCode);
-static	const DWORD PutJisKatakanaChar(WCHAR *lpszDst, const WORD wCode);
-static	const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutAlphanumericChar(TSDCHAR *lpszDst, const WORD wCode);
+//static	const DWORD PutAlphanumericHankakuChar(TSDCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutHiraganaChar(TSDCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutKatakanaChar(TSDCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutJisKatakanaChar(TSDCHAR *lpszDst, const WORD wCode);
+static	const DWORD PutSymbolsChar(TSDCHAR *lpszDst, const WORD wCode);
 
 static	void ProcessEscapeSeq(const BYTE byCode);
 
@@ -160,7 +157,7 @@ bool IsSmallCharMode(void)
 }
 
 int AribToString(
-	WCHAR *dst,
+	TSDCHAR *dst,
 	const int dst_maxlen,
 	const uint8_t *src,
 	const int src_len )
@@ -170,11 +167,11 @@ int AribToString(
 }
 
 
-const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
+const DWORD AribToStringInternal(TSDCHAR *lpszDst, const int dst_maxlen,
 								 const uint8_t *pSrcData, const int dwSrcLen)
 {
 	if (dwSrcLen <= 0 && dst_maxlen >= 1) {
-		lpszDst[0] = TSD_NULL_CHARACTER;
+		lpszDst[0] = TSD_NULLCHAR;
 		return 0;
 	}
 	if( dst_maxlen <= 0 || !pSrcData || dwSrcLen <= 0 || !lpszDst) return 0UL;
@@ -183,7 +180,7 @@ const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 	DWORD dwDstLen = 0UL;
 	int   dwSrcData;
 
-	WCHAR charbuf[8];
+	TSDCHAR charbuf[8];
 	int charlen;
 	
 	// 状態初期設定
@@ -214,7 +211,7 @@ const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 				
 				if(abCharSizeTable[CurCodeSet]){
 					// 2バイトコード
-					if((dwSrcLen - dwSrcPos) < 2UL)break;
+					//if((dwSrcLen - dwSrcPos) < 2UL)break;
 					
 					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
 					charlen = ProcessCharCode(charbuf, ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
@@ -280,10 +277,10 @@ const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 
 		if (charlen > 0) {
 			/* dstの長さを見てオーバーランをしないようにする */
-			if (dwSrcLen + charlen >= dst_maxlen) {
+			if (dwDstLen + charlen >= dst_maxlen) {
 				break;
 			}
-			memcpy(&lpszDst[dwDstLen], charbuf, charlen*sizeof(WCHAR));
+			memcpy(&lpszDst[dwDstLen], charbuf, charlen*sizeof(TSDCHAR));
 			dwDstLen += charlen;
 		}
 		
@@ -291,12 +288,12 @@ const DWORD AribToStringInternal(WCHAR *lpszDst, const int dst_maxlen,
 	}
 
 	// 終端文字
-	lpszDst[dwDstLen] = TSD_NULL_CHARACTER;
+	lpszDst[dwDstLen] = TSD_NULLCHAR;
 
 	return dwDstLen;
 }
 
-const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET CodeSet)
+const DWORD ProcessCharCode(TSDCHAR *lpszDst, const WORD wCode, const CODE_SET CodeSet)
 {
 	switch(CodeSet){
 	case CODE_KANJI	:
@@ -313,7 +310,7 @@ const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET Cod
 			return PutAlphanumericChar(lpszDst, wCode);
 		} else {
 			//半角はそのまま出力
-			lpszDst[0] = wCode;
+			lpszDst[0] = (TSDCHAR)wCode;
 			return 1UL;
 		}
 
@@ -340,8 +337,40 @@ const DWORD ProcessCharCode(WCHAR *lpszDst, const WORD wCode, const CODE_SET Cod
 	}
 }
 
-/*
-const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode)
+#ifdef TSD_PLATFORM_MSVC
+/* JIS X 0208 から一旦Shift-JISに変換し、WindowsのランタイムでUTF-16LEに変換する */
+const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
+{
+	uint8_t u, v;
+	char shiftjis_char[3];
+	size_t ret;
+
+	u = (wCode >> 8) - 0x20;
+	v = (wCode & 0xFF) - 0x20;
+
+	if (u < 63) {
+		shiftjis_char[0] = (u-1)/2 + 0x81;
+	} else {
+		shiftjis_char[0] = (u-1)/2 + 0xC1;
+	}
+
+	if (u % 2 == 1) {
+		if (v <= 63) {
+			shiftjis_char[1] = v + 0x3F;
+		} else {
+			shiftjis_char[1] = v + 0x40;
+		}
+	} else {
+		shiftjis_char[1] = v + 0x9E;
+	}
+
+	shiftjis_char[2] = 0;
+	mbstowcs_s(&ret, lpszDst, 2, shiftjis_char, 1);
+	return 1;
+}
+#else
+/* iconvで変換する */
+const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	char code[9];
 	char xcode[5];
@@ -377,43 +406,12 @@ const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode)
 
 	return strlen(lpszDst);
 }
-*/
+#endif
 
-/* JIS X 0208 から一旦Shift-JISに変換し、WindowsのランタイムでUTF-16LEに変換する */
-const DWORD PutKanjiChar(WCHAR *lpszDst, const WORD wCode)
-{
-	uint8_t u, v;
-	char shiftjis_char[3];
-	size_t ret;
-
-	u = (wCode >> 8) - 0x20;
-	v = (wCode & 0xFF) - 0x20;
-
-	if (u < 63) {
-		shiftjis_char[0] = (u-1)/2 + 0x81;
-	} else {
-		shiftjis_char[0] = (u-1)/2 + 0xC1;
-	}
-
-	if (u % 2 == 1) {
-		if (v <= 63) {
-			shiftjis_char[1] = v + 0x3F;
-		} else {
-			shiftjis_char[1] = v + 0x40;
-		}
-	} else {
-		shiftjis_char[1] = v + 0x9E;
-	}
-
-	shiftjis_char[2] = 0;
-	mbstowcs_s(&ret, lpszDst, 2, shiftjis_char, 1);
-	return 1;
-}
-
-const DWORD PutAlphanumericChar(WCHAR *lpszDst, const WORD wCode)
+const DWORD PutAlphanumericChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	// 英数字全角文字コード変換
-	static const WCHAR *acAlphanumericTable =
+	static const TSDCHAR *acAlphanumericTable =
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　！”＃＄％＆’（）＊＋，－．／")
@@ -436,10 +434,10 @@ const DWORD PutAlphanumericChar(WCHAR *lpszDst, const WORD wCode)
 #endif
 }
 
-const DWORD PutHiraganaChar(WCHAR *lpszDst, const WORD wCode)
+const DWORD PutHiraganaChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	// ひらがな文字コード変換
-	static const WCHAR *acHiraganaTable =
+	static const TSDCHAR *acHiraganaTable =
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　ぁあぃいぅうぇえぉおかがきぎく")
@@ -462,10 +460,10 @@ const DWORD PutHiraganaChar(WCHAR *lpszDst, const WORD wCode)
 #endif
 }
 
-const DWORD PutKatakanaChar(WCHAR *lpszDst, const WORD wCode)
+const DWORD PutKatakanaChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	// カタカナ英数字文字コード変換
-	static const WCHAR *acKatakanaTable =
+	static const TSDCHAR *acKatakanaTable =
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　ァアィイゥウェエォオカガキギク")
@@ -488,10 +486,10 @@ const DWORD PutKatakanaChar(WCHAR *lpszDst, const WORD wCode)
 #endif
 }
 
-const DWORD PutJisKatakanaChar(WCHAR *lpszDst, const WORD wCode)
+const DWORD PutJisKatakanaChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	// JISカタカナ文字コード変換
-	static const WCHAR *acJisKatakanaTable =
+	static const TSDCHAR *acJisKatakanaTable =
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　　　　　　　　　　　　　　　　")
 		TEXT("　。「」、・ヲァィゥェォャュョッ")
@@ -514,14 +512,14 @@ const DWORD PutJisKatakanaChar(WCHAR *lpszDst, const WORD wCode)
 #endif
 }
 
-const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
+const DWORD PutSymbolsChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	// 追加シンボル文字コード変換(とりあえず必要そうなものだけ)
 
 	/* Windows7 + VC2015上で正しく表示される文字のみできるだけ本来の文字を埋め込み */
 	/* そうでないものは代替の文字列に置き換え */
 
-	static const WCHAR *aszSymbolsTable1[] =
+	static const TSDCHAR *aszSymbolsTable1[] =
 		{
 			_T("[HV]"),	_T("[SD]"),	_T("[Ｐ]"),	_T("[Ｗ]"),	_T("[MV]"),	_T("[手]"),	_T("[字]"),	_T("[双]"),		// 0x7A50 - 0x7A57	90/48 - 90/55
 			_T("[デ]"),	_T("[Ｓ]"),	_T("[二]"),	_T("[多]"),	_T("[解]"),	_T("[SS]"),	_T("[Ｂ]"),	_T("[Ｎ]"),		// 0x7A58 - 0x7A5F	90/56 - 90/63
@@ -530,7 +528,7 @@ const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
 			_T("[声]"),	_T("[吹]"),	_T("[PPV]"),	_T("㊙"),	_T("ほか")															// 0x7A70 - 0x7A74	90/80 - 90/84
 		};
 
-	static const WCHAR *aszSymbolsTable2[] =
+	static const TSDCHAR *aszSymbolsTable2[] =
 		{
 			_T("➡"),		_T("⬅"),		_T("⬆"),		_T("⬇"),		_T("○"),		_T("●"),		_T("年"),		_T("月"),			// 0x7C21 - 0x7C28	92/01 - 92/08
 			_T("日"),		_T("円"),		_T("㎡"),		_T("㎥"),		_T("㎝"),		_T("㎠"),		_T("㎤"),		_T("0."),			// 0x7C29 - 0x7C30	92/09 - 92/16
@@ -546,7 +544,7 @@ const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
 			_T("[DJ]"),		_T("[演]"),		_T("℻")																							// 0x7C79 - 0x7C7B	92/89 - 92/91
 		};
 
-	static const WCHAR *aszSymbolsTable3[] =
+	static const TSDCHAR *aszSymbolsTable3[] =
 		{
 			_T("㈪"),		_T("㈫"),		_T("㈬"),		_T("㈭"),		_T("㈮"),		_T("㈯"),		_T("㈰"),		_T("㈷"),			// 0x7D21 - 0x7D28	93/01 - 93/08
 			_T("㍾"),		_T("㍽"),		_T("㍼"),		_T("㍻"),		_T("№"),		_T("℡"),		_T("〶"),		_T("⚾"),			// 0x7D29 - 0x7D30	93/09 - 93/16
@@ -562,7 +560,7 @@ const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
 			_T("・"),		_T("♬"),		_T("☎")																							// 0x7D79 - 0x7D7B	93/89 - 93/91
 		};
 
-	static const WCHAR *aszSymbolsTable4[] =
+	static const TSDCHAR *aszSymbolsTable4[] =
 		{
 			_T("Ⅰ"),		_T("Ⅱ"),		_T("Ⅲ"),		_T("Ⅳ"),		_T("Ⅴ"),		_T("Ⅵ"),		_T("Ⅶ"),		_T("Ⅷ"),			// 0x7E21 - 0x7E28	94/01 - 94/08
 			_T("Ⅸ"),		_T("Ⅹ"),		_T("Ⅺ"),		_T("Ⅻ"),		_T("⑰"),		_T("⑱"),		_T("⑲"),		_T("⑳"),			// 0x7E29 - 0x7E30	94/09 - 94/16
@@ -578,7 +576,7 @@ const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
 			_T("❾"),		_T("❿"),		_T("⓫"),		_T("⓬"),		_T("㉛")															// 0x7E79 - 0x7E7D	94/89 - 94/93
 		};
 
-	static const WCHAR *aszSymbolsTable5[] =
+	static const TSDCHAR *aszSymbolsTable5[] =
 		{
 			_T("㐂"),		_T("𠅘"),		_T("份"),		_T("仿"),		_T("侚"),		_T("俉"),		_T("傜"),		_T("儞"),			// 0x7521 - 0x7528	85/01 - 85/08
 			_T("冼"),		_T("㔟"),		_T("匇"),		_T("卡"),		_T("卬"),		_T("詹"),		_T("𠮷"),		_T("呍"),			// 0x7529 - 0x7530	85/09 - 85/16
@@ -594,7 +592,7 @@ const DWORD PutSymbolsChar(WCHAR *lpszDst, const WORD wCode)
 			_T("磈"),		_T("磠"),		_T("祇"),		_T("禮"),		_T("・"),		_T("䄃")											// 0x7579 - 0x757E	85/89 - 85/94
 		};
 
-	static const WCHAR *aszSymbolsTable6[] =
+	static const TSDCHAR *aszSymbolsTable6[] =
 		{
 			_T("・"),		_T("秚"),		_T("稞"),		_T("筿"),		_T("簱"),		_T("䉤"),		_T("綋"),		_T("羡"),			// 0x7621 - 0x7628	86/01 - 86/08
 			_T("脘"),		_T("脺"),		_T("・"),		_T("芮"),		_T("葛"),		_T("蓜"),		_T("蓬"),		_T("蕙"),			// 0x7629 - 0x7630	86/09 - 86/16

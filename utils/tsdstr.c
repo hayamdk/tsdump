@@ -1,31 +1,50 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
-#include <wtypes.h>
 
+#include "core/tsdump_def.h"
 #include "utils/tsdstr.h"
 
-const WCHAR* tsd_strncpy(WCHAR *dst, const WCHAR *src, size_t n)
+#ifdef TSD_PLATFORM_MSVC
+#include <wtypes.h>
+#else
+#include <string.h>
+#endif
+
+const TSDCHAR* tsd_strncpy(TSDCHAR *dst, const TSDCHAR *src, size_t n)
 {
+#ifdef TSD_PLATFORM_MSVC
 	return wcsncpy(dst, src, n);
+#else
+	return strncpy(dst, src, n);
+#endif
 }
 
-const WCHAR* tsd_strcpy(WCHAR *dst, const WCHAR *src)
+const TSDCHAR* tsd_strcpy(TSDCHAR *dst, const TSDCHAR *src)
 {
+#ifdef TSD_PLATFORM_MSVC
 	return wcscpy(dst, src);
+#else
+	return strcpy(dst, src);
+#endif
 }
 
-size_t tsd_strlen(const WCHAR *str)
+size_t tsd_strlen(const TSDCHAR *str)
 {
+#ifdef TSD_PLATFORM_MSVC
 	return wcslen(str);
+#else
+	return strlen(str);
+#endif
 }
 
 /* WindowsコンソールでWCHARの日本語をprintfするとなぜか猛烈に遅い(数十ms～数百ms)のでWriteConsoleを使う */
-int tsd_fprintf(FILE *fp, const WCHAR *fmt, ...)
+#ifdef TSD_PLATFORM_MSVC
+int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)
 {
 	int ret;
 	DWORD written;
-	WCHAR str[2048];
+	TSDCHAR str[2048];
 	HANDLE hc = INVALID_HANDLE_VALUE;
 	va_list list;
 
@@ -48,8 +67,11 @@ int tsd_fprintf(FILE *fp, const WCHAR *fmt, ...)
 		return -1;
 	}
 }
+#else
+#define tsd_fprintf fprintf
+#endif
 
-const WCHAR* tsd_strlcat(WCHAR *dst, size_t dst_buflen, const WCHAR *src)
+const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src)
 {
 	size_t dstlen = tsd_strlen(dst);
 	size_t srclen = tsd_strlen(src);
@@ -57,7 +79,7 @@ const WCHAR* tsd_strlcat(WCHAR *dst, size_t dst_buflen, const WCHAR *src)
 		tsd_strcpy(&dst[dstlen], src);
 	} else if(dstlen + 1 < dst_buflen) {
 		tsd_strncpy(&dst[dstlen], src, dst_buflen - dstlen - 1 );
-		dst[dst_buflen - 1] = TSD_NULL_CHARACTER;
+		dst[dst_buflen - 1] = TSD_NULLCHAR;
 	}
 	return dst;
 }

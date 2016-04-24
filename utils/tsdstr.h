@@ -1,10 +1,17 @@
-#define TSD_NULL_CHARACTER			L'\0'
+#ifdef TSD_PLATFORM_MSVC
+	#define TSDCHAR					wchar_t
+	#define TSD_NULLCHAR			L'\0'
+	#define TSD_TEXT(str)			L##str
+#else
+	#define TSDCHAR				char
+	#define TSD_NULLCHAR			'\0'
+	#define TSD_TEXT(str)			str
+#endif
 
-#define TSD_TEXT(str)				L##str
-#define tsd_printf(fmt, ...) tsd_fprintf(stdout, fmt, __VA_ARGS__)
+#define tsd_printf(fmt, ...)		tsd_fprintf(stdout, fmt, __VA_ARGS__)
 
-const WCHAR* tsd_strncpy(WCHAR *dst, const WCHAR *src, size_t n);
-const WCHAR* tsd_strcpy(WCHAR *dst, const WCHAR *src);
-size_t tsd_strlen(const WCHAR *str);
-int tsd_fprintf(FILE *fp, const WCHAR *fmt, ...);
-const WCHAR* tsd_strlcat(WCHAR *dst, size_t dst_buflen, const WCHAR *src);
+const TSDCHAR* tsd_strncpy(TSDCHAR *dst, const TSDCHAR *src, size_t n);
+const TSDCHAR* tsd_strcpy(TSDCHAR *dst, const TSDCHAR *src);
+size_t tsd_strlen(const TSDCHAR *str);
+int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...);
+const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src);

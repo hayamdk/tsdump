@@ -13,6 +13,7 @@ typedef unsigned long	DWORD;
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
+#include "utils/tsdstr.h"
 #include "utils/aribstr.h"
 #include "core/tsdump.h"
 
