@@ -1,8 +1,10 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <stdio.h>
-
 #include "core/tsdump_def.h"
+
+#ifdef TSD_PLATFORM_MSVC
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#endif
+
 #include "utils/tsdstr.h"
 
 #ifdef TSD_PLATFORM_MSVC
@@ -67,8 +69,6 @@ int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)
 		return -1;
 	}
 }
-#else
-#define tsd_fprintf fprintf
 #endif
 
 const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src)
