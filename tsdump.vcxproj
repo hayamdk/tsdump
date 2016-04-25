@@ -94,6 +94,7 @@
     <ClCompile Include="utils/aribstr.c" />
     <ClCompile Include="utils/tsdstr.c" />
     <ClCompile Include="utils/ts_parser.c" />
+    <ClCompile Include="utils/path.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core/tsdump.h" />
@@ -109,6 +110,7 @@
     <ClInclude Include="utils/arib_proginfo.h" />
     <ClInclude Include="utils/tsdstr.h" />
     <ClInclude Include="utils/ts_parser.h" />
+    <ClInclude Include="utils/path.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
