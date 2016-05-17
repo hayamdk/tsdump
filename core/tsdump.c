@@ -7,7 +7,6 @@
 #include <locale.h>
 #include <signal.h>
 #include <time.h>
-#include <shlwapi.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
@@ -21,6 +20,7 @@
 #include "core/load_modules.h"
 #include "utils/tsdstr.h"
 #include "utils/aribstr.h"
+#include "utils/path.h"
 
 //#define HAVE_TIMECALC_DECLARATION
 //#include "timecalc.h"
@@ -76,7 +76,7 @@ void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt
 	}
 	*wcp = L'\0';
 	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
-	modname = PathFindFileName(modpath);
+	modname = path_getfile(modpath);
 
 	if ( wcsncmp(modname, L"mod_", 4) == 0 ) {
 		do_message(modname, msgtype, plasterr, msg);

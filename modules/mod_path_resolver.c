@@ -1,6 +1,5 @@
 #include <Windows.h>
 #include <inttypes.h>
-#include <shlwapi.h>
 #include <wchar.h>
 #include <time.h>
 #include <sys/types.h>
@@ -11,6 +10,7 @@
 #include "core/module_hooks.h"
 #include "core/tsdump.h"
 #include "utils/tsdstr.h"
+#include "utils/path.h"
 
 WCHAR param_base_dir[MAX_PATH_LEN] = {L'\0'};
 
@@ -50,6 +50,8 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	const WCHAR *chname, *pname;
 	time_mjd_t time_mjd;
 
+	WCHAR filepath[MAX_PATH_LEN + 1];
+
 	pname = L"番組情報なし";
 
 	if (PGINFO_READY(pi->status)) {
@@ -80,32 +82,36 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 
 	/* tnは番組情報の開始時刻 */
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s%s", tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s%s", tn, chname_n, pname_n, ext);
 	}
-	if (!PathFileExists(fname)) {
+	path_join(filepath, param_base_dir, fname);
+	if (!path_isexist(filepath)) {
 		goto END;
 	}
+
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s%s", tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s%s", param_base_dir, tn, chname_n, pname_n, ext);
+		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s%s", tn, chname_n, pname_n, ext);
 	}
-	if (!PathFileExists(fname)) {
+	path_join(filepath, param_base_dir, fname);
+	if (!path_isexist(filepath)) {
 		goto END;
 	}
 
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s(sv=%d)_%s_%d%s", param_base_dir, tn, chname_n, pi->service_id, pname_n, i, ext);
+			swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s_%d%s", tn, chname_n, pi->service_id, pname_n, i, ext);
 		} else {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%s%I64d_%s_%s_%d%s", param_base_dir, tn, chname_n, pname_n, i, ext);
+			swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s_%d%s", tn, chname_n, pname_n, i, ext);
 		}
-		if (!PathFileExists(fname)) {
+		path_join(filepath, param_base_dir, fname);
+		if (!path_isexist(filepath)) {
 			goto END;
 		}
 	}
@@ -126,7 +132,7 @@ static const WCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch
 static const WCHAR* set_dir(const WCHAR *param)
 {
 	tsd_strncpy(param_base_dir, param, MAX_PATH_LEN);
-	PathAddBackslash(param_base_dir);
+	//PathAddBackslash(param_base_dir);
 	return NULL;
 }
 
