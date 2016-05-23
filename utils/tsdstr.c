@@ -70,6 +70,15 @@ int tsd_strcmp(const TSDCHAR *s1, const TSDCHAR *s2)
 #endif
 }
 
+int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n)
+{
+#ifdef TSD_PLATFORM_MSVC
+	return wcsncmp(s1, s2, n);
+#else
+	return strcmp(s1, s2, n);
+#endif
+}
+
 /* WindowsコンソールでWCHARの日本語をprintfするとなぜか猛烈に遅い(数十ms～数百ms)のでWriteConsoleを使う */
 #ifdef TSD_PLATFORM_MSVC
 int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)
@@ -112,4 +121,90 @@ const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src)
 		dst[dst_buflen - 1] = TSD_NULLCHAR;
 	}
 	return dst;
+}
+
+static int get_old_len(tsdstr_replace_set_t *sets, size_t idx)
+{
+	if (sets[idx].old_len == 0) {
+		sets[idx].old_len = tsd_strlen(sets[idx].old) + 1;
+	}
+	return sets[idx].old_len - 1;
+}
+
+static int get_new_len(tsdstr_replace_set_t *sets, size_t idx)
+{
+	if (!sets[idx].new) {
+		return 0;
+	}
+	if (sets[idx].new_len == 0) {
+		sets[idx].new_len = tsd_strlen(sets[idx].new) + 1;
+	}
+	return sets[idx].new_len - 1;
+}
+
+static int search_sets(const TSDCHAR *str, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match)
+{
+	size_t i, match_len=0, len;
+	int ret, found = -1;
+
+	for (i = 0; i < n_sets; i++) {
+		len = get_old_len(sets, i);
+		ret = tsd_strncmp(str, sets[i].old, len);
+		if (ret == 0) {
+			if (found == -1) {
+				found = i;
+				match_len = len;
+			} else if (longest_match) {
+				if (match_len < len) {
+					found = i;
+					match_len = len;
+				}
+			} else {
+				if (match_len > len) {
+					found = i;
+					match_len = len;
+				}
+			}
+		}
+	}
+
+	return found;
+}
+
+void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match)
+{
+	size_t i;
+	size_t old_len, new_len, str_len = tsd_strlen(str);
+	int ret;
+
+	for (i = 0; i < str_len; ) {
+		ret = search_sets(&str[i], sets, n_sets, longest_match);
+		if (ret >= 0) {
+			old_len = get_old_len(sets, ret);
+			new_len = get_new_len(sets, ret);
+
+			if (i + new_len >= str_maxlen) {
+				/* オーバーその1 */
+				old_len = 0;
+				new_len = str_maxlen - i - 1;
+				str[str_maxlen] = TSD_NULLCHAR;
+				str_len = str_maxlen - 1;
+			} else if (str_len + new_len - old_len >= str_maxlen) {
+				/* オーバーその2 */
+				memmove(&str[i + new_len], &str[i + old_len], (str_maxlen - 1 - i - new_len) * sizeof(TSDCHAR));
+				str[str_maxlen] = TSD_NULLCHAR;
+				str_len = str_maxlen - 1;
+			} else {
+				/* 通常 */
+				memmove(&str[i + new_len], &str[i + old_len], (str_len + 1 - i - old_len) * sizeof(TSDCHAR));
+				str_len = str_len + new_len - old_len;
+			}
+			if (new_len > 0) {
+				memcpy(&str[i], sets[ret].new, new_len * sizeof(TSDCHAR));
+			}
+			i = i + new_len;
+		} else {
+			i++;
+		}
+	}
 }

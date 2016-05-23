@@ -14,33 +14,21 @@
 
 TSDCHAR param_base_dir[MAX_PATH_LEN] = {TSD_CHAR('\0')};
 
-static void normalize_fname(TSDCHAR *fname/*, size_t fname_max*/)
+static void normalize_fname(TSDCHAR *fname, size_t fname_max)
 {
-	TSDCHAR *p = fname;
-	TSDCHAR c;
+	tsdstr_replace_set_t replace_sets[] = {
+		{ TSD_TEXT("\\"), TSD_TEXT("Åè") },
+		{ TSD_TEXT("/"), TSD_TEXT("Å^") },
+		{ TSD_TEXT("*"), TSD_TEXT("Åñ") },
+		{ TSD_TEXT("?"), TSD_TEXT("ÅH") },
+		{ TSD_TEXT("\""), TSD_TEXT("Åh") },
+		{ TSD_TEXT("<"), TSD_TEXT("ÅÉ") },
+		{ TSD_TEXT(">"), TSD_TEXT("ÅÑ") },
+		{ TSD_TEXT("|"), TSD_TEXT("Åb") },
+		{ TSD_TEXT(":"), TSD_TEXT("ÅF") },
+	};
 
-	while ((c = *p) != TSD_CHAR('\0')) {
-		if (c == TSD_CHAR('\\')) {
-			*p = L'Åè';
-		} else if (c == TSD_CHAR('/')) {
-			*p = L'Å^';
-		} else if (c == TSD_CHAR('*')) {
-			*p = L'*';
-		} else if (c == TSD_CHAR('?')) {
-			*p = L'ÅH';
-		} else if (c == TSD_CHAR('"')) {
-			*p = L'Åh';
-		} else if (c == TSD_CHAR('<')) {
-			*p = L'ÅÉ';
-		} else if (c == TSD_CHAR('>')) {
-			*p = L'ÅÑ';
-		} else if (c == TSD_CHAR('|')) {
-			*p = L'Åb';
-		} else if (c == TSD_CHAR(':')) {
-			*p = L'ÅF';
-		}
-		p++;
-	}
+	tsd_replace_sets(fname, fname_max, replace_sets, sizeof(replace_sets) / sizeof(tsdstr_replace_set_t), 0);
 }
 
 static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_info, WCHAR *ext)
@@ -50,6 +38,7 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	const WCHAR *chname, *pname;
 	time_mjd_t time_mjd;
 
+	WCHAR pname_n[256], chname_n[256];
 	WCHAR filepath[MAX_PATH_LEN + 1];
 
 	pname = L"î‘ëgèÓïÒÇ»Çµ";
@@ -74,11 +63,11 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 		}
 	}
 
-	WCHAR *pname_n = _wcsdup(pname);
-	WCHAR *chname_n = _wcsdup(chname);
+	tsd_strncpy(pname_n, pname, 256 - 1);
+	tsd_strncpy(chname_n, chname, 256 - 1);
 
-	normalize_fname(pname_n);
-	normalize_fname(chname_n);
+	normalize_fname(pname_n, 256-1);
+	normalize_fname(chname_n, 256-1);
 
 	/* tnÇÕî‘ëgèÓïÒÇÃäJénéûçè */
 	if (!isok && ch_info->n_services > 1) {
