@@ -40,6 +40,36 @@ size_t tsd_strlen(const TSDCHAR *str)
 #endif
 }
 
+int tsd_vsnprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, va_list ap)
+{
+#ifdef TSD_PLATFORM_MSVC
+	return vswprintf(str, size, format, ap);
+#else
+	return vsnprintf(str, size, format, ap);
+#endif
+}
+
+int tsd_snprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, ...)
+{
+	int ret;
+	va_list list;
+
+	va_start(list, format);
+	ret = tsd_vsnprintf(str, size, format, list);
+	va_end(list);
+
+	return ret;
+}
+
+int tsd_strcmp(const TSDCHAR *s1, const TSDCHAR *s2)
+{
+#ifdef TSD_PLATFORM_MSVC
+	return wcscmp(s1, s2);
+#else
+	return strcmp(s1, s2);
+#endif
+}
+
 /* WindowsコンソールでWCHARの日本語をprintfするとなぜか猛烈に遅い(数十ms～数百ms)のでWriteConsoleを使う */
 #ifdef TSD_PLATFORM_MSVC
 int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)

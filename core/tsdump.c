@@ -1,9 +1,13 @@
-#pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "Ws2_32.lib")
+#include "core/tsdump_def.h"
+
+#ifdef TSD_PLATFORM_MSVC
+	#pragma comment(lib, "shlwapi.lib")
+	#pragma comment(lib, "Ws2_32.lib")
+
+	#include <windows.h>
+#endif
 
 #include <stdio.h>
-#include <windows.h>
-#include <tchar.h>
 #include <locale.h>
 #include <signal.h>
 #include <time.h>
@@ -11,7 +15,6 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
-#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
@@ -45,15 +48,15 @@ void signal_handler(int sig)
 {
 	UNREF_ARG(sig);
 	termflag = 1;
-	output_message(MSG_NOTIFY, L"\n終了シグナルをキャッチ");
+	output_message(MSG_NOTIFY, TSD_TEXT("\n終了シグナルをキャッチ"));
 }
 
-void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...)
+void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...)
 {
 	va_list list;
 	va_start(list, fmt);
 	DWORD lasterr, *plasterr = NULL;
-	WCHAR modpath[MAX_PATH_LEN], msg[2048], *wcp, *modname;
+	TSDCHAR modpath[MAX_PATH_LEN], msg[2048], *wcp, *modname;
 	const char *cp;
 	int len;
 
@@ -65,7 +68,7 @@ void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt
 		plasterr = &lasterr;
 	}
 
-	vswprintf(msg, 2048 - 1, fmt, list);
+	tsd_vsnprintf(msg, 2048-1, fmt, list);
 	va_end(list);
 
 	/* 拡張子を除いたファイル名=モジュール名をコピー */
@@ -102,13 +105,13 @@ int print_services(ts_service_list_t *services_list)
 		return 0;
 	}
 
-	output_message(MSG_DISP, L"サービス数: %d", services_list->n_services);
+	output_message(MSG_DISP, TSD_TEXT("サービス数: %d"), services_list->n_services);
 	for (i = 0; i < services_list->n_services; i++) {
 		sid = services_list->proginfos[i].service_id;
 		if (services_list->proginfos[i].status & PGINFO_GET_SERVICE_INFO) {
-			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), %s", i, sid, sid, services_list->proginfos[i].service_name.str);
+			output_message(MSG_DISP, TSD_TEXT("サービス%d: ID=%04x(%d), %s"), i, sid, sid, services_list->proginfos[i].service_name.str);
 		} else {
-			output_message(MSG_DISP, L"サービス%d: ID=%04x(%d), (名称不明)", i, sid, sid);
+			output_message(MSG_DISP, TSD_TEXT("サービス%d: ID=%04x(%d), (名称不明)"), i, sid, sid);
 		}
 	}
 	return 1;
@@ -169,9 +172,9 @@ void clear_line()
 		}
 		line[console_width - 1] = L'\0';
 
-		tsd_printf(L"%s\n", line);
-		tsd_printf(L"%s\n", line);
-		tsd_printf(L"%s\n", line);
+		tsd_printf(TSD_TEXT("%s\n"), line);
+		tsd_printf(TSD_TEXT("%s\n"), line);
+		tsd_printf(TSD_TEXT("%s\n"), line);
 		restore_line(new_pos);
 	}
 
@@ -293,7 +296,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
 
-	WCHAR title[256];
+	TSDCHAR title[256];
 	decoder_stats_t stats;
 
 	lasttime = nowtime = gettime();
@@ -421,10 +424,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			double siglevel = do_stream_generator_siglevel(generator_stat);
 
-			_stprintf_s(title, 256, _T("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
+			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
 				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel, Mbps,
 				stats.n_dropped, stats.n_scrambled,
-				(double)total / 1024 / 1024 / 1024 );
+				(double)total / 1024 / 1024 / 1024);
 			SetConsoleTitle(title);
 
 			lasttime = nowtime;
@@ -460,7 +463,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int err;
 	/* 終了処理 */
-	output_message(MSG_NOTIFY, L"まだ書き出していないバッファを書き出ています");
+	output_message(MSG_NOTIFY, TSD_TEXT("まだ書き出していないバッファを書き出ています"));
 	for (i = 0; i < n_tos; i++) {
 		/* まだ書き出していないバッファを書き出し */
 		err = ts_wait_pgoutput(&tos[i]);
@@ -480,10 +483,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 void load_ini()
 {
-	int bufsize = GetPrivateProfileInt(_T("TSDUMP"), _T("BUFSIZE"), BUFSIZE_DEFAULT, _T(".\\tsdump.ini"));
-	int overlap_sec = GetPrivateProfileInt(_T("TSDUMP"), _T("OVERLAP_SEC"), OVERLAP_SEC_DEFAULT, _T(".\\tsdump.ini"));
-	int check_interval = GetPrivateProfileInt(_T("TSDUMP"), _T("CHECK_INTERVAL"), CHECK_INTERVAL_DEFAULT, _T(".\\tsdump.ini"));
-	int max_pgoverlap = GetPrivateProfileInt(_T("TSDUMP"), _T("MAX_PGOVERLAP"), MAX_PGOVERLAP_DEFAULT, _T(".\\tsdump.ini"));
+	int bufsize = GetPrivateProfileInt(L"TSDUMP", L"BUFSIZE", BUFSIZE_DEFAULT, L".\\tsdump.ini");
+	int overlap_sec = GetPrivateProfileInt(L"TSDUMP", L"OVERLAP_SEC", OVERLAP_SEC_DEFAULT, L".\\tsdump.ini");
+	int check_interval = GetPrivateProfileInt(L"TSDUMP", L"CHECK_INTERVAL", CHECK_INTERVAL_DEFAULT, L".\\tsdump.ini");
+	int max_pgoverlap = GetPrivateProfileInt(L"TSDUMP", L"MAX_PGOVERLAP", MAX_PGOVERLAP_DEFAULT, L".\\tsdump.ini");
 
 	BUFSIZE = bufsize * 1024 * 1024;
 	OVERLAP_SEC = overlap_sec;
@@ -502,23 +505,23 @@ int wmain(int argc, WCHAR* argv[])
 	void *decoder_stat = NULL;
 	int encrypted;
 
-	_tsetlocale(LC_ALL, _T("Japanese_Japan.932"));
+	_wsetlocale(LC_ALL, L"Japanese_Japan.932");
 
-	output_message(MSG_NONE, L"tsdump ver%S (%S)\n", VERSION_STR, DATE_STR);
+	output_message(MSG_NONE, TSD_TEXT("tsdump ver%S (%S)\n"), VERSION_STR, DATE_STR);
 
 	/* iniファイルをロード */
 	load_ini();
 
 	/* モジュールをロード */
 	if (load_modules() < 0) {
-		output_message(MSG_ERROR, L"モジュールのロード時にエラーが発生しました!");
+		output_message(MSG_ERROR, TSD_TEXT("モジュールのロード時にエラーが発生しました!"));
 		ret = 1;
 		goto END;
 	}
 
 	/* モジュールを初期化 */
 	if ( !init_modules(argc, argv) ) {
-		output_message(MSG_ERROR, L"モジュールの初期化時にエラーが発生しました!");
+		output_message(MSG_ERROR, TSD_TEXT("モジュールの初期化時にエラーが発生しました!"));
 		print_cmd_usage();
 		ret = 1;
 		goto END;
@@ -528,7 +531,7 @@ int wmain(int argc, WCHAR* argv[])
 	signal(SIGTERM, signal_handler);
 
 	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
-		output_message(MSG_ERROR, L"ストリームジェネレータを開けませんでした");
+		output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータを開けませんでした"));
 		ret = 1;
 		goto END;
 	}
@@ -538,7 +541,7 @@ int wmain(int argc, WCHAR* argv[])
 	ch_info.services = param_services;
 
 	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
-		output_message(MSG_ERROR, L"ストリームデコーダを開けませんでした");
+		output_message(MSG_ERROR, TSD_TEXT("ストリームデコーダを開けませんでした"));
 		ret = 1;
 		goto END1;
 	}
@@ -547,7 +550,7 @@ int wmain(int argc, WCHAR* argv[])
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
 	//printf("正常終了\n");
-	output_message(MSG_NONE, L"正常終了");
+	output_message(MSG_NONE, TSD_TEXT("正常終了"));
 
 	do_stream_decoder_close(decoder_stat);
 
@@ -561,37 +564,37 @@ END:
 	free_modules();
 
 	if( ret ) {
-		output_message(MSG_NOTIFY, L"\n何かキーを押すと終了します");
+		output_message(MSG_NOTIFY, TSD_TEXT("\n何かキーを押すと終了します"));
 		getchar();
 	}
 	return ret;
 }
 
-static const WCHAR *set_nowait(const WCHAR *param)
+static const TSDCHAR *set_nowait(const TSDCHAR *param)
 {
 	UNREF_ARG(param);
 	param_nowait = 1;
 	return NULL;
 }
 
-static const WCHAR* set_sv(const WCHAR *param)
+static const TSDCHAR* set_sv(const TSDCHAR *param)
 {
 	int sv;
 	if (param_all_services) {
 		return NULL;
 	}
-	if ( wcscmp(param, L"all") == 0 ) {
+	if ( tsd_strcmp(param, TSD_TEXT("all")) == 0 ) {
 		param_all_services = 1;
 	} else {
 		if (param_n_services < MAX_SERVICES) {
 			sv = _wtoi(param);
 			if (sv <= 0 || sv > 65535) {
-				return L"サービス番号が不正です";
+				return TSD_TEXT("サービス番号が不正です");
 			}
 			param_services[param_n_services] = sv;
 			param_n_services++;
 		} else {
-			return L"指定するサービスの数が多すぎます\n";
+			return TSD_TEXT("指定するサービスの数が多すぎます\n");
 		}
 	}
 	return NULL;
@@ -654,14 +657,14 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--sv", L"サービス番号(複数指定可能)", 1, set_sv },
-	{ L"--nowait", L"バッファフル時にあふれたデータは捨てる", 0, set_nowait },
+	{ TSD_TEXT("--sv"), TSD_TEXT("サービス番号(複数指定可能)"), 1, set_sv },
+	{ TSD_TEXT("--nowait"), TSD_TEXT("バッファフル時にあふれたデータは捨てる"), 0, set_nowait },
 	NULL,
 };
 
 MODULE_DEF module_def_t mod_core = {
 	TSDUMP_MODULE_V4,
-	L"mod_core",
+	TSD_TEXT("mod_core"),
 	register_hooks,
 	cmds
 };

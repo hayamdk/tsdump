@@ -27,6 +27,14 @@
 
 #define ARIB_CHAR_SIZE_RATIO 1
 
+#ifndef TSDCHAR
+#ifdef TSD_PLATFORM_MSVC
+	#define TSDCHAR wchar_t
+#else
+	#define TSDCHAR char
+#endif
+#endif
+
 typedef enum {
 	PAYLOAD_STAT_INIT = 0,
 	PAYLOAD_STAT_PROC,
@@ -50,7 +58,7 @@ typedef struct {
 	int aribstr_len;
 	uint8_t aribstr[256];
 	int str_len;
-	WCHAR str[256*ARIB_CHAR_SIZE_RATIO];
+	TSDCHAR str[256*ARIB_CHAR_SIZE_RATIO];
 } Sed_string_t;
 
 typedef Sed_string_t Sd_string_t;
@@ -59,25 +67,25 @@ typedef struct {
 	int aribdesc_len;
 	uint8_t aribdesc[20]; /* ARIB TR-B14Ç…Ç®Ç¢Çƒè„å¿Ç™16bytesÇ∆íËÇﬂÇÁÇÍÇƒÇ¢ÇÈ */
 	int desc_len;
-	WCHAR desc[20*ARIB_CHAR_SIZE_RATIO+1];
+	TSDCHAR desc[20*ARIB_CHAR_SIZE_RATIO+1];
 	int aribitem_len;
 	uint8_t aribitem[480]; /* ARIB TR-B14Ç…Ç®Ç¢Çƒè„å¿Ç™440bytesÇ∆íËÇﬂÇÁÇÍÇƒÇ¢ÇÈ */
 	int item_len;
-	WCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
+	TSDCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
 typedef struct {
 	int aribstr_len;
 	uint8_t aribstr[20]; /* ARIB TR-B14Ç…Ç®Ç¢Çƒè„å¿Ç™16bytesÇ∆íËÇﬂÇÁÇÍÇƒÇ¢ÇÈ */
 	int str_len;
-	WCHAR str[20*ARIB_CHAR_SIZE_RATIO+1];
+	TSDCHAR str[20*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_desc_t;
 
 typedef struct {
 	int aribstr_len;
 	uint8_t aribstr[480]; /* ARIB TR-B14Ç…Ç®Ç¢Çƒè„å¿Ç™440bytesÇ∆íËÇﬂÇÁÇÍÇƒÇ¢ÇÈ */
 	int str_len;
-	WCHAR str[480*ARIB_CHAR_SIZE_RATIO+1];
+	TSDCHAR str[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_text_t;
 
 typedef struct {
@@ -176,8 +184,8 @@ typedef struct {
 
 } proginfo_t;
 
-MODULE_EXPORT_FUNC int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi);
-MODULE_EXPORT_FUNC void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item);
+MODULE_EXPORT_FUNC int get_extended_text(TSDCHAR *dst, size_t n, const proginfo_t *pi);
+MODULE_EXPORT_FUNC void get_genre_str(const TSDCHAR **genre1, const TSDCHAR **genre2, Cd_t_item item);
 MODULE_EXPORT_FUNC int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);
 MODULE_EXPORT_FUNC int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time);
 MODULE_EXPORT_FUNC int get_stream_timestamp_rough(const proginfo_t *pi, time_mjd_t *time_mjd);

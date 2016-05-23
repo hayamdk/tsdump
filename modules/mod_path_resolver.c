@@ -12,31 +12,31 @@
 #include "utils/tsdstr.h"
 #include "utils/path.h"
 
-WCHAR param_base_dir[MAX_PATH_LEN] = {L'\0'};
+TSDCHAR param_base_dir[MAX_PATH_LEN] = {TSD_CHAR('\0')};
 
-static void normalize_fname(WCHAR *fname)
+static void normalize_fname(TSDCHAR *fname/*, size_t fname_max*/)
 {
-	WCHAR *p = fname;
-	WCHAR c;
+	TSDCHAR *p = fname;
+	TSDCHAR c;
 
-	while ((c = *p) != L'\0') {
-		if (c == L'\\') {
+	while ((c = *p) != TSD_CHAR('\0')) {
+		if (c == TSD_CHAR('\\')) {
 			*p = L'Åè';
-		} else if (c == L'/') {
+		} else if (c == TSD_CHAR('/')) {
 			*p = L'Å^';
-		} else if (c == L'*') {
+		} else if (c == TSD_CHAR('*')) {
 			*p = L'*';
-		} else if (c == L'?') {
+		} else if (c == TSD_CHAR('?')) {
 			*p = L'ÅH';
-		} else if (c == L'"') {
+		} else if (c == TSD_CHAR('"')) {
 			*p = L'Åh';
-		} else if (c == L'<') {
+		} else if (c == TSD_CHAR('<')) {
 			*p = L'ÅÉ';
-		} else if (c == L'>') {
+		} else if (c == TSD_CHAR('>')) {
 			*p = L'ÅÑ';
-		} else if (c == L'|') {
+		} else if (c == TSD_CHAR('|')) {
 			*p = L'Åb';
-		} else if (c == L':') {
+		} else if (c == TSD_CHAR(':')) {
 			*p = L'ÅF';
 		}
 		p++;
