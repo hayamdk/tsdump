@@ -65,9 +65,9 @@ static const uint32_t crc32tab[256] = {
 	0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4,
 };
 
-static inline unsigned __int32 crc32(unsigned char *buf, int len)
+static inline uint32_t crc32(unsigned char *buf, int len)
 {
-	unsigned __int32 crc = 0xffffffff;
+	uint32_t crc = 0xffffffff;
 	for (int i = 0; i<len; i++){
 		crc = (crc << 8)
 			^ crc32tab[((crc >> 24) ^ buf[i]) & 0xff];
@@ -147,7 +147,7 @@ static inline int ts_get_section_length(const uint8_t *p, const ts_header_t *tsh
 	return get_bits(p, pos * 8 + 12, 12);
 }
 
-static inline unsigned __int32 get_payload_crc32(PSI_parse_t *ps)
+static inline uint32_t get_payload_crc32(PSI_parse_t *ps)
 {
 	return
 		ps->payload[ps->n_payload - 4] * 0x1000000 +

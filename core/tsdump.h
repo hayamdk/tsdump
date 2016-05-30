@@ -19,9 +19,13 @@ extern int MAX_PGOVERLAP;
 static inline int64_t gettime()
 {
 	int64_t result;
+#ifdef TSD_PLATFORM_MSVC
 	struct _timeb tv;
-
 	_ftime64_s(&tv);
+#else
+	struct timeb tv;
+	ftime(&tv);
+#endif
 	result = (int64_t)tv.time * 1000;
 	result += tv.millitm;
 
@@ -58,7 +62,11 @@ static inline int64_t timenumtt(time_t t)
 	int64_t tn;
 	struct tm lt;
 	
+#ifdef TSD_PLATFORM_MSVC
 	localtime_s(&lt, &t);
+#else
+	lt = *(localtime(&t));
+#endif
 
 	tn = lt.tm_year + 1900;
 	tn *= 100;
@@ -79,7 +87,11 @@ static inline int64_t timenum64(int64_t ms)
 
 	time_t tt = ms / 1000;
 
+#ifdef TSD_PLATFORM_MSVC
 	localtime_s(&lt, &tt);
+#else
+	lt = *(localtime(&tt));
+#endif
 
 	tn = lt.tm_year + 1900;
 	tn *= 100;
@@ -101,4 +113,4 @@ static inline int64_t timenumnow()
 
 extern int param_nowait;
 
-void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg);
+void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg);

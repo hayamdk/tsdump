@@ -5,15 +5,20 @@
 	#pragma comment(lib, "Ws2_32.lib")
 
 	#include <windows.h>
+#else
+	#include <errno.h>
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <locale.h>
 #include <signal.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
@@ -55,10 +60,23 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 {
 	va_list list;
 	va_start(list, fmt);
-	DWORD lasterr, *plasterr = NULL;
-	TSDCHAR modpath[MAX_PATH_LEN], msg[2048], *wcp, *modname;
+	tsd_syserr_t lasterr, *plasterr = NULL;
+	TSDCHAR msg[2048], *modname;
 	const char *cp;
 	int len;
+
+	/* 拡張子を除いたファイル名=モジュール名をコピー */
+#ifdef TSD_PLATFORM_MSVC
+	WCHAR modpath[MAX_PATH_LEN], *wcp;
+		for (wcp = modpath, cp = fname;
+			*cp != '\0' && *cp != '.' && wcp < &modpath[MAX_PATH_LEN];
+			cp += len, wcp++) {
+		len = mbtowc(wcp, cp, MB_CUR_MAX);
+	}
+	*wcp = L'\0';
+
+	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
+	modname = path_getfile(modpath);
 
 	if (msgtype == MSG_SYSERROR) {
 		lasterr = GetLastError();
@@ -67,21 +85,20 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 		lasterr = WSAGetLastError();
 		plasterr = &lasterr;
 	}
+#else
+	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
+	modname = path_getfile(fname);
+
+	if (msgtype == MSG_SYSERROR) {
+		lasterr = errno;
+		plasterr = &lasterr;
+	}
+#endif
 
 	tsd_vsnprintf(msg, 2048-1, fmt, list);
 	va_end(list);
 
-	/* 拡張子を除いたファイル名=モジュール名をコピー */
-	for (	wcp = modpath, cp = fname;
-			*cp != '\0' && *cp != '.' && wcp < &modpath[MAX_PATH_LEN];
-			cp += len, wcp++) {
-		len = mbtowc(wcp, cp, MB_CUR_MAX);
-	}
-	*wcp = L'\0';
-	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
-	modname = path_getfile(modpath);
-
-	if ( wcsncmp(modname, L"mod_", 4) == 0 ) {
+	if ( tsd_strncmp(modname, TSD_TEXT("mod_"), 4) == 0 ) {
 		do_message(modname, msgtype, plasterr, msg);
 	} else {
 		do_message(NULL, msgtype, plasterr, msg);
@@ -116,6 +133,8 @@ int print_services(ts_service_list_t *services_list)
 	}
 	return 1;
 }
+
+#ifdef TSD_PLATFORM_MSVC
 
 int save_line(COORD *new_pos)
 {
@@ -168,9 +187,9 @@ void clear_line()
 	console_width = save_line(&new_pos);
 	if (console_width > 0) {
 		for (i = 0; i < console_width - 1; i++) {
-			line[i] = L' ';
+			line[i] = TSD_CHAR(' ');
 		}
-		line[console_width - 1] = L'\0';
+		line[console_width - 1] = TSD_NULLCHAR;
 
 		tsd_printf(TSD_TEXT("%s\n"), line);
 		tsd_printf(TSD_TEXT("%s\n"), line);
@@ -181,26 +200,33 @@ void clear_line()
 	need_clear_line = 0;
 }
 
-void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
+#endif
+
+void print_stat(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 {
+#ifdef TSD_PLATFORM_MSVC
 	int n, i, j, backward_size, console_width, width;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
 	COORD new_pos;
-	double rate;
 	time_mjd_t time_jst;
+#endif
+	double rate;
 
 	if(!tos) {
 		return;
 	}
 
+#ifdef TSD_PLATFORM_MSVC
 	console_width = save_line(&new_pos);
 	if (console_width < 0) {
 		fprintf(stderr, "console error\r");
 	} else if (console_width == 0) {
+#endif
 		rate = 100.0 * tos->pos_filled / BUFSIZE;
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
+#ifdef TSD_PLATFORM_MSVC
 	} else {
 		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
@@ -258,6 +284,7 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const WCHAR *stat)
 
 		need_clear_line = 1;
 	}
+#endif
 }
 
 void init_service_list(ts_service_list_t *service_list)
@@ -284,7 +311,7 @@ void init_service_list(ts_service_list_t *service_list)
 
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
-	BYTE *recvbuf, *decbuf;
+	uint8_t *recvbuf, *decbuf;
 
 	int n_recv, n_dec;
 
@@ -339,7 +366,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 					   PESパケットの規格を要調査 */
 					//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 				} else {
-					output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+					output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
 				}
 				continue; /* pass */
 			}
@@ -423,13 +450,15 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			do_stream_decoder_stats(decoder_stat, &stats);
 
 			double siglevel = do_stream_generator_siglevel(generator_stat);
-
+			
+#ifdef TSD_PLATFORM_MSVC
 			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
 				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel, Mbps,
 				stats.n_dropped, stats.n_scrambled,
 				(double)total / 1024 / 1024 / 1024);
 			SetConsoleTitle(title);
-
+#endif
+			
 			lasttime = nowtime;
 			subtotal = 0;
 
@@ -470,7 +499,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		while (tos[i].pos_filled - tos[i].pos_write > 0 && !err) {
 			ts_output(&tos[i], gettime(), 1);
 			err = ts_wait_pgoutput(&tos[i]);
-			print_stat(&tos[i], n_tos-i, L"");
+			print_stat(&tos[i], n_tos-i, TSD_TEXT(""));
 		}
 		close_tos(&tos[i]);
 	}
@@ -483,6 +512,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 void load_ini()
 {
+#ifdef TSD_PLATFORM_MSVC
 	int bufsize = GetPrivateProfileInt(L"TSDUMP", L"BUFSIZE", BUFSIZE_DEFAULT, L".\\tsdump.ini");
 	int overlap_sec = GetPrivateProfileInt(L"TSDUMP", L"OVERLAP_SEC", OVERLAP_SEC_DEFAULT, L".\\tsdump.ini");
 	int check_interval = GetPrivateProfileInt(L"TSDUMP", L"CHECK_INTERVAL", CHECK_INTERVAL_DEFAULT, L".\\tsdump.ini");
@@ -492,12 +522,17 @@ void load_ini()
 	OVERLAP_SEC = overlap_sec;
 	CHECK_INTERVAL = check_interval;
 	MAX_PGOVERLAP = max_pgoverlap;
+#endif
 
-	output_message(MSG_NONE, L"BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n",
-		bufsize, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
+	output_message(MSG_NONE, TSD_TEXT("BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n"),
+		BUFSIZE, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 }
 
-int wmain(int argc, WCHAR* argv[])
+#ifdef TSD_PLATFORM_MSVC
+int wmain(int argc, const WCHAR* argv[])
+#else
+int main(int argc, const char* argv[])
+#endif
 {
 	int ret=0;
 	ch_info_t ch_info;
@@ -505,7 +540,9 @@ int wmain(int argc, WCHAR* argv[])
 	void *decoder_stat = NULL;
 	int encrypted;
 
+#ifdef TSD_PLATFORM_MSVC
 	_wsetlocale(LC_ALL, L"Japanese_Japan.932");
+#endif
 
 	output_message(MSG_NONE, TSD_TEXT("tsdump ver%S (%S)\n"), VERSION_STR, DATE_STR);
 
@@ -587,7 +624,7 @@ static const TSDCHAR* set_sv(const TSDCHAR *param)
 		param_all_services = 1;
 	} else {
 		if (param_n_services < MAX_SERVICES) {
-			sv = _wtoi(param);
+			sv = tsd_atoi(param);
 			if (sv <= 0 || sv > 65535) {
 				return TSD_TEXT("サービス番号が不正です");
 			}
@@ -600,26 +637,29 @@ static const TSDCHAR* set_sv(const TSDCHAR *param)
 	return NULL;
 }
 
-void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg)
+void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg)
 {
-	const WCHAR *msgtype_str = L"";
+	const TSDCHAR *msgtype_str = TSD_TEXT("");
 	FILE *fp = stdout;
-	WCHAR msgbuf[256];
+	TSDCHAR msgbuf[256];
 	int errtype = 0;
 
+#ifdef TSD_PLATFORM_MSVC
 	clear_line();
+#endif
 
 	if ( msgtype == MSG_WARNING || msgtype == MSG_PACKETERROR ) {
-		msgtype_str = L"[WARNING] ";
+		msgtype_str = TSD_TEXT("[WARNING] ");
 		fp = stderr;
 		errtype = 1;
 	} else if ( msgtype == MSG_ERROR || msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
-		msgtype_str = L"[ERROR] ";
+		msgtype_str = TSD_TEXT("[ERROR] ");
 		fp = stderr;
 		errtype = 1;
 	}
 
 	if ( msgtype == MSG_SYSERROR || msgtype == MSG_WINSOCKERROR ) {
+#ifdef TSD_PLATFORM_MSVC
 		FormatMessage(
 			/*FORMAT_MESSAGE_ALLOCATE_BUFFER |*/
 			FORMAT_MESSAGE_FROM_SYSTEM |
@@ -636,6 +676,9 @@ void ghook_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, con
 		if (msgbuf[wcslen(msgbuf)-1] == L' ') {
 			msgbuf[wcslen(msgbuf)-1] = L'\0';
 		}
+#else
+		strerror_r(*err, msgbuf, 256);
+#endif
 
 		if (modname && errtype) {
 			tsd_fprintf(fp, TSD_TEXT("%s(%s): %s <0x%x:%s>\n"), msgtype_str, modname, msg, *err, msgbuf);

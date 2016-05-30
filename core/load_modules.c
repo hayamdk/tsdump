@@ -546,7 +546,7 @@ static int load_dll_modules()
 	return 1;
 }
 
-static int get_cmd_params( int argc, WCHAR* argv[] )
+static int get_cmd_params( int argc, const WCHAR* argv[] )
 {
 	int i;
 	cmd_load_t *cmd_load;
@@ -573,7 +573,7 @@ static int get_cmd_params( int argc, WCHAR* argv[] )
 	return 1;
 }
 
-int init_modules(int argc, WCHAR* argv[])
+int init_modules(int argc, const WCHAR* argv[])
 {
 	int i;
 	cmd_def_t *cmd;

@@ -27,14 +27,6 @@
 
 #define ARIB_CHAR_SIZE_RATIO 1
 
-#ifndef TSDCHAR
-#ifdef TSD_PLATFORM_MSVC
-	#define TSDCHAR wchar_t
-#else
-	#define TSDCHAR char
-#endif
-#endif
-
 typedef enum {
 	PAYLOAD_STAT_INIT = 0,
 	PAYLOAD_STAT_PROC,

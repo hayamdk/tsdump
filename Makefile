@@ -18,7 +18,7 @@ SUFFIXES: .o .c
 
 .c.o:
 ifeq ($(findstring $<, $(SOURCES_CP932)), $<)
-	$(CC) $(CFLAGS) -finput-charset=cp932 -c $<
+	$(CC) $(CFLAGS) -finput-charset=cp932 -c $< -o $@
 else
 	$(CC) $(CFLAGS) -c $<
 endif
@@ -26,4 +26,4 @@ endif
 .PHONY: clean
 
 clean:
-	rm -f $(PROGRAM) $(OBJS)
+	rm -f $(PROGRAM) $(OBJS1)

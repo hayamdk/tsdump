@@ -1,6 +1,6 @@
 typedef void (*register_hooks_t)();
 
-typedef const WCHAR* (*cmd_handler_t)(const WCHAR*);
+typedef const TSDCHAR* (*cmd_handler_t)(const TSDCHAR*);
 
 typedef enum {
 	TSDUMP_MODULE_NONE = 0,
@@ -11,15 +11,15 @@ typedef enum {
 } module_ver;
 
 typedef struct{
-	const WCHAR *cmd_name;
-	const WCHAR *cmd_description;
+	const TSDCHAR *cmd_name;
+	const TSDCHAR *cmd_description;
 	int have_option;
 	cmd_handler_t cmd_handler;
 } cmd_def_t;
 
 typedef struct{
 	module_ver mod_ver;
-	const WCHAR *modname;
+	const TSDCHAR *modname;
 	register_hooks_t register_hooks;
 	cmd_def_t *cmds;
 } module_def_t;
@@ -30,12 +30,12 @@ typedef struct{
 	int n_services;
 	unsigned int *services;
 	int mode_all_services;
-	const WCHAR *tuner_name;
-	const WCHAR *sp_str;
-	const WCHAR *ch_str;
+	const TSDCHAR *tuner_name;
+	const TSDCHAR *sp_str;
+	const TSDCHAR *ch_str;
 } ch_info_t;
 
-typedef void* (*hook_pgoutput_create_t)(const WCHAR*, const proginfo_t*, const ch_info_t*, const int);
+typedef void* (*hook_pgoutput_create_t)(const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int);
 typedef void(*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int(*hook_pgoutput_check_t)(void*);
 typedef const int(*hook_pgoutput_wait_t)(void*);
@@ -92,13 +92,19 @@ typedef enum {
 	MSG_DEBUG = 8,
 } message_type_t;
 
-typedef void(*hook_message_t)(const WCHAR*, message_type_t, DWORD*, const WCHAR*);
-typedef const WCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*);
+#ifdef TSD_PLATFORM_MSVC
+	typedef DWORD tsd_syserr_t;
+#else
+	typedef int tsd_syserr_t;
+#endif
+
+typedef void(*hook_message_t)(const TSDCHAR*, message_type_t, tsd_syserr_t*, const TSDCHAR*);
+typedef const TSDCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*);
 
 //typedef void(*hook_stream_splitter)();
 
-#define output_message(type, fmt, ...) _output_message( __FILE__ , type, fmt, __VA_ARGS__)
-MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const WCHAR *fmt, ...);
+#define output_message(type, ...) _output_message( __FILE__ , type, __VA_ARGS__ )
+MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...);
 
 MODULE_EXPORT_FUNC void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
 MODULE_EXPORT_FUNC void register_hook_pgoutput(hook_pgoutput_t handler);

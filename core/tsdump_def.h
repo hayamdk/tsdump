@@ -28,10 +28,30 @@
 	#ifndef __cplusplus
 		#define inline						__inline
 	#endif
+
+	#define TSDCHAR						wchar_t
+	#define TSD_NULLCHAR				L'\0'
+	#define TSD_TEXT(str)				L##str
+	#define TSD_CHAR(c)					L##c
 #else
 	/* ‚»‚êˆÈŠO */
 	#define MAX_PATH_LEN					1024
 	#define	TSD_PLATFORM_OTHER
+
+	#ifdef __cplusplus
+		#define MODULE_EXPORT_FUNC			extern "C"
+		#define MODULE_EXPORT_VAR			extern "C"
+		#define MODULE_DEF					extern "C"
+	#else
+		#define MODULE_EXPORT_FUNC
+		#define MODULE_EXPORT_VAR
+		#define MODULE_DEF
+	#endif
+
+	#define TSDCHAR						char
+	#define TSD_NULLCHAR				'\0'
+	#define TSD_TEXT(str)				str
+	#define TSD_CHAR(c)					c
 #endif
 
 #define			UNREF_ARG(x)			(x)

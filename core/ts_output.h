@@ -1,6 +1,6 @@
 typedef struct
 {
-	const WCHAR *fn;
+	const TSDCHAR *fn;
 	int delay_remain;
 	int close_remain;
 	int close_flag;
@@ -20,7 +20,7 @@ typedef struct
 
 typedef struct
 {
-	BYTE *buf;
+	uint8_t *buf;
 	int pos_filled;
 	int pos_write;
 	//int pos_pi;
@@ -48,7 +48,7 @@ typedef struct
 
 void init_tos(ts_output_stat_t *tos);
 void close_tos(ts_output_stat_t *tos);
-void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf);
+void ts_copybuf(ts_output_stat_t *tos, uint8_t *buf, int n_buf);
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info);
 void ts_minimize_buf(ts_output_stat_t *tos);
 void ts_require_buf(ts_output_stat_t *tos, int require);
@@ -108,7 +108,7 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 			return 0; /* pass */
 		} else {
-			output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+			output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
 			return 0; /* pass */
 		}
 	}
@@ -121,14 +121,14 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	/* 不正なパケットかどうかをチェック */
 	section_len = ts_get_section_length(old_packet, &tsh);
 	if (section_len < 0) {
-		output_message(MSG_PACKETERROR, L"Invalid payload pos!");
+		output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload pos!"));
 		return 0; /* pass */
 	}
 	payload_pos = tsh.payload_data_pos;
 	table_pos = payload_pos + 8 + 4;
 	n = (section_len - 5 - 4 - 4) / 4;
 	if ( table_pos + 8 > 188 || n <= 0 || table_pos + n*4 + 2 > 188 ) {
-		output_message(MSG_PACKETERROR, L"Invalid packet!");
+		output_message(MSG_PACKETERROR, TSD_TEXT("Invalid packet!"));
 		return 0; /* pass */
 	}
 
@@ -137,7 +137,7 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	int i;
 	unsigned int sid;
 
-	unsigned __int32 crc32_set;
+	uint32_t crc32_set;
 
 	for (i = 0; i < n; i++) {
 		sid = new_packet[table_pos + i * 4] * 256 + new_packet[table_pos + i * 4 + 1];
@@ -177,7 +177,7 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service
 				PESパケットの規格を要調査 */
 			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 		} else {
-			output_message(MSG_PACKETERROR, L"Invalid ts packet!");
+			output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
 			return;
 		}
 	}

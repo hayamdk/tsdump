@@ -123,6 +123,15 @@ const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src)
 	return dst;
 }
 
+int tsd_atoi(const TSDCHAR *str)
+{
+#ifdef TSD_PLATFORM_MSVC
+	return _wtoi(str);
+#else
+	return atoi(str);
+#endif
+}
+
 static int get_old_len(tsdstr_replace_set_t *sets, size_t idx)
 {
 	if (sets[idx].old_len == 0) {
