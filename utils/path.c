@@ -78,4 +78,48 @@ int path_isfile(const TSDCHAR *path)
 	return 0;
 }
 
+#else
+
+int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
+{
+	/* dummy */
+	return 1;
+}
+
+int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
+{
+	/* dummy */
+	return 1;
+}
+
+TSDCHAR* path_getfile(const TSDCHAR *path)
+{
+	/* dummy */
+	return NULL;
+}
+
+TSDCHAR* path_extension(const TSDCHAR *path)
+{
+	/* dummy */
+	return NULL;
+}
+
+int path_isexist(const TSDCHAR *path)
+{
+	/* dummy */
+	return 0;
+}
+
+int path_isdir(const TSDCHAR *path)
+{
+	/* dummy */
+	return 0;
+}
+
+int path_isfile(const TSDCHAR *path)
+{
+	/* dummy */
+	return 0;
+}
+
 #endif

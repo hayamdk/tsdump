@@ -1,14 +1,23 @@
-#pragma comment(lib, "shlwapi.lib")
+#include "core/tsdump_def.h"
 
+#ifdef TSD_PLATFORM_MSVC
+#pragma comment(lib, "shlwapi.lib")
 #include <windows.h>
+#include <shlwapi.h>
+#else
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <sys/timeb.h>
-#include <shlwapi.h>
 #include <inttypes.h>
 #include <process.h>
 
-#include "core/tsdump_def.h"
+#include "utils/tsdstr.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "core/tsdump.h"
@@ -42,7 +51,9 @@ static hook_path_resolver_t hook_path_resolver = NULL;
 
 typedef struct {
 	module_def_t *def;
+#ifdef TSD_PLATFORM_MSVC
 	HMODULE hdll;
+#endif
 	module_hooks_t hooks;
 } module_load_t;
 
@@ -136,7 +147,7 @@ int register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 	if (hooks_stream_generator == NULL) {
 		hooks_stream_generator = handlers;
 	} else {
-		output_message(MSG_ERROR, L"ストリームジェネレータは既に登録されています");
+		output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータは既に登録されています"));
 		return 0;
 	}
 	return 1;
@@ -147,7 +158,7 @@ int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 	if (hooks_stream_decoder == NULL) {
 		hooks_stream_decoder = handlers;
 	} else {
-		output_message(MSG_ERROR, L"ストリームデコーダは既に登録されています");
+		output_message(MSG_ERROR, TSD_TEXT("ストリームデコーダは既に登録されています"));
 		return 0;
 	}
 	return 1;
@@ -163,13 +174,13 @@ int register_hook_path_resolver(hook_path_resolver_t handler)
 	if (hook_path_resolver == NULL) {
 		hook_path_resolver = handler;
 	} else {
-		output_message(MSG_ERROR, L"パスリゾルバは既に登録されています");
+		output_message(MSG_ERROR, TSD_TEXT("パスリゾルバは既に登録されています"));
 		return 0;
 	}
 	return 1;
 }
 
-void **do_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
+void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
 {
 	int i;
 	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
@@ -256,13 +267,13 @@ void do_pgoutput_close(void **modulestats, const proginfo_t *pi)
 int do_postconfig()
 {
 	int i;
-	//const WCHAR *msg;
+	//const TSDCHAR *msg;
 	int ret;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_postconfig) {
 			ret = modules[i].hooks.hook_postconfig();
 			if (!ret) {
-				//fwprintf(stderr, L"%s\n", msg );
+				//fwprintf(stderr, TSD_TEXT("%s\n"), msg );
 				return 0;
 			}
 		}
@@ -325,7 +336,7 @@ int do_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (hooks_stream_generator) {
 		return hooks_stream_generator->open_handler(param, chinfo);
 	}
-	output_message(MSG_ERROR, L"ストリームジェネレータが一つも登録されていません");
+	output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータが一つも登録されていません"));
 	return 0;
 }
 
@@ -389,7 +400,7 @@ void do_stream_decoder_close(void *param)
 	}
 }
 
-void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const WCHAR *msg)
+void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg)
 {
 	int i;
 
@@ -403,16 +414,24 @@ void do_message(const WCHAR *modname, message_type_t msgtype, DWORD *err, const 
 	}
 }
 
-const WCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
+const TSDCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
 {
+	int pid;
 	UNREF_ARG(pi);
 	UNREF_ARG(ch_info);
-	WCHAR *fname = (WCHAR*)malloc(sizeof(WCHAR)*MAX_PATH_LEN);
-	swprintf(fname, MAX_PATH_LEN-1, L"%I64d_%s_%s_%d.ts", gettime(), ch_info->tuner_name, ch_info->ch_str, _getpid());
+
+#ifdef TSD_PLATFORM_MSVC
+	pid = _getpid();
+#else
+	pid = getpid();
+#endif
+
+	TSDCHAR *fname = (TSDCHAR*)malloc(sizeof(TSDCHAR)*MAX_PATH_LEN);
+	tsd_snprintf(fname, MAX_PATH_LEN-1, TSD_TEXT("%I64d_%s_%s_%d.ts"), gettime(), ch_info->tuner_name, ch_info->ch_str, pid);
 	return fname;
 }
 
-const WCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info)
+const TSDCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info)
 {
 	if (hook_path_resolver) {
 		return hook_path_resolver(proginfo, ch_info);
@@ -421,11 +440,11 @@ const WCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_in
 	}
 }
 
-static cmd_load_t *get_cmddef(const WCHAR *cmdname)
+static cmd_load_t *get_cmddef(const TSDCHAR *cmdname)
 {
 	int i;
 	for ( i = 0; i < n_modulecmds; i++ ) {
-		if ( wcscmp(cmdname, modulecmds[i].cmd_def->cmd_name) == 0 ) {
+		if ( tsd_strcmp(cmdname, modulecmds[i].cmd_def->cmd_name) == 0 ) {
 			return &modulecmds[i];
 		}
 	}
@@ -436,7 +455,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 {
 	cmd_load_t *cmd_load = get_cmddef(cmd->cmd_name);
 	if ( cmd_load != NULL ) {
-		output_message(MSG_ERROR, L"%s: コマンドオプション %s は既にモジュール %s によって登録されています",
+		output_message(MSG_ERROR, TSD_TEXT("%s: コマンドオプション %s は既にモジュール %s によって登録されています"),
 			mod->modname, cmd->cmd_name, cmd_load->cmd_module->modname );
 		return 0;
 	}
@@ -446,58 +465,76 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 	return 1;
 }
 
+#ifdef TSD_PLATFORM_MSVC
 static int load_module(module_def_t *mod, HMODULE hdll)
+#else
+static int load_module(module_def_t *mod, void *dummy)
+#endif
 {
 	if ( mod->mod_ver != TSDUMP_MODULE_V4 ) {
-		output_message(MSG_ERROR, L"互換性の無いモジュールです: %s", mod->modname);
+		output_message(MSG_ERROR, TSD_TEXT("互換性の無いモジュールです: %s"), mod->modname);
 		return 0;
 	}
 
 	if (n_modules >= MAX_MODULES) {
-		output_message(MSG_ERROR, L"これ以上モジュールをロードできません(最大数:%d)", MAX_MODULES);
+		output_message(MSG_ERROR, TSD_TEXT("これ以上モジュールをロードできません(最大数:%d)"), MAX_MODULES);
 		return 0;
 	}
 
 	modules[n_modules].def = mod;
 	memset(&modules[n_modules].hooks, 0, sizeof(module_hooks_t));
+#ifdef TSD_PLATFORM_MSVC
 	modules[n_modules].hdll = hdll;
+#endif
 	n_modules++;
 	return 1;
 }
 
-static int unload_module(const WCHAR *modname)
+static int unload_module(const TSDCHAR *modname)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
-		if ( wcscmp(modules[i].def->modname, modname) == 0 ) {
+		if ( tsd_strcmp(modules[i].def->modname, modname) == 0 ) {
 			memmove( &modules[i], &modules[i+1], sizeof(module_load_t)*(n_modules-i-1) );
 			n_modules--;
 			return 1;
 		}
 	}
-	output_message(MSG_ERROR, L"モジュール%sはロードされていません", modname);
+	output_message(MSG_ERROR, TSD_TEXT("モジュール%sはロードされていません"), modname);
 	return 0;
 }
 
 static int load_dll_modules()
 {
 	FILE *fp = NULL;
-	WCHAR exepath[MAX_PATH_LEN];
-	WCHAR confpath[MAX_PATH_LEN];
-	WCHAR dllname[MAX_PATH_LEN];
+	TSDCHAR exepath[MAX_PATH_LEN];
+	TSDCHAR confpath[MAX_PATH_LEN];
+	TSDCHAR dllname[MAX_PATH_LEN];
 	char modname[MAX_PATH_LEN];
 	module_def_t *mod;
+#ifdef TSD_PLATFORM_MSVC
 	HMODULE hdll;
-	size_t len;
 	errno_t err;
+#endif
+	size_t len;
 
-	GetModuleFileName(NULL, exepath, MAX_PATH);
+#ifdef TSD_PLATFORM_MSVC
+	GetModuleFileName(NULL, exepath, MAX_PATH_LEN);
 	PathRemoveFileSpec(exepath);
-	swprintf(confpath, MAX_PATH-1, L"%s\\modules.conf", exepath);
+#else
+	strcpy(exepath, "dummy");
+#endif
+	tsd_snprintf(confpath, MAX_PATH_LEN-1, TSD_TEXT("%s\\modules.conf"), exepath);
+#ifdef TSD_PLATFORM_MSVC
 	err = _wfopen_s(&fp, confpath, L"r");
 	if (err == 0) {
-		while( fgetws(dllname, MAX_PATH_LEN-1, fp) != NULL ) {
-			if ( (len = wcslen(dllname)) > 0 ) {
+		while ( fgetws(dllname, MAX_PATH_LEN - 1, fp) != NULL ) {
+#else
+	fp = fopen(confpath, "r");
+	if (fp) {
+		while ( fgets(dllname, MAX_PATH_LEN - 1, fp) != NULL ) {
+#endif
+			if ( (len = tsd_strlen(dllname)) > 0 ) {
 				if (dllname[len - 1] == L'\n') {
 					dllname[len - 1] = L'\0'; /* 末尾の改行を削除 */
 				}
@@ -515,9 +552,10 @@ static int load_dll_modules()
 				continue;
 			}
 
+#ifdef TSD_PLATFORM_MSVC
 			hdll = LoadLibrary(dllname);
 			if (hdll == NULL) {
-				output_message(MSG_SYSERROR, L"DLLモジュールをロードできませんでした: %s (LoadLibrary)", dllname);
+				output_message(MSG_SYSERROR, TSD_TEXT("DLLモジュールをロードできませんでした: %s (LoadLibrary)"), dllname);
 				fclose(fp);
 				return 0;
 			}
@@ -528,7 +566,7 @@ static int load_dll_modules()
 			mod = (module_def_t*)GetProcAddress(hdll, modname);
 #pragma warning(pop)
 			if (mod == NULL) {
-				output_message(MSG_SYSERROR, L"モジュールポインタを取得できませんでした: %s (GetProcAddress)", dllname);
+				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (GetProcAddress)"), dllname);
 				FreeLibrary(hdll);
 				fclose(fp);
 				return 0;
@@ -538,15 +576,16 @@ static int load_dll_modules()
 				fclose(fp);
 				return 0;
 			}
+#endif
 		}
 		fclose(fp);
 	} else {
-		output_message(MSG_NOTIFY, L"modules.confを開けないのでDLLモジュールをロードしません");
+		output_message(MSG_NOTIFY, TSD_TEXT("modules.confを開けないのでDLLモジュールをロードしません"));
 	}
 	return 1;
 }
 
-static int get_cmd_params( int argc, const WCHAR* argv[] )
+static int get_cmd_params( int argc, const TSDCHAR* argv[] )
 {
 	int i;
 	cmd_load_t *cmd_load;
@@ -554,13 +593,13 @@ static int get_cmd_params( int argc, const WCHAR* argv[] )
 	for ( i = 1; i < argc; i++ ) {
 		cmd_load = get_cmddef(argv[i]);
 		if ( ! cmd_load ) {
-			output_message(MSG_ERROR, L"不明なコマンドオプション %s が指定されました", argv[i]);
+			output_message(MSG_ERROR, TSD_TEXT("不明なコマンドオプション %s が指定されました"), argv[i]);
 			return 0;
 		}
 		cmd_def = cmd_load->cmd_def;
 		if ( cmd_def->have_option ) {
 			if ( i == argc-1 ) {
-				output_message(MSG_ERROR, L"コマンドオプション %s に値を指定してください", argv[i]);
+				output_message(MSG_ERROR, TSD_TEXT("コマンドオプション %s に値を指定してください"), argv[i]);
 				return 1;
 			} else {
 				cmd_def->cmd_handler(argv[i+1]);
@@ -573,17 +612,21 @@ static int get_cmd_params( int argc, const WCHAR* argv[] )
 	return 1;
 }
 
-int init_modules(int argc, const WCHAR* argv[])
+int init_modules(int argc, const TSDCHAR* argv[])
 {
 	int i;
 	cmd_def_t *cmd;
 
 	/* list */
 	for (i = 0; i < n_modules; i++) {
+#ifdef TSD_PLATFORM_MSVC
 		if (modules[i].hdll) {
-			output_message(MSG_NOTIFY, L"module(dll): %s", modules[i].def->modname);
+			output_message(MSG_NOTIFY, TSD_TEXT("module(dll): %s"), modules[i].def->modname);
 		} else {
-			output_message(MSG_NOTIFY, L"module: %s", modules[i].def->modname);
+#else
+		{
+#endif
+			output_message(MSG_NOTIFY, TSD_TEXT("module: %s"), modules[i].def->modname);
 		}
 	}
 
@@ -637,9 +680,11 @@ void free_modules()
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
+#ifdef TSD_PLATFORM_MSVC
 		if (modules[i].hdll) {
 			FreeLibrary(modules[i].hdll);
 		}
+#endif
 	}
 	n_modules = 0;
 }
@@ -647,19 +692,19 @@ void free_modules()
 void print_cmd_usage()
 {
 	int i;
-	wprintf(L"\n----------------------\n<コマンドオプション>\n");
+	tsd_printf(TSD_TEXT("\n----------------------\n<コマンドオプション>\n"));
 	for (i = 0; i < n_modulecmds; i++) {
 		if (modulecmds[i].cmd_def->have_option) {
-			wprintf(L"%s [option]: %s\n",
+			tsd_printf(TSD_TEXT("%s [option]: %s\n"),
 				modulecmds[i].cmd_def->cmd_name,
 				modulecmds[i].cmd_def->cmd_description
 				);
 		} else {
-			wprintf(L"%s: %s\n",
+			tsd_printf(TSD_TEXT("%s: %s\n"),
 				modulecmds[i].cmd_def->cmd_name,
 				modulecmds[i].cmd_def->cmd_description
 				);
 		}
 	}
-	wprintf(L"* は必須オプション\n");
+	tsd_printf(TSD_TEXT("* は必須オプション\n"));
 }

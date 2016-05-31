@@ -525,7 +525,7 @@ void load_ini()
 #endif
 
 	output_message(MSG_NONE, TSD_TEXT("BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n"),
-		BUFSIZE, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
+		BUFSIZE/1024/1024, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 }
 
 #ifdef TSD_PLATFORM_MSVC
@@ -544,7 +544,7 @@ int main(int argc, const char* argv[])
 	_wsetlocale(LC_ALL, L"Japanese_Japan.932");
 #endif
 
-	output_message(MSG_NONE, TSD_TEXT("tsdump ver%S (%S)\n"), VERSION_STR, DATE_STR);
+	output_message(MSG_NONE, TSD_TEXT("tsdump ver%s (%s)\n"), VERSION_STR, DATE_STR);
 
 	/* iniファイルをロード */
 	load_ini();

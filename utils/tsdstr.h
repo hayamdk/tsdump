@@ -1,9 +1,9 @@
 #ifdef TSD_PLATFORM_MSVC
-	#define tsd_printf(fmt, ...)		tsd_fprintf(stdout, fmt, __VA_ARGS__)
+	#define tsd_printf(...)				tsd_fprintf(stdout, __VA_ARGS__)
 	int									tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...);
 #else
-	#define tsd_printf(fmt, ...)		printf(fmt, __VA_ARGS__)
-	#define tsd_fprintf(fp, fmt, ...)	fprintf(fp, fmt, __VA_ARGS__)
+	#define tsd_printf(...)				printf( __VA_ARGS__)
+	#define tsd_fprintf(fp, ...)		fprintf(fp, __VA_ARGS__)
 #endif
 
 typedef struct {

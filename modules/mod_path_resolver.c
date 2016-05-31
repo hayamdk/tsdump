@@ -1,11 +1,16 @@
+#include "core/tsdump_def.h"
+
+#ifdef TSD_PLATFORM_MSVC
 #include <Windows.h>
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
-#include <wchar.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 
-#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "core/tsdump.h"
@@ -31,17 +36,17 @@ static void normalize_fname(TSDCHAR *fname, size_t fname_max)
 	tsd_replace_sets(fname, fname_max, replace_sets, sizeof(replace_sets) / sizeof(tsdstr_replace_set_t), 0);
 }
 
-static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_info, WCHAR *ext)
+static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_info, TSDCHAR *ext)
 {
 	int64_t tn;
 	int i, isok = 0;
-	const WCHAR *chname, *pname;
+	const TSDCHAR *chname, *pname;
 	time_mjd_t time_mjd;
 
-	WCHAR pname_n[256], chname_n[256];
-	WCHAR filepath[MAX_PATH_LEN + 1];
+	TSDCHAR pname_n[256], chname_n[256];
+	TSDCHAR filepath[MAX_PATH_LEN + 1];
 
-	pname = L"番組情報なし";
+	pname = TSD_TEXT("番組情報なし");
 
 	if (PGINFO_READY(pi->status)) {
 		tn = timenum_start(pi);
@@ -71,9 +76,9 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 
 	/* tnは番組情報の開始時刻 */
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s%s", tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s%s", tn, chname_n, pname_n, ext);
+		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
 	path_join(filepath, param_base_dir, fname);
 	if (!path_isexist(filepath)) {
@@ -83,9 +88,9 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s%s", tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s%s", tn, chname_n, pname_n, ext);
+		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
 	path_join(filepath, param_base_dir, fname);
 	if (!path_isexist(filepath)) {
@@ -95,9 +100,9 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s(sv=%d)_%s_%d%s", tn, chname_n, pi->service_id, pname_n, i, ext);
+			tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
 		} else {
-			swprintf(fname, MAX_PATH_LEN - 1, L"%I64d_%s_%s_%d%s", tn, chname_n, pname_n, i, ext);
+			tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s_%d%s"), tn, chname_n, pname_n, i, ext);
 		}
 		path_join(filepath, param_base_dir, fname);
 		if (!path_isexist(filepath)) {
@@ -106,19 +111,17 @@ static void get_fname(WCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_in
 	}
 
 END:
-	free(pname_n);
-	free(chname_n);
 	return;
 }
 
-static const WCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
+static const TSDCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
 {
-	WCHAR *fname = (WCHAR*)malloc(sizeof(WCHAR)*MAX_PATH_LEN);
-	get_fname(fname, pi, ch_info, L".ts");
+	TSDCHAR *fname = (TSDCHAR*)malloc(sizeof(TSDCHAR)*MAX_PATH_LEN);
+	get_fname(fname, pi, ch_info, TSD_TEXT(".ts"));
 	return fname;
 }
 
-static const WCHAR* set_dir(const WCHAR *param)
+static const TSDCHAR* set_dir(const TSDCHAR *param)
 {
 	tsd_strncpy(param_base_dir, param, MAX_PATH_LEN);
 	//PathAddBackslash(param_base_dir);
@@ -128,14 +131,14 @@ static const WCHAR* set_dir(const WCHAR *param)
 static int hook_postconfig()
 {
 	if (param_base_dir[0] == L'\0') {
-		output_message(MSG_ERROR, L"出力ディレクトリが指定されていないか、または不正です");
+		output_message(MSG_ERROR, TSD_TEXT("出力ディレクトリが指定されていないか、または不正です"));
 		return 0;
 	}
 	return 1;
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--dir", L"出力先ディレクトリ *", 1, set_dir },
+	{ TSD_TEXT("--dir"), TSD_TEXT("出力先ディレクトリ *"), 1, set_dir },
 	NULL,
 };
 
@@ -147,7 +150,7 @@ static void register_hooks()
 
 MODULE_DEF module_def_t mod_path_resolver = {
 	TSDUMP_MODULE_V4,
-	L"mod_path_resolver",
+	TSD_TEXT("mod_path_resolver"),
 	register_hooks,
 	cmds,
 };

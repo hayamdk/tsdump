@@ -1,10 +1,14 @@
+#include "core/tsdump_def.h"
+
+#ifdef TSD_PLATFORM_MSVC
+#include <Windows.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include <Windows.h>
 
-#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
@@ -98,7 +102,7 @@ void default_decoder(unsigned char **decbuf, int *n_decbuf, const unsigned char 
 	*n_decbuf = n_dec;
 
 	if (i != 0) {
-		output_message(MSG_WARNING, L"skipped %d bytes", i);
+		output_message(MSG_WARNING, TSD_TEXT("skipped %d bytes"), i);
 	}
 
 	/* DROPêîÇÉJÉEÉìÉg */

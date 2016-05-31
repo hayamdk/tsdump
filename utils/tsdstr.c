@@ -2,8 +2,12 @@
 
 #ifdef TSD_PLATFORM_MSVC
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
 #endif
+
+#include <stdio.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 #include "utils/tsdstr.h"
 
@@ -75,7 +79,7 @@ int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n)
 #ifdef TSD_PLATFORM_MSVC
 	return wcsncmp(s1, s2, n);
 #else
-	return strcmp(s1, s2, n);
+	return strncmp(s1, s2, n);
 #endif
 }
 

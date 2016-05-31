@@ -5,9 +5,7 @@
 #include <time.h>
 #include <sys/timeb.h>
 
-typedef wchar_t			WCHAR;
-typedef long			BOOL;
-typedef unsigned long	DWORD;
+typedef uint32_t DWORD;
 
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
@@ -17,93 +15,95 @@ typedef unsigned long	DWORD;
 #include "utils/aribstr.h"
 #include "core/tsdump.h"
 
-const WCHAR *genre_main[] = {
-	L"ニュース／報道",			L"スポーツ",	L"情報／ワイドショー",	L"ドラマ",
-	L"音楽",					L"バラエティ",	L"映画",				L"アニメ／特撮",
-	L"ドキュメンタリー／教養",	L"劇場／公演",	L"趣味／教育",			L"福祉",
-	L"予備",					L"予備",		L"拡張",				L"その他"
+#define TT TSD_TEXT
+
+const TSDCHAR *genre_main[] = {
+	TSD_TEXT("ニュース／報道"),			TSD_TEXT("スポーツ"),	TSD_TEXT("情報／ワイドショー"),	TSD_TEXT("ドラマ"),
+	TSD_TEXT("音楽"),					TSD_TEXT("バラエティ"),	TSD_TEXT("映画"),				TSD_TEXT("アニメ／特撮"),
+	TSD_TEXT("ドキュメンタリー／教養"),	TSD_TEXT("劇場／公演"),	TSD_TEXT("趣味／教育"),			TSD_TEXT("福祉"),
+	TSD_TEXT("予備"),					TSD_TEXT("予備"),		TSD_TEXT("拡張"),				TSD_TEXT("その他")
 };
 
-const WCHAR *genre_detail[] = {
+const TSDCHAR *genre_detail[] = {
 	/* 0x0 */
-	L"定時・総合", L"天気", L"特集・ドキュメント", L"政治・国会", L"経済・市況", L"海外・国際", L"解説", L"討論・会談",
-	L"報道特番", L"ローカル・地域", L"交通", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("定時・総合"), TSD_TEXT("天気"), TSD_TEXT("特集・ドキュメント"), TSD_TEXT("政治・国会"), TSD_TEXT("経済・市況"), TSD_TEXT("海外・国際"), TSD_TEXT("解説"), TSD_TEXT("討論・会談"),
+	TSD_TEXT("報道特番"), TSD_TEXT("ローカル・地域"), TSD_TEXT("交通"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x1 */
-	L"スポーツニュース", L"野球", L"サッカー", L"ゴルフ", L"その他の球技", L"相撲・格闘技", L"オリンピック・国際大会", L"マラソン・陸上・水泳",
-	L"モータースポーツ", L"マリン・ウィンタースポーツ", L"競馬・公営競技", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("スポーツニュース"), TSD_TEXT("野球"), TSD_TEXT("サッカー"), TSD_TEXT("ゴルフ"), TSD_TEXT("その他の球技"), TSD_TEXT("相撲・格闘技"), TSD_TEXT("オリンピック・国際大会"), TSD_TEXT("マラソン・陸上・水泳"),
+	TSD_TEXT("モータースポーツ"), TSD_TEXT("マリン・ウィンタースポーツ"), TSD_TEXT("競馬・公営競技"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x2 */
-	L"芸能・ワイドショー", L"ファッション", L"暮らし・住まい", L"健康・医療", L"ショッピング・通販", L"グルメ・料理", L"イベント", L"番組紹介・お知らせ",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("芸能・ワイドショー"), TSD_TEXT("ファッション"), TSD_TEXT("暮らし・住まい"), TSD_TEXT("健康・医療"), TSD_TEXT("ショッピング・通販"), TSD_TEXT("グルメ・料理"), TSD_TEXT("イベント"), TSD_TEXT("番組紹介・お知らせ"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x3 */
-	L"国内ドラマ", L"海外ドラマ", L"時代劇", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("国内ドラマ"), TSD_TEXT("海外ドラマ"), TSD_TEXT("時代劇"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x4 */
-	L"国内ロック・ポップス", L"海外ロック・ポップス", L"クラシック・オペラ", L"ジャズ・フュージョン", L"歌謡曲・演歌", L"ライブ・コンサート", L"ランキング・リクエスト", L"カラオケ・のど自慢",
-	L"民謡・邦楽", L"童謡・キッズ", L"民族音楽・ワールドミュージック", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("国内ロック・ポップス"), TSD_TEXT("海外ロック・ポップス"), TSD_TEXT("クラシック・オペラ"), TSD_TEXT("ジャズ・フュージョン"), TSD_TEXT("歌謡曲・演歌"), TSD_TEXT("ライブ・コンサート"), TSD_TEXT("ランキング・リクエスト"), TSD_TEXT("カラオケ・のど自慢"),
+	TSD_TEXT("民謡・邦楽"), TSD_TEXT("童謡・キッズ"), TSD_TEXT("民族音楽・ワールドミュージック"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x5 */
-	L"クイズ", L"ゲーム", L"トークバラエティ", L"お笑い・コメディ", L"音楽バラエティ", L"旅バラエティ", L"料理バラエティ", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("クイズ"), TSD_TEXT("ゲーム"), TSD_TEXT("トークバラエティ"), TSD_TEXT("お笑い・コメディ"), TSD_TEXT("音楽バラエティ"), TSD_TEXT("旅バラエティ"), TSD_TEXT("料理バラエティ"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x6 */
-	L"洋画", L"邦画", L"アニメ", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("洋画"), TSD_TEXT("邦画"), TSD_TEXT("アニメ"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x7 */
-	L"国内アニメ", L"海外アニメ", L"特撮", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("国内アニメ"), TSD_TEXT("海外アニメ"), TSD_TEXT("特撮"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x8 */
-	L"社会・時事", L"歴史・紀行", L"自然・動物・環境", L"宇宙・科学・医学", L"カルチャー・伝統芸能", L"文学・文芸", L"スポーツ", L"ドキュメンタリー全般",
-	L"インタビュー・討論", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("社会・時事"), TSD_TEXT("歴史・紀行"), TSD_TEXT("自然・動物・環境"), TSD_TEXT("宇宙・科学・医学"), TSD_TEXT("カルチャー・伝統芸能"), TSD_TEXT("文学・文芸"), TSD_TEXT("スポーツ"), TSD_TEXT("ドキュメンタリー全般"),
+	TSD_TEXT("インタビュー・討論"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0x9 */
-	L"現代劇・新劇", L"ミュージカル", L"ダンス・バレエ", L"落語・演芸", L"歌舞伎・古典", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("現代劇・新劇"), TSD_TEXT("ミュージカル"), TSD_TEXT("ダンス・バレエ"), TSD_TEXT("落語・演芸"), TSD_TEXT("歌舞伎・古典"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0xA */
-	L"旅・釣り・アウトドア", L"園芸・ペット・手芸", L"音楽・美術・工芸", L"囲碁・将棋", L"麻雀・パチンコ", L"車・オートバイ", L"コンピュータ・ＴＶゲーム", L"会話・語学",
-	L"幼児・小学生", L"中学生・高校生", L"大学生・受験", L"生涯教育・資格", L"教育問題", L"-", L"-", L"その他",
+	TSD_TEXT("旅・釣り・アウトドア"), TSD_TEXT("園芸・ペット・手芸"), TSD_TEXT("音楽・美術・工芸"), TSD_TEXT("囲碁・将棋"), TSD_TEXT("麻雀・パチンコ"), TSD_TEXT("車・オートバイ"), TSD_TEXT("コンピュータ・ＴＶゲーム"), TSD_TEXT("会話・語学"),
+	TSD_TEXT("幼児・小学生"), TSD_TEXT("中学生・高校生"), TSD_TEXT("大学生・受験"), TSD_TEXT("生涯教育・資格"), TSD_TEXT("教育問題"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0xB */
-	L"高齢者", L"障害者", L"社会福祉", L"ボランティア", L"手話", L"文字（字幕）", L"音声解説", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他",
+	TSD_TEXT("高齢者"), TSD_TEXT("障害者"), TSD_TEXT("社会福祉"), TSD_TEXT("ボランティア"), TSD_TEXT("手話"), TSD_TEXT("文字（字幕）"), TSD_TEXT("音声解説"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他"),
 
 	/* 0xC */
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
 	/* 0xD */
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
 	/* 0xE */
-	L"BS/地上デジタル放送用番組付属情報", L"広帯域CSデジタル放送用拡張", L"衛星デジタル音声放送用拡張", L"サーバー型番組付属情報", L"IP放送用番組付属情報", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+	TSD_TEXT("BS/地上デジタル放送用番組付属情報"), TSD_TEXT("広帯域CSデジタル放送用拡張"), TSD_TEXT("衛星デジタル音声放送用拡張"), TSD_TEXT("サーバー型番組付属情報"), TSD_TEXT("IP放送用番組付属情報"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
 	/* 0xF */
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"その他"
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("その他")
 };
 
-const WCHAR *genre_user[] = {
-	L"中止の可能性あり",
-	L"延長の可能性あり",
-	L"中断の可能性あり",
-	L"同一シリーズの別話数放送の可能性あり",
-	L"編成未定枠",
-	L"繰り上げの可能性あり",
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-",
+const TSDCHAR *genre_user[] = {
+	TSD_TEXT("中止の可能性あり"),
+	TSD_TEXT("延長の可能性あり"),
+	TSD_TEXT("中断の可能性あり"),
+	TSD_TEXT("同一シリーズの別話数放送の可能性あり"),
+	TSD_TEXT("編成未定枠"),
+	TSD_TEXT("繰り上げの可能性あり"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
-	L"中断ニュースあり", L"当該イベントに関連する臨時サービスあり"
-	L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-", L"-"
+	TSD_TEXT("中断ニュースあり"), TSD_TEXT("当該イベントに関連する臨時サービスあり")
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-")
 };
 
-void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item)
+void get_genre_str(const TSDCHAR **genre1, const TSDCHAR **genre2, Cd_t_item item)
 {
 	if (item.content_nibble_level_1 != 0xe) {
 		*genre1 = genre_main[item.content_nibble_level_1];
@@ -113,15 +113,15 @@ void get_genre_str(const WCHAR **genre1, const WCHAR **genre2, Cd_t_item item)
 		if (item.user_nibble_1 <= 0x01) {
 			*genre2 = genre_user[item.user_nibble_1 * 0x10 + item.user_nibble_2];
 		} else {
-			*genre2 = L"-";
+			*genre2 = TSD_TEXT("-");
 		}
 	}
 }
 
-int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
+int get_extended_text(TSDCHAR *dst, size_t n, const proginfo_t *pi)
 {
 	int i;
-	WCHAR *p = dst, *end = &dst[n - 1];
+	TSDCHAR *p = dst, *end = &dst[n - 1];
 
 	*p = L'\0';
 	if (!(pi->status & PGINFO_GET_EXTEND_TEXT)) {
@@ -129,13 +129,13 @@ int get_extended_text(WCHAR *dst, size_t n, const proginfo_t *pi)
 	}
 
 	for (i = 0; i < pi->n_items && p < end; i++) {
-		wcscpy_s(p, end - p, pi->items[i].desc.str);
+		tsd_strncpy(p, pi->items[i].desc.str, end - p);
 		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, L"\n");
+		tsd_strncpy(p, TSD_TEXT("\n"), end - p);
 		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, pi->items[i].item.str);
+		tsd_strncpy(p, pi->items[i].item.str, end - p);
 		while (*p != L'\0') { p++; }
-		wcscpy_s(p, end - p, L"\n");
+		tsd_strncpy(p, TSD_TEXT("\n"), end - p);
 		while (*p != L'\0') { p++; }
 	}
 	return 1;
@@ -553,7 +553,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 		/* continuity_counter の連続性を確認 */
 		if ((ps->continuity_counter + 1) % 16 != tsh->continuity_counter) {
 			/* drop! */
-			output_message(MSG_PACKETERROR, L"packet continuity_counter is discontinuous! (pid=0x%02x)", ps->pid);
+			output_message(MSG_PACKETERROR, TSD_TEXT("packet continuity_counter is discontinuous! (pid=0x%02x)"), ps->pid);
 			ps->n_payload = ps->recv_payload = 0;
 			ps->stat = PAYLOAD_STAT_INIT;
 			return;
@@ -568,7 +568,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 			/* 不正なパケットかどうかのチェック */
 			if (pos + pointer_field >= 188) {
 				ps->stat = PAYLOAD_STAT_INIT;
-				output_message(MSG_PACKETERROR, L"Invalid payload data_byte offset! (pid=0x%02x)", ps->pid);
+				output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload data_byte offset! (pid=0x%02x)"), ps->pid);
 				return;
 			}
 
@@ -586,7 +586,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 			/* 不正なパケットかどうかのチェック */
 			if (pos > 188) {
 				ps->stat = PAYLOAD_STAT_INIT;
-				output_message(MSG_PACKETERROR, L"Invalid payload data_byte offset! (pid=0x%02x)", ps->pid);
+				output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload data_byte offset! (pid=0x%02x)"), ps->pid);
 				return;
 			}
 
@@ -603,10 +603,10 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 
 	if (ps->stat == PAYLOAD_STAT_FINISHED) {
 		ps->crc32 = get_payload_crc32(ps);
-		unsigned __int32 crc = crc32(ps->payload, ps->n_payload - 4);
+		uint32_t crc = crc32(ps->payload, ps->n_payload - 4);
 		if (ps->crc32 != crc) {
 			ps->stat = PAYLOAD_STAT_INIT;
-			output_message(MSG_PACKETERROR, L"Payload CRC32 mismatch! (pid=0x%02x)", ps->pid);
+			output_message(MSG_PACKETERROR, TSD_TEXT("Payload CRC32 mismatch! (pid=0x%02x)"), ps->pid);
 		}
 	}
 }
@@ -954,7 +954,7 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t 
 			if( offset < 1*PCR_BASE_HZ ) {
 				sl->proginfos[i].status |= PGINFO_VALID_PCR;
 				sl->proginfos[i].status |= PGINFO_PCR_UPDATED;
-				//output_message(MSG_DISP, L"PCR %x: %I64d %I64x %d %d",
+				//output_message(MSG_DISP, TSD_TEXT("PCR %x: %I64d %I64x %d %d"),
 				//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
 			} else {
 				/* 前のPCRから1秒以上差があれば有効とは見なさない */
@@ -997,7 +997,7 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_lis
 	min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
 	sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
 
-	//output_message( MSG_DISP, L"TOT %04d/%02d/%02d %02d:%02d:%02d", year, mon, day, hour, min, sec );
+	//output_message( MSG_DISP, TSD_TEXT("TOT %04d/%02d/%02d %02d:%02d:%02d"), year, mon, day, hour, min, sec );
 
 	for (i = 0; i < sl->n_services; i++) {
 		sl->proginfos[i].TOT_time.mjd = mjd;

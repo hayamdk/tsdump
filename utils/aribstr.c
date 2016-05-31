@@ -398,7 +398,7 @@ const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
 
 	fptr = code;
 	tptr = xcode;
-	iconv(cd, (ICONV_CONST char **)&fptr, &inbyte, &tptr, &outbyte);
+	iconv(cd, (char **)&fptr, &inbyte, &tptr, &outbyte);
 
 	iconv_close(cd);
 

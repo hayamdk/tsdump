@@ -1,12 +1,17 @@
-#include <stdio.h>
+#include "core/tsdump_def.h"
+
+#ifdef TSD_PLATFORM_MSVC
 #include <windows.h>
-#include <tchar.h>
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
 
-#include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
@@ -28,28 +33,28 @@ static inline int pi_endtime_unknown(const proginfo_t *pi)
 void printpi(const proginfo_t *pi)
 {
 	time_mjd_t endtime;
-	WCHAR et[4096];
+	TSDCHAR et[4096];
 
 	if (!PGINFO_READY(pi->status)) {
 		if (pi->status & PGINFO_GET_SERVICE_INFO) {
-			output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
-				L"[番組情報なし]\n%s\n"
-				L"---------------------------------- >>>", pi->service_name.str);
+			output_message(MSG_DISP, TSD_TEXT("<<< ------------ 番組情報 ------------\n")
+				TSD_TEXT("[番組情報なし]\n%s\n")
+				TSD_TEXT("---------------------------------- >>>"), pi->service_name.str);
 			return;
 		} else {
-			output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
-				L"[番組情報なし]\n"
-				L"---------------------------------- >>>");
+			output_message(MSG_DISP, TSD_TEXT("<<< ------------ 番組情報 ------------\n")
+				TSD_TEXT("[番組情報なし]\n")
+				TSD_TEXT("---------------------------------- >>>"));
 			return;
 		}
 	}
 
-	get_extended_text(et, sizeof(et) / sizeof(WCHAR), pi);
+	get_extended_text(et, sizeof(et) / sizeof(TSDCHAR), pi);
 
 	if ( pi_endtime_unknown(pi) ) {
-		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
-			L"[%d/%02d/%02d %02d:%02d:%02d～ +未定]\n%s:%s\n「%s」\n"
-			L"---------------------------------- >>>",
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ 番組情報 ------------\n")
+			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02d～ +未定]\n%s:%s\n「%s」\n")
+			TSD_TEXT("---------------------------------- >>>"),
 			pi->start.year, pi->start.mon, pi->start.day,
 			pi->start.hour, pi->start.min, pi->start.sec,
 			pi->service_name.str,
@@ -58,9 +63,9 @@ void printpi(const proginfo_t *pi)
 		);
 	} else {
 		time_add_offset(&endtime, &pi->start, &pi->dur);
-		output_message(MSG_DISP, L"<<< ------------ 番組情報 ------------\n"
-			L"[%d/%02d/%02d %02d:%02d:%02d～%02d:%02d:%02d]\n%s:%s\n「%s」\n"
-			L"---------------------------------- >>>",
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ 番組情報 ------------\n")
+			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02d～%02d:%02d:%02d]\n%s:%s\n「%s」\n")
+			TSD_TEXT("---------------------------------- >>>"),
 			pi->start.year, pi->start.mon, pi->start.day,
 			pi->start.hour, pi->start.min, pi->start.sec,
 			endtime.hour, endtime.min, endtime.sec,
@@ -126,10 +131,10 @@ void init_tos(ts_output_stat_t *tos)
 	tos->n_pgos = 0;
 	tos->pgos = (pgoutput_stat_t*)malloc(MAX_PGOVERLAP * sizeof(pgoutput_stat_t));
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
-		tos->pgos[i].fn = (WCHAR*)malloc(MAX_PATH_LEN*sizeof(WCHAR));
+		tos->pgos[i].fn = (TSDCHAR*)malloc(MAX_PATH_LEN*sizeof(TSDCHAR));
 	}
 
-	tos->buf = (BYTE*)malloc(BUFSIZE);
+	tos->buf = (uint8_t*)malloc(BUFSIZE);
 	tos->pos_filled = 0;
 	tos->pos_filled_old = 0;
 	tos->pos_write = 0;
@@ -168,7 +173,7 @@ void close_tos(ts_output_stat_t *tos)
 	}
 
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
-		free((WCHAR*)tos->pgos[i].fn);
+		free((TSDCHAR*)tos->pgos[i].fn);
 	}
 	free(tos->pgos);
 
@@ -350,14 +355,14 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 
 void ts_require_buf(ts_output_stat_t *tos, int require_size)
 {
-	output_message(MSG_WARNING, L"バッファが足りません。バッファの空き容量が増えるのを待機します。");
+	output_message(MSG_WARNING, TSD_TEXT("バッファが足りません。バッファの空き容量が増えるのを待機します。"));
 	ts_wait_pgoutput(tos);
 	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
 		ts_output(tos, gettime(), 1);
 		ts_wait_pgoutput(tos);
 	}
 	//printf("完了\n");
-	output_message(MSG_WARNING, L"待機完了");
+	output_message(MSG_WARNING, TSD_TEXT("待機完了"));
 
 	int move_size = tos->pos_write;
 
@@ -366,7 +371,7 @@ void ts_require_buf(ts_output_stat_t *tos, int require_size)
 	tos->pos_write = 0;
 }
 
-void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf)
+void ts_copybuf(ts_output_stat_t *tos, uint8_t *buf, int n_buf)
 {
 	//fprintf(logfp, " filled=%d n_buf=%d\n", tos->filled, n_buf);
 
@@ -391,7 +396,7 @@ void ts_copybuf(ts_output_stat_t *tos, BYTE *buf, int n_buf)
 void ts_check_extended_text(ts_output_stat_t *tos)
 {
 	pgoutput_stat_t *current_pgos;
-	WCHAR et[4096];
+	TSDCHAR et[4096];
 
 	if (tos->n_pgos <= 0) {
 		return;
@@ -401,10 +406,10 @@ void ts_check_extended_text(ts_output_stat_t *tos)
 	if (!(current_pgos->initial_pi_status & PGINFO_GET_EXTEND_TEXT) &&
 			(tos->proginfo->status & PGINFO_GET_EXTEND_TEXT)) {
 		/* 拡張形式イベント情報が途中から来た場合 */
-		get_extended_text(et, sizeof(et) / sizeof(WCHAR), tos->proginfo);
-		output_message(MSG_DISP, L"<<< ------------ 追加番組情報 ------------\n"
-			L"「%s」\n"
-			L"---------------------------------- >>>",
+		get_extended_text(et, sizeof(et) / sizeof(TSDCHAR), tos->proginfo);
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ 追加番組情報 ------------\n")
+			TSD_TEXT("「%s」\n")
+			TSD_TEXT("---------------------------------- >>>"),
 			et
 		);
 	}
@@ -458,7 +463,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 	/* split! */
 	if (tos->n_pgos >= MAX_PGOVERLAP) {
-		output_message(MSG_WARNING, L"番組の切り替わりを短時間に連続して検出したためスキップします");
+		output_message(MSG_WARNING, TSD_TEXT("番組の切り替わりを短時間に連続して検出したためスキップします"));
 	} else {
 		/* 番組終了時間をタイムスタンプから得るかどうか */
 		if ( !(tos->last_proginfo.status & PGINFO_UNKNOWN_STARTTIME) &&		/* 開始時間が既知かつ */
@@ -469,7 +474,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			tmp_pi.dur = offset;
 			tmp_pi.status &= ~PGINFO_UNKNOWN_DURATION;
 			final_pi = &tmp_pi;
-			output_message(MSG_NOTIFY, L"終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします");
+			output_message(MSG_NOTIFY, TSD_TEXT("終了時刻が未定のまま番組が終了したので現在のタイムスタンプを番組終了時刻にします"));
 		} else {
 			final_pi = &tos->last_proginfo;
 		}
@@ -504,7 +509,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0, time_changed = 0;
 	time_mjd_t endtime, last_endtime, time1, time2;
-	WCHAR msg1[64], msg2[64];
+	TSDCHAR msg1[64], msg2[64];
 
 	check_stream_timeinfo(tos);
 
@@ -567,33 +572,33 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 			time_add_offset(&last_endtime, &tos->last_proginfo.start, &tos->last_proginfo.dur);
 
 			if ( get_time_offset(NULL, &tos->proginfo->start, &tos->last_proginfo.start) != 0 ) {
-				swprintf(msg1, 128, L"番組開始時間の変更(サービス%d)", tos->proginfo->service_id);
+				tsd_snprintf(msg1, 64, TSD_TEXT("番組開始時間の変更(サービス%d)"), tos->proginfo->service_id);
 
 				time_changed = 1;
-				output_message( MSG_NOTIFY, L"%s: %02d:%02d:%02d → %02d:%02d:%02d", msg1,
+				output_message( MSG_NOTIFY, TSD_TEXT("%s: %02d:%02d:%02d → %02d:%02d:%02d"), msg1,
 					tos->proginfo->start.hour, tos->proginfo->start.min, tos->proginfo->start.sec,
 					tos->last_proginfo.start.hour, tos->last_proginfo.start.min, tos->last_proginfo.start.sec );
 			}
 			if ( get_time_offset(NULL, &endtime, &last_endtime) != 0 ) {
-				swprintf(msg1, 128, L"番組終了時間の変更(サービス%d)", tos->proginfo->service_id);
+				tsd_snprintf(msg1, 64, TSD_TEXT("番組終了時間の変更(サービス%d)"), tos->proginfo->service_id);
 
 				if ( pi_endtime_unknown(&tos->last_proginfo) ) {
 					tsd_strcpy(msg2, TSD_TEXT("未定 →"));
 				} else {
-					wsprintf( msg2, L"%02d:%02d:%02d →", last_endtime.hour, last_endtime.min, last_endtime.sec );
+					tsd_snprintf( msg2, 64, TSD_TEXT("%02d:%02d:%02d →"), last_endtime.hour, last_endtime.min, last_endtime.sec );
 				}
 
 				time_changed = 1;
 				if ( pi_endtime_unknown(tos->proginfo) ) {
-					output_message(MSG_NOTIFY, L"%s: %s 未定", msg1, msg2);
+					output_message(MSG_NOTIFY, TSD_TEXT("%s: %s 未定"), msg1, msg2);
 				} else {
-					output_message( MSG_NOTIFY, L"%s: %s %02d:%02d:%02d", msg1, msg2,
+					output_message( MSG_NOTIFY, TSD_TEXT("%s: %s %02d:%02d:%02d"), msg1, msg2,
 						endtime.hour, endtime.min, endtime.sec );
 				}
 			}
 
 			if (!time_changed) {
-				output_message(MSG_NOTIFY, L"番組情報の変更");
+				output_message(MSG_NOTIFY, TSD_TEXT("番組情報の変更"));
 				printpi(tos->proginfo);
 			}
 		}

@@ -39,7 +39,7 @@ typedef void* (*hook_pgoutput_create_t)(const TSDCHAR*, const proginfo_t*, const
 typedef void(*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int(*hook_pgoutput_check_t)(void*);
 typedef const int(*hook_pgoutput_wait_t)(void*);
-typedef const void(*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_t*);
+typedef void(*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_t*);
 typedef void(*hook_pgoutput_end_t)(void*, const proginfo_t*);
 typedef void(*hook_pgoutput_close_t)(void*, const proginfo_t*);
 typedef void(*hook_pgoutput_postclose_t)(void*);
