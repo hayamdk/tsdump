@@ -61,7 +61,8 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 	va_list list;
 	va_start(list, fmt);
 	tsd_syserr_t lasterr, *plasterr = NULL;
-	TSDCHAR msg[2048], *modname;
+	TSDCHAR msg[2048];
+	const TSDCHAR *modname;
 	const char *cp;
 	int len;
 

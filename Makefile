@@ -10,9 +10,10 @@ OBJS1 = $(SOURCES_CP932:.c=.o) $(MODULES_CP932:.c=.o)
 OBJS2 = $(SOURCES:.c=.o)
 OBJS = $(OBJS1) $(OBJS2)
 
-#CFLAGS = -O3 -I$(CURDIR)
-CFLAGS = -O0 -g -I$(CURDIR)
-LDFLAGS = -liconv
+CFLAGS = -O3 -flto -I$(CURDIR)
+#CFLAGS = -O0 -g -I$(CURDIR)
+LDFLAGS = -liconv -flto
+#LDFLAGS = -liconv
 
 $(PROGRAM): $(OBJS)
 	$(CC) $(OBJS) $(SPECS) $(LDFLAGS) -o $(PROGRAM)

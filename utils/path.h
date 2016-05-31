@@ -6,8 +6,8 @@
 
 int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition);
 int path_getdir(TSDCHAR *dst, const TSDCHAR *path);
-TSDCHAR* path_getfile(const TSDCHAR *path);
-TSDCHAR* path_extension(const TSDCHAR *path);
+const TSDCHAR* path_getfile(const TSDCHAR *path);
+const TSDCHAR* path_getext(const TSDCHAR *path);
 int path_isexist(const TSDCHAR *path);
 int path_isdir(const TSDCHAR *path);
 int path_isfile(const TSDCHAR *path);

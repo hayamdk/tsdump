@@ -5,6 +5,10 @@
 #ifdef TSD_PLATFORM_MSVC
 #include <Windows.h>
 #include <shlwapi.h>
+#else
+#include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #include <sys/stat.h>
@@ -31,12 +35,12 @@ int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
 	return 1;
 }
 
-TSDCHAR* path_getfile(const TSDCHAR *path)
+const TSDCHAR* path_getfile(const TSDCHAR *path)
 {
 	return PathFindFileName(path);
 }
 
-TSDCHAR* path_extension(const TSDCHAR *path)
+const TSDCHAR* path_getext(const TSDCHAR *path)
 {
 	return PathFindExtension(path);
 }
@@ -62,6 +66,146 @@ int path_isexist(const TSDCHAR *path)
 	return TSD_PATH_OTHER;
 }
 
+#else
+
+#define PATH_DELIMITER TSD_CHAR('/')
+
+static void path_split(const TSDCHAR **dir, int *dir_len, const TSDCHAR **file, int *file_len, const TSDCHAR **ext, int *ext_len, const TSDCHAR *path)
+{
+	const TSDCHAR *d, *f, *e, *p;
+	int d_len, f_len, e_len;
+	size_t path_len;
+
+	path_len = tsd_strlen(path);
+
+	d = path;
+	if (path_len == 0) {
+		d_len = 0;
+		f = e = path;
+		f_len = e_len = 0;
+	} else {
+		for (e_len = 0, e = p = &path[path_len]; *p != PATH_DELIMITER && p > path; p--) {
+			if (e_len == 0 && *p == TSD_CHAR('.')) {
+				e = p;
+				e_len = &path[path_len] - p;
+			}
+		}
+		if(p[0] == PATH_DELIMITER) {
+			f = &p[1];
+			f_len = &path[path_len] - p - 1;
+		} else {
+			f = &p[0];
+			f_len = &path[path_len] - p;
+		}
+		d_len = p - path;
+	}
+
+	if (dir) { *dir = d; }
+	if (dir_len) { *dir_len = d_len; }
+	if (file) { *file = f; }
+	if (file_len) { *file_len = f_len; }
+	if (ext) { *ext = e; }
+	if (ext_len) { *ext_len = e_len; }
+	return;
+}
+
+int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
+{
+	TSDCHAR *p;
+	int add_delimiter = 0;
+	int base_len = tsd_strlen(base);
+	int addition_len = tsd_strlen(addition);
+
+	if (addition[0] == PATH_DELIMITER) {
+		if (base[base_len - 1] == PATH_DELIMITER) {
+			addition++;
+			addition_len--;
+		}
+	} else {
+		if (base[base_len-1] != PATH_DELIMITER) {
+			add_delimiter = 1;
+		}
+	}
+
+	if (base_len + add_delimiter >= MAX_PATH_LEN) {
+		tsd_strncpy(dst, base, MAX_PATH_LEN - 1);
+		dst[MAX_PATH_LEN-1] = TSD_NULLCHAR;
+		return 0;
+	}
+	tsd_strcpy(dst, base);
+	if (add_delimiter) {
+		dst[base_len] = PATH_DELIMITER;
+		base_len++;
+	}
+
+	if (base_len + addition_len >= MAX_PATH_LEN) {
+		tsd_strncpy(&dst[base_len], addition, MAX_PATH_LEN - 1 - base_len);
+		dst[MAX_PATH_LEN - 1] = TSD_NULLCHAR;
+		return 0;
+	}
+	tsd_strcpy(&dst[base_len], addition);
+	dst[base_len + addition_len] = TSD_NULLCHAR;
+
+	return 1;
+}
+
+int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
+{
+	int ret = 1;
+	const TSDCHAR *dir;
+	int dir_len;
+
+	path_split(&dir, &dir_len, NULL, NULL, NULL, NULL, path);
+
+	if (dir_len > MAX_PATH_LEN - 1) {
+		dir_len = MAX_PATH_LEN - 1;
+		ret = 0;
+	} else if (dir_len == 0) {
+		dst[0] = TSD_NULLCHAR;
+	}
+
+	tsd_strncpy(dst, dir, dir_len);
+
+	return ret;
+}
+
+const TSDCHAR* path_getfile(const TSDCHAR *path)
+{
+	const TSDCHAR *file;
+	path_split(NULL, NULL, &file, NULL, NULL, NULL, path);
+	return file;
+}
+
+const TSDCHAR* path_getext(const TSDCHAR *path)
+{
+	const TSDCHAR *ext;
+	path_split(NULL, NULL, NULL, NULL, &ext, NULL, path);
+	return ext;
+}
+
+int path_isexist(const TSDCHAR *path)
+{
+	int ret;
+	struct stat buf;
+
+	ret = stat(path, &buf);
+	if (ret) {
+		if (errno == ENOENT) {
+			return TSD_PATH_NOTEXIST;
+		}
+		return TSD_PATH_ERROR;
+	}
+	if ((buf.st_mode & S_IFMT) == S_IFDIR) {
+		return TSD_PATH_ISDIR;
+	}
+	if ((buf.st_mode & S_IFMT) == S_IFREG) {
+		return TSD_PATH_ISFILE;
+	}
+	return TSD_PATH_OTHER;
+}
+
+#endif
+
 int path_isdir(const TSDCHAR *path)
 {
 	if (path_isexist(path) == TSD_PATH_ISDIR) {
@@ -77,49 +221,3 @@ int path_isfile(const TSDCHAR *path)
 	}
 	return 0;
 }
-
-#else
-
-int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
-{
-	/* dummy */
-	return 1;
-}
-
-int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
-{
-	/* dummy */
-	return 1;
-}
-
-TSDCHAR* path_getfile(const TSDCHAR *path)
-{
-	/* dummy */
-	return NULL;
-}
-
-TSDCHAR* path_extension(const TSDCHAR *path)
-{
-	/* dummy */
-	return NULL;
-}
-
-int path_isexist(const TSDCHAR *path)
-{
-	/* dummy */
-	return 0;
-}
-
-int path_isdir(const TSDCHAR *path)
-{
-	/* dummy */
-	return 0;
-}
-
-int path_isfile(const TSDCHAR *path)
-{
-	/* dummy */
-	return 0;
-}
-
-#endif
