@@ -12,8 +12,8 @@ OBJS = $(OBJS1) $(OBJS2)
 
 CFLAGS = -O3 -flto -I$(CURDIR)
 #CFLAGS = -O0 -g -I$(CURDIR)
-LDFLAGS = -liconv -flto
-#LDFLAGS = -liconv
+LDFLAGS = -flto #-liconv
+#LDFLAGS = #-liconv
 
 $(PROGRAM): $(OBJS)
 	$(CC) $(OBJS) $(SPECS) $(LDFLAGS) -o $(PROGRAM)

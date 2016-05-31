@@ -4,6 +4,7 @@
 #pragma comment(lib, "shlwapi.lib")
 #include <windows.h>
 #include <shlwapi.h>
+#include <process.h>
 #else
 #include <sys/types.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include <time.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
-#include <process.h>
 
 #include "utils/tsdstr.h"
 #include "utils/arib_proginfo.h"

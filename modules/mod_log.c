@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <share.h>
 #include <sys/timeb.h>
+#include <process.h>
 #else
 #include <sys/types.h>
 #include <sys/time.h>
@@ -14,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include <process.h>
 #include <time.h>
 
 #include "utils/arib_proginfo.h"
