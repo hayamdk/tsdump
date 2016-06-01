@@ -907,17 +907,6 @@ void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
 	}
 }
 
-proginfo_t *find_curr_service(ts_service_list_t *sl, unsigned int service_id)
-{
-	int i;
-	for (i = 0; i < sl->n_services; i++) {
-		if (service_id == sl->proginfos[i].service_id) {
-			return &sl->proginfos[i];
-		}
-	}
-	return NULL;
-}
-
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
 {
 	int i, get = 0, wraparounded;
@@ -1020,7 +1009,7 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_lis
 	}
 }
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, eit_callback_handler_t handler)
 {
 	int len;
 	EIT_header_t eit_h;
@@ -1038,13 +1027,8 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 
 	parse_EIT_header(payload_stat->payload, &eit_h);
 
-	if (eit_h.section_number != 0) {
-		/* 今の番組ではない */
-		return;
-	}
-
-	/* 対象のサービスIDかどうか */
-	curr_proginfo = find_curr_service(sl, eit_h.service_id);
+	/* コールバック関数を呼び、取得対象の番組情報かどうかチェックする */
+	curr_proginfo = handler(param, &eit_h);
 	if(!curr_proginfo) {
 		return;
 	}
@@ -1174,7 +1158,7 @@ void store_SDT(const SDT_header_t *sdt_h, const Sd_t *sd, proginfo_t *proginfo)
 	proginfo->status |= PGINFO_GET_SERVICE_INFO;
 }
 
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler)
 {
 	int len;
 	SDT_header_t sdt_h;
@@ -1206,9 +1190,8 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 		}
 
 		/* 対象のサービスIDかどうか */
-		curr_proginfo = find_curr_service(sl, sdt_b.service_id);
+		curr_proginfo = handler(param, sdt_b.service_id);
 		if (curr_proginfo) {
-
 			while( p_desc < p_desc_end ) {
 				dtag = p_desc[0];
 				dlen = p_desc[1];
@@ -1225,66 +1208,50 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 }
 
 /* PMT: ISO 13818-1 2.4.4.8 Program Map Table */
-void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *PMT_payload, proginfo_t *proginfo)
 {
-	int i;
 	int pos, n_pids, len;
 	uint16_t pid;
 	uint8_t stream_type;
 	uint8_t *payload;
 
-	for (i = 0; i < sl->n_services; i++) {
-		parse_PSI(packet, tsh, &sl->proginfos[i].PMT_payload);
-		if (sl->proginfos[i].PMT_payload.stat != PAYLOAD_STAT_FINISHED) {
-			continue;
-		}
-
-		len = sl->proginfos[i].PMT_payload.n_payload - 4/*crc32*/;
-		payload = sl->proginfos[i].PMT_payload.payload;
-		sl->proginfos[i].PCR_pid = get_bits(payload, 67, 13);
-		pos = 12 + get_bits(payload, 84, 12);
-		n_pids = 0;
-		while ( pos < len && n_pids <= MAX_PIDS_PER_SERVICE ) {
-			stream_type = payload[pos];
-			pid = (uint16_t)get_bits(payload, pos*8+11, 13);
-			pos += get_bits(payload, pos*8+28, 12) + 5;
-			sl->proginfos[i].service_pids[n_pids].stream_type = stream_type;
-			sl->proginfos[i].service_pids[n_pids].pid = pid;
-			n_pids++;
-		}
-		sl->proginfos[i].n_service_pids = n_pids;
-		sl->proginfos[i].PMT_payload.stat = PAYLOAD_STAT_INIT;
-		sl->proginfos[i].status |= PGINFO_GET_PMT;
-		sl->proginfos[i].PMT_last_CRC = sl->proginfos[i].PMT_payload.crc32;
+	parse_PSI(packet, tsh, PMT_payload);
+	if (PMT_payload->stat != PAYLOAD_STAT_FINISHED) {
+		return;
 	}
+
+	len = PMT_payload->n_payload - 4/*crc32*/;
+	payload = PMT_payload->payload;
+	proginfo->PCR_pid = get_bits(payload, 67, 13);
+	pos = 12 + get_bits(payload, 84, 12);
+	n_pids = 0;
+	while ( pos < len && n_pids <= MAX_PIDS_PER_SERVICE ) {
+		stream_type = payload[pos];
+		pid = (uint16_t)get_bits(payload, pos*8+11, 13);
+		pos += get_bits(payload, pos*8+28, 12) + 5;
+		proginfo->service_pids[n_pids].stream_type = stream_type;
+		proginfo->service_pids[n_pids].pid = pid;
+		n_pids++;
+	}
+	proginfo->n_service_pids = n_pids;
+	PMT_payload->stat = PAYLOAD_STAT_INIT;
+	proginfo->status |= PGINFO_GET_PMT;
 }
 
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, void *param, pat_callback_handler_t handler)
 {
-	int i, n, pn, pid;
+	int i, n;
+	PAT_item_t pat_item;
 	uint8_t *payload;
 
 	parse_PSI(packet, tsh, PAT_payload);
 	if (PAT_payload->stat == PAYLOAD_STAT_FINISHED) {
 		n = (PAT_payload->n_payload - 4/*crc32*/ - 8/*fixed length*/) / 4;
-		if (n > MAX_SERVICES_PER_CH) {
-			n = MAX_SERVICES_PER_CH;
-		}
-
 		payload = &(PAT_payload->payload[8]);
-		sl->n_services = 0;
 		for (i = 0; i < n; i++) {
-			pn = get_bits(payload, i*32, 16);
-			pid = get_bits(payload, i*32+19, 13);
-			if (pn == 0) {
-				/* do nothing */
-			} else {
-				sl->proginfos[sl->n_services].service_id = pn;
-				sl->proginfos[sl->n_services].PMT_payload.stat = PAYLOAD_STAT_INIT;
-				sl->proginfos[sl->n_services].PMT_payload.pid = pid;
-				sl->proginfos[sl->n_services].status |= PGINFO_GET_PAT;
-				(sl->n_services)++;
-			}
+			pat_item.program_number = get_bits(payload, i * 32, 16);
+			pat_item.pid = get_bits(payload, i * 32 + 19, 13);
+			handler(param, n, i, &pat_item);
 		}
 	}
 }

@@ -310,6 +310,46 @@ void init_service_list(ts_service_list_t *service_list)
 	}
 }
 
+static proginfo_t *find_curr_service(void *param, const unsigned int service_id)
+{
+	int i;
+	ts_service_list_t *sl = (ts_service_list_t*)param;
+	for (i = 0; i < sl->n_services; i++) {
+		if (service_id == sl->proginfos[i].service_id) {
+			return &sl->proginfos[i];
+		}
+	}
+	return NULL;
+}
+
+static proginfo_t *find_curr_service_eit(void *param, const EIT_header_t *eit_h)
+{
+	if (eit_h->section_number != 0) {
+		/* åªç›êiçsíÜÇÃî‘ëgÇ≈ÇÕÇ»Ç¢ */
+		return NULL;
+	}
+	return find_curr_service(param, eit_h->service_id);
+}
+
+static void store_PAT(void *param, const int n, const int i, PAT_item_t *pat_item)
+{
+	ts_service_list_t *sl = (ts_service_list_t*)param;
+	UNREF_ARG(n);
+	UNREF_ARG(i);
+
+	if (sl->n_services >= MAX_SERVICES_PER_CH) {
+		return;
+	}
+
+	if (pat_item->program_number != 0) {
+		sl->proginfos[sl->n_services].service_id = pat_item->program_number;
+		sl->PMT_payloads[sl->n_services].stat = PAYLOAD_STAT_INIT;
+		sl->PMT_payloads[sl->n_services].pid = pat_item->pid;
+		sl->proginfos[sl->n_services].status |= PGINFO_GET_PAT;
+		(sl->n_services)++;
+	}
+}
+
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
 	uint8_t *recvbuf, *decbuf;
@@ -331,7 +371,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	double tdiff, Mbps=0.0;
 
-	int i;
+	int i, j;
 	int single_mode = 0;
 
 	int pos;
@@ -372,21 +412,23 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				continue; /* pass */
 			}
 
-			if (service_list.pid0x00.stat != PAYLOAD_STAT_FINISHED) {
+			if (service_list.n_services == 0) {
 				/* PATÇÃéÊìæÇÕèââÒÇÃÇ› */
-				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list);
+				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, store_PAT);
 			} else {
-				parse_PMT(packet, &tsh, &service_list);
+				for (j = 0; j < service_list.n_services; j++) {
+					parse_PMT(packet, &tsh, &service_list.PMT_payloads[j], &service_list.proginfos[j]);
+				}
 				if (!printservice) {
 					printservice = print_services(&service_list);
 				}
 			}
 			parse_PCR(packet, &tsh, &service_list);
 			parse_TOT_TDT(packet, &tsh, &service_list);
-			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list);
-			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list);
-			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list);
-			parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list);
+			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list, find_curr_service);
+			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
+			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
+			parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
 		}
 
 		//tc_start("bufcopy");

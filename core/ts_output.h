@@ -62,7 +62,7 @@ static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_service_list_
 {
 	int i, j, found = 0, my = 0;
 	for (i = 0; i < service_list->n_services; i++) {
-		if (pid == service_list->proginfos[i].PMT_payload.pid ) {
+		if (pid == service_list->PMT_payloads[i].pid ) {
 			if (i == tos->tps_index) {
 				my = 1;
 			} else {

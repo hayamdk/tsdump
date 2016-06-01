@@ -128,8 +128,8 @@ typedef struct {
 	int status;
 
 	/***** PAT,PMT *****/
-	PSI_parse_t PMT_payload;
-	uint32_t PMT_last_CRC;
+	//PSI_parse_t PMT_payload;
+	//uint32_t PMT_last_CRC;
 	int n_service_pids;
 	PMT_pid_def_t service_pids[MAX_PIDS_PER_SERVICE];
 	unsigned int service_id : 16;

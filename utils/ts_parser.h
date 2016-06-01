@@ -165,6 +165,7 @@ typedef struct {
 	PSI_parse_t pid0x27;
 	int n_services;
 	proginfo_t proginfos[MAX_SERVICES_PER_CH];
+	PSI_parse_t PMT_payloads[MAX_SERVICES_PER_CH];
 } ts_service_list_t;
 
 /* 短形式イベント記述子（Short event descriptor） */
@@ -256,10 +257,19 @@ typedef struct {
 	unsigned int original_network_id : 16;
 } SDT_header_t;
 
-void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
-void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
-void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
-void parse_PMT(const uint8_t * packet, const ts_header_t *tsh, ts_service_list_t *sl);
+typedef struct {
+	unsigned int program_number : 16;
+	unsigned int pid : 13;
+} PAT_item_t;
+
+typedef proginfo_t* (*eit_callback_handler_t)(void*, const EIT_header_t*);
+typedef proginfo_t* (*service_callback_handler_t)(void*, const unsigned int);
+typedef void (*pat_callback_handler_t)(void*, const int, const int, PAT_item_t*);
+
+void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, eit_callback_handler_t handler);
+void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler);
+void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, void *param, pat_callback_handler_t handler);
+void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *PMT_payload, proginfo_t *proginfo);
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
 
