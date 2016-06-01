@@ -48,6 +48,9 @@
     <ClCompile Include="modules/mod_log.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="modules/mod_filein.c" >
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="utils/aribstr.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>

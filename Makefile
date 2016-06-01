@@ -1,7 +1,7 @@
 PROGRAM = tsdump
 
 SOURCES_CP932 = core/tsdump.c core/ts_output.c core/load_modules.c core/default_decoder.c utils/tsdstr.c utils/ts_parser.c utils/path.c
-MODULES_CP932 = modules/mod_path_resolver.c modules/mod_log.c
+MODULES_CP932 = modules/mod_path_resolver.c modules/mod_log.c modules/mod_filein.c
 SOURCES = utils/aribstr.c
 
 CC := gcc
@@ -11,7 +11,7 @@ OBJS2 = $(SOURCES:.c=.o)
 OBJS = $(OBJS1) $(OBJS2)
 
 CFLAGS = -O3 -flto -I$(CURDIR)
-#CFLAGS = -O0 -g -I$(CURDIR)
+#CFLAGS = -O0 -Wall -g -I$(CURDIR)
 LDFLAGS = -flto #-liconv
 #LDFLAGS = #-liconv
 
