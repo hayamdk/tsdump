@@ -264,14 +264,17 @@ typedef struct {
 
 typedef proginfo_t* (*eit_callback_handler_t)(void*, const EIT_header_t*);
 typedef proginfo_t* (*service_callback_handler_t)(void*, const unsigned int);
-typedef void (*pat_callback_handler_t)(void*, const int, const int, PAT_item_t*);
+typedef void (*pat_callback_handler_t)(void*, const int, const int, const PAT_item_t*);
+typedef void(*tot_callback_handler_t)(void*, const time_mjd_t*);
+void store_TOT(proginfo_t *proginfo, const time_mjd_t *TOT_time);
+void store_PAT(proginfo_t *proginfo, const PAT_item_t *PAT_item);
 
 void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, eit_callback_handler_t handler);
 void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler);
 void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_t *tsh, void *param, pat_callback_handler_t handler);
 void parse_PMT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *PMT_payload, proginfo_t *proginfo);
-void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
-void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl);
+void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler);
+void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *TOT_payload, void *param, tot_callback_handler_t handler);
 
 void clear_proginfo_all(proginfo_t *proginfo);
 void init_proginfo(proginfo_t *proginfo);

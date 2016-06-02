@@ -907,13 +907,14 @@ void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
 	}
 }
 
-void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler)
 {
-	int i, get = 0, wraparounded;
+	int get = 0, wraparounded;
 	const uint8_t *p;
 	uint64_t PCR_base = 0;
 	int64_t offset;
 	unsigned int PCR_ext = 0;
+	proginfo_t *current_proginfo;
 
 	if ( !(tsh->adaptation_field_control & 0x02) ) {
 		return;
@@ -925,51 +926,67 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t 
 		return;
 	}
 
-	for (i = 0; i < sl->n_services; i++) {
-		if (tsh->pid == sl->proginfos[i].PCR_pid) {
-			if (!get) {
-				PCR_base = get_bits64(p, 8, 33);
-				PCR_ext = get_bits(p, 47, 9);
-				get = 1;
-			}
-			offset = (int64_t)PCR_base - (int64_t)sl->proginfos[i].PCR_base;
-			wraparounded = 0;
-			if (offset < 0) {
-				/* wrap-around‘Îô */
-				offset += PCR_BASE_MAX;
-				wraparounded = 1;
-			}
+	current_proginfo = handler(param, tsh->pid);
+	if (!current_proginfo) {
+		return;
+	}
 
-			if( offset < 1*PCR_BASE_HZ ) {
-				sl->proginfos[i].status |= PGINFO_VALID_PCR;
-				sl->proginfos[i].status |= PGINFO_PCR_UPDATED;
-				//output_message(MSG_DISP, TSD_TEXT("PCR %x: %I64d %I64x %d %d"),
-				//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
-			} else {
-				/* ‘O‚ÌPCR‚©‚ç1•bˆÈã·‚ª‚ ‚ê‚Î—LŒø‚Æ‚ÍŒ©‚È‚³‚È‚¢ */
-				sl->proginfos[i].status &= ~PGINFO_VALID_PCR;
-			}
-			sl->proginfos[i].PCR_base = PCR_base;
-			sl->proginfos[i].PCR_ext = PCR_ext;
-			sl->proginfos[i].PCR_wraparounded |= wraparounded;
+	if (tsh->pid == current_proginfo->PCR_pid) {
+		if (!get) {
+			PCR_base = get_bits64(p, 8, 33);
+			PCR_ext = get_bits(p, 47, 9);
+			get = 1;
 		}
+		offset = (int64_t)PCR_base - (int64_t)current_proginfo->PCR_base;
+		wraparounded = 0;
+		if (offset < 0) {
+			/* wrap-around‘Îô */
+			offset += PCR_BASE_MAX;
+			wraparounded = 1;
+		}
+
+		if( offset < 1*PCR_BASE_HZ ) {
+			current_proginfo->status |= PGINFO_VALID_PCR;
+			current_proginfo->status |= PGINFO_PCR_UPDATED;
+			//output_message(MSG_DISP, TSD_TEXT("PCR %x: %I64d %I64x %d %d"),
+			//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
+		} else {
+			/* ‘O‚ÌPCR‚©‚ç1•bˆÈã·‚ª‚ ‚ê‚Î—LŒø‚Æ‚ÍŒ©‚È‚³‚È‚¢ */
+			current_proginfo->status &= ~PGINFO_VALID_PCR;
+		}
+		current_proginfo->PCR_base = PCR_base;
+		current_proginfo->PCR_ext = PCR_ext;
+		current_proginfo->PCR_wraparounded |= wraparounded;
 	}
 }
 
-void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_list_t *sl)
+void store_TOT(proginfo_t *proginfo, const time_mjd_t *TOT_time)
+{
+	proginfo->TOT_time = *TOT_time;
+	if (proginfo->status & PGINFO_VALID_PCR) {
+		proginfo->TOT_PCR = proginfo->PCR_base;
+		proginfo->status |= PGINFO_VALID_TOT_PCR;
+	} else {
+		proginfo->status &= ~PGINFO_VALID_TOT_PCR;
+	}
+	proginfo->PCR_wraparounded = 0;
+	proginfo->status |= PGINFO_GET_TOT;
+}
+
+void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *TOT_payload, void *param, tot_callback_handler_t handler)
 {
 	unsigned int slen, mjd;
 	uint8_t tid;
 	uint32_t bcd_jst;
-	int i, year, mon, day, hour, min, sec;
+	time_mjd_t TOT_time;
 
-	parse_PSI(packet, tsh, &sl->pid0x14);
-	if (sl->pid0x14.stat != PAYLOAD_STAT_FINISHED || sl->pid0x14.n_payload < 8) {
+	parse_PSI(packet, tsh, TOT_payload);
+	if (TOT_payload->stat != PAYLOAD_STAT_FINISHED || TOT_payload->n_payload < 8) {
 		return;
 	}
 
-	tid = sl->pid0x14.payload[0];
-	slen = get_bits(sl->pid0x14.payload, 12, 12);
+	tid = TOT_payload->payload[0];
+	slen = get_bits(TOT_payload->payload, 12, 12);
 	if (tid == 0x70) {
 		/* TDT */
 		if (slen != 5) {  return; }
@@ -978,35 +995,17 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, ts_service_lis
 		if (slen < 5) { return; }
 	} else { return; }
 
-	mjd = get_bits(sl->pid0x14.payload, 24, 16);
-	bcd_jst= get_bits(sl->pid0x14.payload, 40, 24);
+	mjd = get_bits(TOT_payload->payload, 24, 16);
+	bcd_jst= get_bits(TOT_payload->payload, 40, 24);
 
-	mjd_to_ymd(mjd, &year, &mon, &day);
-	hour = (bcd_jst >> 20 & 0x0f) * 10 + ((bcd_jst >> 16) & 0x0f);
-	min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
-	sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
+	mjd_to_ymd(mjd, &TOT_time.year, &TOT_time.mon, &TOT_time.day);
+	TOT_time.hour = (bcd_jst >> 20 & 0x0f) * 10 + ((bcd_jst >> 16) & 0x0f);
+	TOT_time.min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
+	TOT_time.sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
 
 	//output_message( MSG_DISP, TSD_TEXT("TOT %04d/%02d/%02d %02d:%02d:%02d"), year, mon, day, hour, min, sec );
 
-	for (i = 0; i < sl->n_services; i++) {
-		sl->proginfos[i].TOT_time.mjd = mjd;
-		sl->proginfos[i].TOT_time.year = year;
-		sl->proginfos[i].TOT_time.mon = mon;
-		sl->proginfos[i].TOT_time.day = day;
-		sl->proginfos[i].TOT_time.hour = hour;
-		sl->proginfos[i].TOT_time.min = min;
-		sl->proginfos[i].TOT_time.sec = sec;
-		sl->proginfos[i].TOT_time.usec = 0;
-
-		if (sl->proginfos[i].status & PGINFO_VALID_PCR) {
-			sl->proginfos[i].TOT_PCR = sl->proginfos[i].PCR_base;
-			sl->proginfos[i].status |= PGINFO_VALID_TOT_PCR;
-		} else {
-			sl->proginfos[i].status &= ~PGINFO_VALID_TOT_PCR;
-		}
-		sl->proginfos[i].PCR_wraparounded = 0;
-		sl->proginfos[i].status |= PGINFO_GET_TOT;
-	}
+	handler(param, &TOT_time);
 }
 
 void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header_t *tsh, void *param, eit_callback_handler_t handler)
@@ -1254,4 +1253,10 @@ void parse_PAT(PSI_parse_t *PAT_payload, const uint8_t *packet, const ts_header_
 			handler(param, n, i, &pat_item);
 		}
 	}
+}
+
+void store_PAT(proginfo_t *proginfo, const PAT_item_t *PAT_item)
+{
+	proginfo->service_id = PAT_item->program_number;
+	proginfo->status |= PGINFO_GET_PAT;
 }

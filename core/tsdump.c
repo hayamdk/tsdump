@@ -322,6 +322,18 @@ static proginfo_t *find_curr_service(void *param, const unsigned int service_id)
 	return NULL;
 }
 
+static proginfo_t *find_curr_service_pcr_pid(void *param, const unsigned int pcr_pid)
+{
+	int i;
+	ts_service_list_t *sl = (ts_service_list_t*)param;
+	for (i = 0; i < sl->n_services; i++) {
+		if (pcr_pid == sl->proginfos[i].PCR_pid) {
+			return &sl->proginfos[i];
+		}
+	}
+	return NULL;
+}
+
 static proginfo_t *find_curr_service_eit(void *param, const EIT_header_t *eit_h)
 {
 	if (eit_h->section_number != 0) {
@@ -331,7 +343,7 @@ static proginfo_t *find_curr_service_eit(void *param, const EIT_header_t *eit_h)
 	return find_curr_service(param, eit_h->service_id);
 }
 
-static void store_PAT(void *param, const int n, const int i, PAT_item_t *pat_item)
+static void pat_handler(void *param, const int n, const int i, const PAT_item_t *PAT_item)
 {
 	ts_service_list_t *sl = (ts_service_list_t*)param;
 	UNREF_ARG(n);
@@ -341,12 +353,21 @@ static void store_PAT(void *param, const int n, const int i, PAT_item_t *pat_ite
 		return;
 	}
 
-	if (pat_item->program_number != 0) {
-		sl->proginfos[sl->n_services].service_id = pat_item->program_number;
+	if (PAT_item->program_number != 0) {
 		sl->PMT_payloads[sl->n_services].stat = PAYLOAD_STAT_INIT;
-		sl->PMT_payloads[sl->n_services].pid = pat_item->pid;
-		sl->proginfos[sl->n_services].status |= PGINFO_GET_PAT;
+		sl->PMT_payloads[sl->n_services].pid = PAT_item->pid;
+		store_PAT(&sl->proginfos[sl->n_services], PAT_item);
 		(sl->n_services)++;
+	}
+}
+
+static void tot_handler(void *param, const time_mjd_t *TOT_time)
+{
+	int i;
+	ts_service_list_t *sl = (ts_service_list_t*)param;
+
+	for (i = 0; i < sl->n_services; i++) {
+		store_TOT(&sl->proginfos[sl->n_services], TOT_time);
 	}
 }
 
@@ -414,7 +435,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			if (service_list.n_services == 0) {
 				/* PAT‚Ìæ“¾‚Í‰‰ñ‚Ì‚İ */
-				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, store_PAT);
+				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, pat_handler);
 			} else {
 				for (j = 0; j < service_list.n_services; j++) {
 					parse_PMT(packet, &tsh, &service_list.PMT_payloads[j], &service_list.proginfos[j]);
@@ -423,8 +444,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 					printservice = print_services(&service_list);
 				}
 			}
-			parse_PCR(packet, &tsh, &service_list);
-			parse_TOT_TDT(packet, &tsh, &service_list);
+			parse_PCR(packet, &tsh, &service_list, find_curr_service_pcr_pid);
+			parse_TOT_TDT(packet, &tsh, &service_list.pid0x14, &service_list, tot_handler);
 			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list, find_curr_service);
 			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
 			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
