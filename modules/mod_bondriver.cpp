@@ -68,12 +68,8 @@ static int hook_postconfig()
 static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 {
 	DWORD n_recv;
-
 	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
-	/* 空取得が予測される場合少し待ってみる */
-	if (pstat->n_rem == 0) {
-		pstat->pBon2->WaitTsStream(100);
-	}
+
 	/* tsをチューナーから取得 */
 	if (!pstat->pBon2->GetTsStream(buf, &n_recv, &pstat->n_rem)) {
 		*size = 0;
@@ -81,6 +77,23 @@ static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 		return;
 	}
 	*size = n_recv;
+}
+
+static int hook_stream_generator_wait(void *param, int timeout_ms)
+{
+	DWORD ret;
+	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
+
+	if (pstat->n_rem > 0) {
+		return 1;
+	}
+	if (timeout_ms > 0) {
+		ret = pstat->pBon2->WaitTsStream(timeout_ms);
+		if (ret == WAIT_OBJECT_0) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
@@ -170,6 +183,7 @@ static void hook_stream_generator_close(void *param)
 static hooks_stream_generator_t hooks_stream_generator = {
 	hook_stream_generator_open,
 	hook_stream_generator,
+	hook_stream_generator_wait,
 	hook_stream_generator_siglevel,
 	hook_stream_generator_close
 };

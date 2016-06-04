@@ -51,12 +51,14 @@ typedef void(*hook_stream_t)(const unsigned char*, const size_t, const int);
 typedef void(*hook_close_stream_t)();
 typedef void(*hook_stream_generator_t)(void *, unsigned char **, int *);
 typedef int (*hook_stream_generator_open_t)(void**, ch_info_t*);
+typedef int(*hook_stream_generator_wait_t)(void *, int);
 typedef double(*hook_stream_generator_siglevel_t)(void *);
 typedef void(*hook_stream_generator_close_t)(void *);
 
 typedef struct {
 	hook_stream_generator_open_t open_handler;
 	hook_stream_generator_t handler;
+	hook_stream_generator_wait_t wait_handler;
 	hook_stream_generator_siglevel_t siglevel_handler;
 	hook_stream_generator_close_t close_handler;
 } hooks_stream_generator_t;

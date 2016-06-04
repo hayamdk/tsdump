@@ -347,6 +347,16 @@ void do_stream_generator(void *param, unsigned char **buf, int *size)
 	}
 }
 
+int do_stream_generator_wait(void *param, int timeout_ms)
+{
+	if (hooks_stream_generator) {
+		if (hooks_stream_generator->wait_handler) {
+			return hooks_stream_generator->wait_handler(param, timeout_ms);
+		}
+	}
+	return -1;
+}
+
 double do_stream_generator_siglevel(void *param)
 {
 	if (hooks_stream_generator) {

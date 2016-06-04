@@ -7,6 +7,7 @@
 	#include <windows.h>
 #else
 	#include <errno.h>
+	#include <unistd.h>
 #endif
 
 #include <stdio.h>
@@ -376,7 +377,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 {
 	uint8_t *recvbuf, *decbuf;
 
-	int n_recv, n_dec;
+	int n_recv=0, n_dec;
 
 	int64_t total = 0;
 	int64_t subtotal = 0;
@@ -415,6 +416,17 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	while ( !termflag ) {
 		nowtime = gettime();
 
+		if (n_recv == 0) {
+			/* 前回の取得サイズが0だった場合はストリームの到着を待つ */
+			if (do_stream_generator_wait(generator_stat, 100) < 0) {
+				/* 待ち機能に非対応なストリームジェネレータの場合10ms待つ */
+#ifdef TSD_PLATFORM_MSVC
+				Sleep(10);
+#else
+				usleep(10*1000);
+#endif
+			}
+		}
 		do_stream_generator(generator_stat, &recvbuf, &n_recv);
 		do_encrypted_stream(recvbuf, n_recv);
 
