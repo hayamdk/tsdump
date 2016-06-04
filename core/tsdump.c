@@ -292,6 +292,7 @@ void init_service_list(ts_service_list_t *service_list)
 {
 	int i;
 
+	service_list->n_services = 0;
 	service_list->pid0x00.pid = 0;
 	service_list->pid0x00.stat = PAYLOAD_STAT_INIT;
 	service_list->pid0x11.pid = 0x11;
