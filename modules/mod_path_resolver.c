@@ -44,7 +44,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 	time_mjd_t time_mjd;
 
 	TSDCHAR pname_n[256], chname_n[256];
-	TSDCHAR filepath[MAX_PATH_LEN + 1];
+	TSDCHAR filename[MAX_PATH_LEN + 1];
 
 	pname = TSD_TEXT("番組情報なし");
 
@@ -76,36 +76,36 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 
 	/* tnは番組情報の開始時刻 */
 	if (!isok && ch_info->n_services > 1) {
-		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
-	path_join(filepath, param_base_dir, fname);
-	if (!path_isexist(filepath)) {
+	path_join(fname, param_base_dir, filename);
+	if (!path_isexist(fname)) {
 		goto END;
 	}
 
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
-		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
-	path_join(filepath, param_base_dir, fname);
-	if (!path_isexist(filepath)) {
+	path_join(fname, param_base_dir, filename);
+	if (!path_isexist(fname)) {
 		goto END;
 	}
 
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
-			tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
+			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
 		} else {
-			tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s_%d%s"), tn, chname_n, pname_n, i, ext);
+			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s_%d%s"), tn, chname_n, pname_n, i, ext);
 		}
-		path_join(filepath, param_base_dir, fname);
-		if (!path_isexist(filepath)) {
+		path_join(fname, param_base_dir, filename);
+		if (!path_isexist(fname)) {
 			goto END;
 		}
 	}
