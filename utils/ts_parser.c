@@ -1002,6 +1002,7 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *T
 	TOT_time.hour = (bcd_jst >> 20 & 0x0f) * 10 + ((bcd_jst >> 16) & 0x0f);
 	TOT_time.min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
 	TOT_time.sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
+	TOT_time.usec = 0;
 
 	//output_message( MSG_DISP, TSD_TEXT("TOT %04d/%02d/%02d %02d:%02d:%02d"), year, mon, day, hour, min, sec );
 

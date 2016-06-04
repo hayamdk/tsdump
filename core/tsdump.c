@@ -369,7 +369,7 @@ static void tot_handler(void *param, const time_mjd_t *TOT_time)
 	ts_service_list_t *sl = (ts_service_list_t*)param;
 
 	for (i = 0; i < sl->n_services; i++) {
-		store_TOT(&sl->proginfos[sl->n_services], TOT_time);
+		store_TOT(&sl->proginfos[i], TOT_time);
 	}
 }
 

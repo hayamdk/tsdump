@@ -39,7 +39,7 @@ static hooks_stream_generator_t hooks_stream_generator = {
 
 static void register_hooks()
 {
-	register_hooks_stream_generator(&hooks_stream_generator);
+	//register_hooks_stream_generator(&hooks_stream_generator);
 	register_hook_postconfig(hook_postconfig);
 }
 
