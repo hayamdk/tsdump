@@ -211,14 +211,10 @@ const DWORD AribToStringInternal(TSDCHAR *lpszDst, const int dst_maxlen,
 				
 				if(abCharSizeTable[CurCodeSet]){
 					// 2バイトコード
-					//if((dwSrcLen - dwSrcPos) < 2UL)break;
-					
-					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
 					charlen = ProcessCharCode(charbuf, ((WORD)pSrcData[dwSrcPos + 0] << 8) | (WORD)pSrcData[dwSrcPos + 1], CurCodeSet);
 					dwSrcPos++;
 				} else{
 					// 1バイトコード
-					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)dwSrcData, CurCodeSet);
 					charlen = ProcessCharCode(charbuf, (WORD)dwSrcData, CurCodeSet);
 				}
 			} else if((dwSrcData >= 0xA1U) && (dwSrcData <= 0xFEU)){
@@ -227,14 +223,10 @@ const DWORD AribToStringInternal(TSDCHAR *lpszDst, const int dst_maxlen,
 				
 				if(abCharSizeTable[CurCodeSet]){
 					// 2バイトコード
-					if((dwSrcLen - dwSrcPos) < 2UL)break;
-					
-					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], ((WORD)(pSrcData[dwSrcPos + 0] & 0x7FU) << 8) | (WORD)(pSrcData[dwSrcPos + 1] & 0x7FU), CurCodeSet);
 					charlen = ProcessCharCode(charbuf, ((WORD)(pSrcData[dwSrcPos + 0] & 0x7FU) << 8) | (WORD)(pSrcData[dwSrcPos + 1] & 0x7FU), CurCodeSet);
 					dwSrcPos++;
 				} else{
 					// 1バイトコード
-					//dwDstLen += ProcessCharCode(&lpszDst[dwDstLen], (WORD)(dwSrcData & 0x7FU), CurCodeSet);
 					charlen = ProcessCharCode(charbuf, (WORD)(dwSrcData & 0x7FU), CurCodeSet);
 				}
 			} else{
@@ -373,13 +365,10 @@ const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
 const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
 {
 	char code[9];
-	char xcode[5];
 	iconv_t cd;
 
 	size_t inbyte = 8;
-	size_t outbyte = sizeof(xcode);
-
-	memset(xcode, '\0', sizeof(xcode));
+	size_t outbyte = 8;
   
 	const char *fptr;
 	char *tptr;
@@ -397,14 +386,12 @@ const DWORD PutKanjiChar(TSDCHAR *lpszDst, const WORD wCode)
 	cd = iconv_open("UTF-8","ISO-2022-JP");
 
 	fptr = code;
-	tptr = xcode;
+	tptr = lpszDst;
 	iconv(cd, (char **)&fptr, &inbyte, &tptr, &outbyte);
 
 	iconv_close(cd);
 
-	strncpy(lpszDst, xcode, strlen(xcode));
-
-	return strlen(lpszDst);
+	return 8-outbyte;
 }
 #endif
 

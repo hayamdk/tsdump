@@ -25,7 +25,11 @@
 #define PCR_BASE_MAX				0x200000000
 #define PCR_BASE_HZ					(90*1000)
 
-#define ARIB_CHAR_SIZE_RATIO 1
+#ifdef TSD_PLATFORM_MSVC
+#define ARIB_CHAR_SIZE_RATIO 1 /* WCHARではサロゲートペアを除き1文字を1WCHARで表せるので1倍あれば十分 */
+#else
+#define ARIB_CHAR_SIZE_RATIO 2 /* UTF-8ではひとまず2倍を確保（一般的なひらがな・漢字は1.5倍） */
+#endif
 
 typedef enum {
 	PAYLOAD_STAT_INIT = 0,
