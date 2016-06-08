@@ -136,6 +136,15 @@ int tsd_atoi(const TSDCHAR *str)
 #endif
 }
 
+double tsd_atof(const TSDCHAR *str)
+{
+#ifdef TSD_PLATFORM_MSVC
+	return _wtof(str);
+#else
+	return atof(str);
+#endif
+}
+
 static int get_old_len(tsdstr_replace_set_t *sets, size_t idx)
 {
 	if (sets[idx].old_len == 0) {

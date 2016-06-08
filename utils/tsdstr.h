@@ -18,6 +18,7 @@ const TSDCHAR* tsd_strcpy(TSDCHAR *dst, const TSDCHAR *src);
 size_t tsd_strlen(const TSDCHAR *str);
 const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src);
 int tsd_atoi(const TSDCHAR *str);
+double tsd_atof(const TSDCHAR *str);
 int tsd_snprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, ...);
 int tsd_strcmp(const TSDCHAR *s1, const TSDCHAR *s2);
 int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n);
