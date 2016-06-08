@@ -948,7 +948,7 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, servi
 		if( offset < 1*PCR_BASE_HZ ) {
 			current_proginfo->status |= PGINFO_VALID_PCR;
 			current_proginfo->status |= PGINFO_PCR_UPDATED;
-			//output_message(MSG_DISP, TSD_TEXT("PCR %x: %I64d %I64x %d %d"),
+			//output_message(MSG_DISP, TSD_TEXT("PCR %x: %"PRId64" %I64x %d %d"),
 			//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
 		} else {
 			/* ‘O‚ÌPCR‚©‚ç1•bˆÈã·‚ª‚ ‚ê‚Î—LŒø‚Æ‚ÍŒ©‚È‚³‚È‚¢ */

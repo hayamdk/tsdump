@@ -76,9 +76,9 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 
 	/* tnは番組情報の開始時刻 */
 	if (!isok && ch_info->n_services > 1) {
-		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
 	path_join(fname, param_base_dir, filename);
 	if (!path_isexist(fname)) {
@@ -88,9 +88,9 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 	/* ファイルが既に存在したらtnを現在時刻に */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
-		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
-		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s%s"), tn, chname_n, pname_n, ext);
+		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s_%s%s"), tn, chname_n, pname_n, ext);
 	}
 	path_join(fname, param_base_dir, filename);
 	if (!path_isexist(fname)) {
@@ -100,9 +100,9 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 	/* それでも存在したらsuffixをつける */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
-			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
+			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
 		} else {
-			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%I64d_%s_%s_%d%s"), tn, chname_n, pname_n, i, ext);
+			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s_%s_%d%s"), tn, chname_n, pname_n, i, ext);
 		}
 		path_join(fname, param_base_dir, filename);
 		if (!path_isexist(fname)) {

@@ -437,7 +437,7 @@ const TSDCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_i
 #endif
 
 	TSDCHAR *fname = (TSDCHAR*)malloc(sizeof(TSDCHAR)*MAX_PATH_LEN);
-	tsd_snprintf(fname, MAX_PATH_LEN-1, TSD_TEXT("%I64d_%s_%s_%d.ts"), gettime(), ch_info->tuner_name, ch_info->ch_str, pid);
+	tsd_snprintf(fname, MAX_PATH_LEN-1, TSD_TEXT("%"PRId64"_%s_%s_%d.ts"), gettime(), ch_info->tuner_name, ch_info->ch_str, pid);
 	return fname;
 }
 

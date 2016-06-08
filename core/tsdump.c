@@ -529,7 +529,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			double siglevel = do_stream_generator_siglevel(generator_stat);
 			
 #ifdef TSD_PLATFORM_MSVC
-			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%.1fdb %.1fMbps D:%I64d S:%I64d %.1fGB"),
+			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%.1fdb %.1fMbps D:%"PRId64" S:%I64d %.1fGB"),
 				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel, Mbps,
 				stats.n_dropped, stats.n_scrambled,
 				(double)total / 1024 / 1024 / 1024);
