@@ -54,4 +54,4 @@
 	#define TSD_CHAR(c)					c
 #endif
 
-#define			UNREF_ARG(x)			(x)
+#define			UNREF_ARG(x)			((void)(x))
