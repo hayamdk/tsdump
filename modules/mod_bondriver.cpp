@@ -166,10 +166,11 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	return 1;
 }
 
-static double hook_stream_generator_siglevel(void *param)
+static int hook_stream_generator_snr(void *param, double *siglevel)
 {
 	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
-	return pstat->pBon2->GetSignalLevel();
+	*siglevel = pstat->pBon2->GetSignalLevel();
+	return 1;
 }
 
 static void hook_stream_generator_close(void *param)
@@ -184,7 +185,8 @@ static hooks_stream_generator_t hooks_stream_generator = {
 	hook_stream_generator_open,
 	hook_stream_generator,
 	hook_stream_generator_wait,
-	hook_stream_generator_siglevel,
+	NULL,
+	hook_stream_generator_snr,
 	hook_stream_generator_close
 };
 

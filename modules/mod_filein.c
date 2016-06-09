@@ -319,12 +319,6 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	return 1;
 }
 
-static double hook_stream_generator_siglevel(void *param)
-{
-	UNREF_ARG(param);
-	return 10.0;
-}
-
 static void hook_stream_generator_close(void *param)
 {
 	filein_stat_t *stat = (filein_stat_t*)param;
@@ -340,7 +334,8 @@ static hooks_stream_generator_t hooks_stream_generator = {
 	hook_stream_generator_open,
 	hook_stream_generator,
 	hook_stream_generator_wait,
-	hook_stream_generator_siglevel,
+	NULL,
+	NULL,
 	hook_stream_generator_close
 };
 

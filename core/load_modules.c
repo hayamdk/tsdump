@@ -357,12 +357,24 @@ int do_stream_generator_wait(void *param, int timeout_ms)
 	return -1;
 }
 
-double do_stream_generator_siglevel(void *param)
+int do_stream_generator_snr(void *param, double *snr)
 {
 	if (hooks_stream_generator) {
-		return hooks_stream_generator->siglevel_handler(param);
+		if (hooks_stream_generator->snr_handler) {
+			return hooks_stream_generator->snr_handler(param, snr);
+		}
 	}
-	return 0.0;
+	return 0;
+}
+
+int do_stream_generator_siglevel(void *param, double *siglevel)
+{
+	if (hooks_stream_generator) {
+		if (hooks_stream_generator->siglevel_handler) {
+			return hooks_stream_generator->siglevel_handler(param, siglevel);
+		}
+	}
+	return 0;
 }
 
 void do_stream_generator_close(void *param)
