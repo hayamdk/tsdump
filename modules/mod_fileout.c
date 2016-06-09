@@ -268,7 +268,7 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 		return NULL;
 	}
 #else
-	int fd = open(fname, O_WRONLY | O_NONBLOCK | O_CREAT);
+	int fd = open(fname, O_WRONLY | O_NONBLOCK | O_CREAT, 644);
 	if (fd < 0) {
 		output_message(MSG_SYSERROR, "ファイルをオープンできません(open): %s", fname);
 		return NULL;
