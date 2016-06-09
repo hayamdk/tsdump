@@ -36,9 +36,6 @@
     <ClCompile Include="modules/mod_cmdexec_win.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_fileoutput_win.c" >
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="modules/mod_path_resolver.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -49,6 +46,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="modules/mod_filein.c" >
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="modules/mod_fileout.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="utils/aribstr.c" >

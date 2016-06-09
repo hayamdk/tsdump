@@ -6,6 +6,7 @@
 #include <Windows.h>
 #include <shlwapi.h>
 #else
+#include <string.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -35,12 +36,12 @@ int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
 	return 1;
 }
 
-const TSDCHAR* path_getfile(const TSDCHAR *path)
+TSDCHAR* path_getfile(const TSDCHAR *path)
 {
 	return PathFindFileName(path);
 }
 
-const TSDCHAR* path_getext(const TSDCHAR *path)
+TSDCHAR* path_getext(const TSDCHAR *path)
 {
 	return PathFindExtension(path);
 }
@@ -66,11 +67,16 @@ int path_isexist(const TSDCHAR *path)
 	return TSD_PATH_OTHER;
 }
 
+int path_addext(TSDCHAR *path, const TSDCHAR *ext)
+{
+	return PathAddExtension(path, ext);
+}
+
 #else
 
 #define PATH_DELIMITER TSD_CHAR('/')
 
-static void path_split(const TSDCHAR **dir, int *dir_len, const TSDCHAR **file, int *file_len, const TSDCHAR **ext, int *ext_len, const TSDCHAR *path)
+static void path_split(const TSDCHAR **dir, int *dir_len, TSDCHAR **file, int *file_len, TSDCHAR **ext, int *ext_len, const TSDCHAR *path)
 {
 	const TSDCHAR *d, *f, *e, *p;
 	int d_len, f_len, e_len;
@@ -100,11 +106,11 @@ static void path_split(const TSDCHAR **dir, int *dir_len, const TSDCHAR **file, 
 		d_len = p - path;
 	}
 
-	if (dir) { *dir = d; }
+	if (dir) { *dir = (char*)d; }
 	if (dir_len) { *dir_len = d_len; }
-	if (file) { *file = f; }
+	if (file) { *file = (char*)f; }
 	if (file_len) { *file_len = f_len; }
-	if (ext) { *ext = e; }
+	if (ext) { *ext = (char*)e; }
 	if (ext_len) { *ext_len = e_len; }
 	return;
 }
@@ -169,18 +175,26 @@ int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
 	return ret;
 }
 
-const TSDCHAR* path_getfile(const TSDCHAR *path)
+TSDCHAR* path_getfile(const TSDCHAR *path)
 {
-	const TSDCHAR *file;
+	TSDCHAR *file;
 	path_split(NULL, NULL, &file, NULL, NULL, NULL, path);
 	return file;
 }
 
-const TSDCHAR* path_getext(const TSDCHAR *path)
+TSDCHAR* path_getext(const TSDCHAR *path)
 {
-	const TSDCHAR *ext;
+	TSDCHAR *ext;
 	path_split(NULL, NULL, NULL, NULL, &ext, NULL, path);
 	return ext;
+}
+
+int path_addext(TSDCHAR *path, const TSDCHAR *ext)
+{
+	int maxlen;
+	TSDCHAR *pext = path_getext(path);
+	maxlen = &path[MAX_PATH_LEN-1] - pext;
+	strncpy(pext, ext, maxlen);
 }
 
 int path_isexist(const TSDCHAR *path)
@@ -220,4 +234,10 @@ int path_isfile(const TSDCHAR *path)
 		return 1;
 	}
 	return 0;
+}
+
+void path_removeext(TSDCHAR *path)
+{
+	TSDCHAR *c = path_getext(path);
+	*c = TSD_NULLCHAR;
 }

@@ -87,11 +87,11 @@
     <ClCompile Include="modules/mod_b25decoder.cpp" />
     <ClCompile Include="modules/mod_bondriver.cpp" />
     <ClCompile Include="modules/mod_cmdexec_win.c" />
-    <ClCompile Include="modules/mod_fileoutput_win.c" />
     <ClCompile Include="modules/mod_path_resolver.c" />
     <ClCompile Include="modules/mod_pipeoutput_win.c" />
     <ClCompile Include="modules/mod_log.c" />
     <ClCompile Include="modules/mod_filein.c" />
+    <ClCompile Include="modules/mod_fileout.c" />
     <ClCompile Include="utils/aribstr.c" />
     <ClCompile Include="utils/tsdstr.c" />
     <ClCompile Include="utils/ts_parser.c" />
