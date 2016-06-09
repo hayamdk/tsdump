@@ -102,7 +102,7 @@ int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)
 	} else if( fp == stdout ) {
 		hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	} else {
-		return _putws(str);
+		return fputws(str, fp);
 	}
 
 	if (hc != INVALID_HANDLE_VALUE && ret >= 0) {
