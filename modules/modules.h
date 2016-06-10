@@ -11,6 +11,8 @@ extern module_def_t mod_bondriver;
 extern module_def_t mod_b25decoder;
 extern module_def_t mod_pipeoutput_win;
 extern module_def_t mod_cmdexec_win;
+#else
+extern module_def_t mod_dvb;
 #endif
 
 module_def_t *static_modules[] = {
@@ -24,5 +26,7 @@ module_def_t *static_modules[] = {
 	&mod_b25decoder,
 	&mod_pipeoutput_win,
 	&mod_cmdexec_win,
+#else
+	&mod_dvb,
 #endif
 };

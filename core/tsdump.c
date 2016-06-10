@@ -534,20 +534,20 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			is_snr = do_stream_generator_snr(generator_stat, &snr);
 
 			if (is_siglevel) {
-				tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%f.1dBm"));
+				tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
 			}
 			if (is_snr) {
-				tsd_snprintf(snr_str, sizeof(snr_str) - 1, TSD_TEXT("%f.1dB"));
+				tsd_snprintf(snr_str, sizeof(snr_str) - 1, TSD_TEXT("%.1fdB"), snr);
 			}
 			if (is_siglevel && is_siglevel) {
 				tsd_strcpy(sig_separator, TSD_TEXT(","));
 			}
 			
-#ifdef TSD_PLATFORM_MSVC
-			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%I64d %.1fGB"),
+			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%"PRId64" %.1fGB"),
 				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, snr_str, Mbps,
 				stats.n_dropped, stats.n_scrambled,
 				(double)total / 1024 / 1024 / 1024);
+#ifdef TSD_PLATFORM_MSVC
 			SetConsoleTitle(title);
 #endif
 			
