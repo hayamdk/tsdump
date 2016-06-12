@@ -520,9 +520,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		//tc_start("proginfo");
 		/* 定期的に番組情報をチェック */
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
-			double siglevel, snr;
-			int is_siglevel, is_snr;
-			TSDCHAR siglevel_str[16] = { TSD_NULLCHAR }, snr_str[16] = { TSD_NULLCHAR };
+			double siglevel, cnr;
+			int is_siglevel, is_cnr;
+			TSDCHAR siglevel_str[16] = { TSD_NULLCHAR }, cnr_str[16] = { TSD_NULLCHAR };
 			TSDCHAR sig_separator[2] = { TSD_NULLCHAR };
 
 			tdiff = (double)(nowtime - lasttime) / 1000;
@@ -531,20 +531,20 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			do_stream_decoder_stats(decoder_stat, &stats);
 
 			is_siglevel = do_stream_generator_siglevel(generator_stat, &siglevel);
-			is_snr = do_stream_generator_snr(generator_stat, &snr);
+			is_cnr = do_stream_generator_cnr(generator_stat, &cnr);
 
 			if (is_siglevel) {
 				tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
 			}
-			if (is_snr) {
-				tsd_snprintf(snr_str, sizeof(snr_str) - 1, TSD_TEXT("%.1fdB"), snr);
+			if (is_cnr) {
+				tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), cnr);
 			}
 			if (is_siglevel && is_siglevel) {
 				tsd_strcpy(sig_separator, TSD_TEXT(","));
 			}
 			
 			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%"PRId64" %.1fGB"),
-				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, snr_str, Mbps,
+				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, cnr_str, Mbps,
 				stats.n_dropped, stats.n_scrambled,
 				(double)total / 1024 / 1024 / 1024);
 #ifdef TSD_PLATFORM_MSVC

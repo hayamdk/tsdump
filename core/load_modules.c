@@ -357,11 +357,11 @@ int do_stream_generator_wait(void *param, int timeout_ms)
 	return -1;
 }
 
-int do_stream_generator_snr(void *param, double *snr)
+int do_stream_generator_cnr(void *param, double *cnr)
 {
 	if (hooks_stream_generator) {
-		if (hooks_stream_generator->snr_handler) {
-			return hooks_stream_generator->snr_handler(param, snr);
+		if (hooks_stream_generator->cnr_handler) {
+			return hooks_stream_generator->cnr_handler(param, cnr);
 		}
 	}
 	return 0;
