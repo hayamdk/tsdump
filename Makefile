@@ -11,7 +11,8 @@ OBJS1 = $(SOURCES_CP932:.c=.o) $(MODULES_CP932:.c=.o)
 OBJS2 = $(SOURCES:.c=.o) $(MODULES:.c=.o)
 OBJS = $(OBJS1) $(OBJS2)
 
-CFLAGS = -O3 -flto -I$(CURDIR)
+#CFLAGS = -O3 -flto -I$(CURDIR)
+CFLAGS = -Ofast -march=native -flto -I$(CURDIR)
 #CFLAGS = -O0 -Wall -g -I$(CURDIR)
 LDFLAGS = -flto -lm #-liconv
 #LDFLAGS = #-liconv

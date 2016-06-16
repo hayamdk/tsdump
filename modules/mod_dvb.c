@@ -20,8 +20,8 @@
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 
-#define BLOCK_SIZE			(188*256)
-#define TYPE_ISDB_T			0
+#define BLOCK_SIZE		(188*256)
+#define TYPE_ISDB_T		0
 #define TYPE_ISDB_S_BS		1
 #define TYPE_ISDB_S_CS		2
 
@@ -29,6 +29,7 @@ typedef enum {
 	DVB_TUNER_OTHER,
 	DVB_TUNER_PT,
 	DVB_TUNER_PT3,
+	DVB_TUNER_FRIIO_W,
 } tuner_model_t;
 
 typedef struct {
@@ -46,7 +47,7 @@ static int enabled = 0;
 static int dvb_dev = -1;
 static int dvb_type = -1;
 static int dvb_ch = -1;
-static int dvb_tsnum = 0;
+static int dvb_tsnum = -1;
 
 static int dvb_freq = 0;
 static int dvb_tsid = 0;
@@ -66,6 +67,9 @@ static int resolve_channel()
 			if(dvb_ch % 2 != 1) {
 				output_message(MSG_ERROR, "不正なBSチャンネルです(奇数のみ有効)");
 				return 0;
+			}
+			if(dvb_tsnum < 0) {
+				dvb_tsnum = 0;
 			}
 			dvb_freq = (dvb_ch - 1) / 2 * 38360 + 1049480;
 			dvb_tsid = dvb_ch * 0x10 + 0x4000 + dvb_tsnum;
@@ -94,13 +98,14 @@ static int hook_postconfig()
 		} else if(dvb_ch < 0) {
 			output_message(MSG_ERROR, "DVBのチャンネルが指定されていません");
 			return 0;
+		} else if(dvb_type != TYPE_ISDB_S_BS && dvb_tsnum >= 0) {
+			output_message(MSG_ERROR, "TS番号を指定できるのはBSのみです");
+			return 0;
 		} else {
 			return resolve_channel();
 		}
-	} else {
-		return 1;
 	}
-	return 0;
+	return 1;
 }
 
 static void dvb_read(dvb_stat_t *pstat)
@@ -181,6 +186,8 @@ tuner_model_t check_tuner_model(const char *tuner_name)
 		return DVB_TUNER_PT;
 	} else if (strncmp(tuner_name, "Toshiba TC90522", strlen("Toshiba TC90522")) == 0) {
 		return DVB_TUNER_PT3;
+	} else if (strcmp(tuner_name, "Comtech JDVBT90502 ISDB-T") == 0) {
+		return DVB_TUNER_FRIIO_W;
 	}
 	return DVB_TUNER_OTHER;
 }
@@ -236,7 +243,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	int i;
 	int fd, fd_fe=-1, fd_demux;
 	struct dvb_frontend_info info;
-	char file[MAX_PATH_LEN];
+	char file[MAX_PATH_LEN], tsid_str[32];
 	struct dtv_property prop[3];
 	struct dtv_properties props;
 	fe_status_t status;
@@ -262,24 +269,33 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		dvb_dev = i;
 	}
 
+	props.props = prop;
 	prop[0].cmd = DTV_FREQUENCY;
 	prop[0].u.data = dvb_freq;
-	prop[1].cmd = DTV_STREAM_ID;
-	prop[1].u.data = dvb_tsid;
-	prop[2].cmd = DTV_TUNE;
-	prop[2].u.data = 0;
 
-	props.props = prop;
-	props.num = 3;
+	/* 地上波でDTV_STREAM_IDを指定するとエラーになるチューナーがある（friio白） */
+	if(dvb_type == TYPE_ISDB_S_BS) {
+		props.num = 3;
+		prop[1].cmd = DTV_STREAM_ID;
+		prop[1].u.data = dvb_tsid;
+		prop[2].cmd = DTV_TUNE;
+		prop[2].u.data = 0;
+		sprintf(tsid_str, ", tsid=0x%x", dvb_tsid);
+	} else {
+		props.num = 2;
+		prop[1].cmd = DTV_TUNE;
+		prop[1].u.data = 0;
+		strcpy(tsid_str, "");
+	}
 
 	if ((ioctl(fd_fe, FE_SET_PROPERTY, &props)) < 0) {
-		output_message(MSG_SYSERROR, "ioctl(FE_SET_PROPERTY, adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
+		output_message(MSG_SYSERROR, "ioctl(FE_SET_PROPERTY, adapter%d, freq=%d%s)", dvb_dev, dvb_freq, tsid_str);
 		goto END1;
 	}
 
 	for (i = 0; i < 32; i++) {
 		if (ioctl(fd_fe, FE_READ_STATUS, &status) < 0) {
-			output_message(MSG_SYSERROR, "ioctl(FE_READ_STATUS, adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
+			output_message(MSG_SYSERROR, "ioctl(FE_READ_STATUS, adapter%d, freq=%d%s)", dvb_dev, dvb_freq, tsid_str);
 			goto END2;
 		}
 		if (status & FE_HAS_LOCK) {
@@ -289,7 +305,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	}
 
 	if( i == 32 ) {
-		output_message(MSG_ERROR, "Failed to tune (adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
+		output_message(MSG_ERROR, "Failed to tune (adapter%d, freq=%d%s)", dvb_dev, dvb_freq, tsid_str);
 		goto END2;
 	}
 
@@ -362,7 +378,6 @@ static double decode_toshiba_cnr_s(uint16_t s)
 static int get_cnr_pt(int fd, double *cnr)
 {
 	uint16_t s = 0;
-
 	if( ioctl(fd, FE_READ_SNR, &s) != 0 ) {
 		output_message(MSG_SYSERROR, "ioctl(FE_READ_SNR, adapter%d)", dvb_dev);
 		return 0;
@@ -370,6 +385,18 @@ static int get_cnr_pt(int fd, double *cnr)
 	/* 最新(2016年時点)のPT1/2ドライバ(drivers/media/pci/pt1/va1j5jf8007[ts].c)によれば
 	   すでにdBに換算した値が返されている。ただし8ビットの固定小数点になっていると思われるので256で割る。 */
 	*cnr = (double)s / 256.0;
+	return 1;
+}
+
+static int get_cnr_friio_w(int fd, double *cnr)
+{
+	uint16_t s = 0;
+	/* friioはSNRをFE_READ_SIGNAL_STRENGTHで返している */
+	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) != 0 ) {
+		output_message(MSG_SYSERROR, "ioctl(FE_READ_SIGNAL_STRENGTH, adapter%d)", dvb_dev);
+		return 0;
+	}
+	*cnr = decode_toshiba_cnr_t(s);
 	return 1;
 }
 
@@ -468,6 +495,8 @@ static int hook_stream_generator_siglevel(void *param, double *siglevel)
 			return 0; /* 非対応 */
 		case DVB_TUNER_PT3:
 			return get_siglevel(pstat->fd_fe, siglevel, 0);
+		case DVB_TUNER_FRIIO_W:
+			return 0; /* 非対応 */
 		default: /* do nothing */ break;
 	}
 	return get_siglevel_default(pstat->fd_fe, siglevel);
@@ -481,8 +510,10 @@ static int hook_stream_generator_cnr(void *param, double *cnr)
 		case DVB_TUNER_PT:
 			return get_cnr_pt(pstat->fd_fe, cnr);
 		case DVB_TUNER_PT3:
-			return get_cnr(pstat->fd_fe, cnr, 0);	
-		default: /* do nothing */ break;	
+			return get_cnr(pstat->fd_fe, cnr, 0);
+		case DVB_TUNER_FRIIO_W:
+			return get_cnr_friio_w(pstat->fd_fe, cnr);
+		default: /* do nothing */ break;
 	}
 	return get_cnr_default(pstat->fd_fe, cnr);
 }
