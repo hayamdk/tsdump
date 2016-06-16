@@ -103,7 +103,7 @@ static int hook_postconfig()
 	return 0;
 }
 
-void dvb_read(dvb_stat_t *pstat)
+static void dvb_read(dvb_stat_t *pstat)
 {
 	int ret;
 	if(pstat->bytes >= BLOCK_SIZE) {
@@ -274,13 +274,13 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	if ((ioctl(fd_fe, FE_SET_PROPERTY, &props)) < 0) {
 		output_message(MSG_SYSERROR, "ioctl(FE_SET_PROPERTY, adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
-		return 0;
+		goto END1;
 	}
 
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < 32; i++) {
 		if (ioctl(fd_fe, FE_READ_STATUS, &status) < 0) {
 			output_message(MSG_SYSERROR, "ioctl(FE_READ_STATUS, adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
-			return 0;
+			goto END2;
 		}
 		if (status & FE_HAS_LOCK) {
 			break;
@@ -288,9 +288,9 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		usleep(250 * 1000);
 	}
 
-	if( i == 5 ) {
+	if( i == 32 ) {
 		output_message(MSG_ERROR, "Failed to tune (adapter%d, freq=%d, tsid=0x%x)", dvb_dev, dvb_freq, dvb_tsid);
-		return 0;
+		goto END2;
 	}
 
 	sprintf(file, "/dev/dvb/adapter%d/demux0", dvb_dev);
@@ -307,13 +307,13 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	if (ioctl(fd_demux, DMX_SET_PES_FILTER, &filter) < 0) {
 		output_message(MSG_SYSERROR, "ioctl(DMX_SET_PES_FILTER, adapter%d)", dvb_dev);
-		goto END2;
+		goto END3;
 	}
 
 	sprintf(file, "/dev/dvb/adapter%d/dvr0", dvb_dev);
 	if ((fd = open(file, O_RDONLY|O_NONBLOCK)) < 0) {
 		output_message(MSG_SYSERROR, "open: %s", file);
-		goto END2;
+		goto END3;
 	}
 
 	pstat = (dvb_stat_t*)malloc(sizeof(dvb_stat_t));
@@ -335,7 +335,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	*param = pstat;
 	return 1;
 
-//END3:
+END3:
 	close(fd_demux);
 END2:
 	close(fd_fe);
@@ -343,93 +343,117 @@ END1:
 	return 0;
 }
 
-int get_snr_pt(int fd, double *snr)
+static double decode_toshiba_cnr_t(uint16_t s)
+{
+	double p;
+	p = log10(5505024/(double)s) * 10;
+	return (0.000024 * p * p * p * p) - (0.0016 * p * p * p) +
+		(0.0398 * p * p) + (0.5491 * p) + 3.0965;
+}
+
+static double decode_toshiba_cnr_s(uint16_t s)
+{
+	double p;
+	p = sqrt((double)s) / 64;
+	return -1.6346*p*p*p*p*p + 14.341*p*p*p*p - 50.259*p*p*p +
+		88.977*p*p - 89.565*p + 58.857;
+}
+
+static int get_cnr_pt(int fd, double *cnr)
 {
 	uint16_t s = 0;
-	double p;
 
 	if( ioctl(fd, FE_READ_SNR, &s) != 0 ) {
 		output_message(MSG_SYSERROR, "ioctl(FE_READ_SNR, adapter%d)", dvb_dev);
 		return 0;
 	}
-
-	p = log10(5505024/(double)s) * 10;
-    *snr = (0.000024 * p * p * p * p) - (0.0016 * p * p * p) +
-                (0.0398 * p * p) + (0.5491 * p)+3.0965;
+	/* 最新(2016年時点)のPT1/2ドライバ(drivers/media/pci/pt1/va1j5jf8007[ts].c)によれば
+	   すでにdBに換算した値が返されている。ただし8ビットの固定小数点になっていると思われるので256で割る。 */
+	*cnr = (double)s / 256.0;
 	return 1;
 }
 
-int get_snr_pt3(int fd, double *snr)
+static int get_cnr_siglevel(int fd, double *cnr, uint32_t cmd, const char *cmdname, int ignore_err)
 {
+	int64_t sval;
+	int scale;
 	struct dtv_property prop[1];
 	struct dtv_properties props;
 
-	prop[0].cmd = DTV_STAT_CNR;
+	prop[0].cmd = cmd;
 	props.num = 1;
 	props.props = prop;
+
 	if( ioctl(fd, FE_GET_PROPERTY, &props) == 0 ) {
-		*snr = (double)(props.props[0].u.st.stat[0].svalue) / 1000;
+		sval = props.props[0].u.st.stat[0].svalue;
+		scale = props.props[0].u.st.stat[0].scale;
+		if(scale == FE_SCALE_DECIBEL) {
+			*cnr = (double)sval / 1000;
+		} else if(scale == FE_SCALE_RELATIVE) {
+			*cnr = (double)sval / 65535 * 100;
+		} else if(scale == FE_SCALE_COUNTER) {
+			*cnr = (double)sval;
+		} else {
+			return 0;
+		}
 		return 1;
 	}
-	output_message(MSG_SYSERROR, "ioctl(FE_GET_PROPERTY->DTV_STAT_CNR, adapter%d)", dvb_dev);
-	return 0;
-}
-
-int get_siglevel_pt3(int fd, double *siglevel)
-{
-	struct dtv_property prop[1];
-	struct dtv_properties props;
-
-	prop[0].cmd = DTV_STAT_SIGNAL_STRENGTH;
-	props.num = 1;
-	props.props = prop;
-	if( ioctl(fd, FE_GET_PROPERTY, &props) == 0 ) {
-		*siglevel = (double)(props.props[0].u.st.stat[0].svalue) / 1000;
-		return 1;
-	}
-	output_message(MSG_SYSERROR, "ioctl(FE_GET_PROPERTY->DTV_STAT_SIGNAL_STRENGTH, adapter%d)", dvb_dev);
-	return 0;
-}
-
-int get_snr_default(int fd, double *snr)
-{
-	uint16_t s = 0;
-	struct dtv_property prop[1];
-	struct dtv_properties props;
-	
-	if( ioctl(fd, DTV_STAT_SIGNAL_STRENGTH, &s) == 0 ) {
-		/* 単位やデコード方法が未知なのでひとまずそのまま返す */
-		*snr = (double)s;
-		return 1;
-	}
-
-	prop[0].cmd = DTV_STAT_CNR;
-	props.num = 1;
-	props.props = prop;
-	if( ioctl(fd, FE_GET_PROPERTY, &props) == 0 ) {
-		*snr = (double)(props.props[0].u.st.stat[0].svalue) / 1000;
-		return 1;
+	if(!ignore_err) {
+		output_message(MSG_SYSERROR, "ioctl(FE_GET_PROPERTY->%s, adapter%d)",
+			cmdname, dvb_dev);
 	}
 	return 0;
 }
 
-int get_siglevel_default(int fd, double *siglevel)
+static int get_cnr(int fd, double *cnr, int ignore_err)
 {
-	uint16_t s = 0;
-	struct dtv_property prop[1];
-	struct dtv_properties props;
-	
+	return get_cnr_siglevel(fd, cnr, DTV_STAT_CNR, "DTV_STAT_CNR", ignore_err);
+}
+
+static int get_siglevel(int fd, double *cnr, int ignore_err)
+{
+	return get_cnr_siglevel(fd, cnr, DTV_STAT_SIGNAL_STRENGTH, "DTV_STAT_SIGNAL_STRENGTH", ignore_err);
+}
+
+int get_cnr_oldapi(int fd, double *cnr)
+{
+	int16_t s = 0;
 	if( ioctl(fd, FE_READ_SNR, &s) == 0 ) {
-		/* 単位やデコード方法が未知なのでひとまずそのまま返す */
-		*siglevel = (double)s;
+		/* 単位やデコード方法が未知なのでひとまず相対値として返す */
+		*cnr = (double)s / (1<<16) * 100;
 		return 1;
 	}
+	return 0;
+}
 
-	prop[0].cmd = DTV_STAT_SIGNAL_STRENGTH;
-	props.num = 1;
-	props.props = prop;
-	if( ioctl(fd, FE_GET_PROPERTY, &props) == 0 ) {
-		*siglevel = (double)(props.props[0].u.st.stat[0].svalue) / 1000;
+int get_siglevel_oldapi(int fd, double *siglevel)
+{
+	uint16_t s = 0;
+	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) == 0 ) {
+		/* 単位やデコード方法が未知なのでひとまず相対値として返す */
+		*siglevel = (double)s / (1<<16) * 100;
+		return 1;
+	}
+	return 0;
+}
+
+int get_cnr_default(int fd, double *cnr)
+{
+	if(get_cnr(fd, cnr, 0)) {
+		return 1;
+	}
+	if(get_cnr_oldapi(fd, cnr)) {
+		return 1;
+	}
+	return 0;
+}
+
+int get_siglevel_default(int fd, double *cnr)
+{
+	if(get_siglevel(fd, cnr, 1)) {
+		return 1;
+	}
+	if(get_siglevel_oldapi(fd, cnr)) {
 		return 1;
 	}
 	return 0;
@@ -443,22 +467,24 @@ static int hook_stream_generator_siglevel(void *param, double *siglevel)
 		case DVB_TUNER_PT:
 			return 0; /* 非対応 */
 		case DVB_TUNER_PT3:
-			return get_siglevel_pt3(pstat->fd_fe, siglevel);
+			return get_siglevel(pstat->fd_fe, siglevel, 0);
+		default: /* do nothing */ break;
 	}
 	return get_siglevel_default(pstat->fd_fe, siglevel);
 }
 
-static int hook_stream_generator_snr(void *param, double *snr)
+static int hook_stream_generator_cnr(void *param, double *cnr)
 {
 	dvb_stat_t *pstat = (dvb_stat_t*)param;
 
 	switch(pstat->model) {
 		case DVB_TUNER_PT:
-			return get_snr_pt(pstat->fd_fe, snr);
+			return get_cnr_pt(pstat->fd_fe, cnr);
 		case DVB_TUNER_PT3:
-			return get_snr_pt3(pstat->fd_fe, snr);		
+			return get_cnr(pstat->fd_fe, cnr, 0);	
+		default: /* do nothing */ break;	
 	}
-	return get_snr_default(pstat->fd_fe, snr);
+	return get_cnr_default(pstat->fd_fe, cnr);
 }
 
 static void hook_stream_generator_close(void *param)
@@ -475,7 +501,7 @@ static hooks_stream_generator_t hooks_stream_generator = {
 	hook_stream_generator,
 	hook_stream_generator_wait,
 	hook_stream_generator_siglevel,
-	hook_stream_generator_snr,
+	hook_stream_generator_cnr,
 	hook_stream_generator_close
 };
 
