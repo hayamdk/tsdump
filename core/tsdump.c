@@ -39,7 +39,8 @@ int OVERLAP_SEC = OVERLAP_SEC_DEFAULT;
 int CHECK_INTERVAL = CHECK_INTERVAL_DEFAULT;
 int MAX_PGOVERLAP = MAX_PGOVERLAP_DEFAULT;
 
-int termflag = 0;
+static volatile int termflag = 0;
+static volatile int termedflag = 0;
 
 int param_sp_num = -1;
 int param_ch_num = -1;
@@ -50,12 +51,34 @@ int param_nowait = 0;
 
 int need_clear_line = 0;
 
+#ifdef TSD_PLATFORM_MSVC
+
+BOOL WINAPI console_ctrl_handler(DWORD ctrl)
+{
+	int64_t t = gettime();
+	UNREF_ARG(ctrl);
+	termflag = 1;
+	output_message(MSG_NOTIFY, TSD_TEXT("\n終了シグナルをキャッチ"));
+	while (!termedflag) {
+		if (gettime() - t > 1000*10) {
+			/* 10秒以上経過したら諦めて出る */
+			break;
+		}
+		Sleep(10);
+	}
+	return FALSE;
+}
+
+#else
+
 void signal_handler(int sig)
 {
 	UNREF_ARG(sig);
 	termflag = 1;
 	output_message(MSG_NOTIFY, TSD_TEXT("\n終了シグナルをキャッチ"));
 }
+
+#endif
 
 void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...)
 {
@@ -656,8 +679,12 @@ int main(int argc, const char* argv[])
 		goto END;
 	}
 
+#ifdef TSD_PLATFORM_MSVC
+	SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+#else
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
+#endif
 
 	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
 		output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータを開けませんでした"));
@@ -696,6 +723,8 @@ END:
 		output_message(MSG_NOTIFY, TSD_TEXT("\n何かキーを押すと終了します"));
 		getchar();
 	}
+
+	termedflag = 1;
 	return ret;
 }
 
