@@ -357,21 +357,21 @@ int do_stream_generator_wait(void *param, int timeout_ms)
 	return -1;
 }
 
-int do_stream_generator_cnr(void *param, double *cnr)
+int do_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
 {
 	if (hooks_stream_generator) {
 		if (hooks_stream_generator->cnr_handler) {
-			return hooks_stream_generator->cnr_handler(param, cnr);
+			return hooks_stream_generator->cnr_handler(param, cnr, scale);
 		}
 	}
 	return 0;
 }
 
-int do_stream_generator_siglevel(void *param, double *siglevel)
+int do_stream_generator_siglevel(void *param, double *siglevel, signal_value_scale_t *scale)
 {
 	if (hooks_stream_generator) {
 		if (hooks_stream_generator->siglevel_handler) {
-			return hooks_stream_generator->siglevel_handler(param, siglevel);
+			return hooks_stream_generator->siglevel_handler(param, siglevel, scale);
 		}
 	}
 	return 0;

@@ -545,6 +545,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
 			double siglevel, cnr;
 			int is_siglevel, is_cnr;
+			signal_value_scale_t scale_siglevel, scale_cnr;
 			TSDCHAR siglevel_str[16] = { TSD_NULLCHAR }, cnr_str[16] = { TSD_NULLCHAR };
 			TSDCHAR sig_separator[2] = { TSD_NULLCHAR };
 
@@ -553,14 +554,26 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			do_stream_decoder_stats(decoder_stat, &stats);
 
-			is_siglevel = do_stream_generator_siglevel(generator_stat, &siglevel);
-			is_cnr = do_stream_generator_cnr(generator_stat, &cnr);
+			is_siglevel = do_stream_generator_siglevel(generator_stat, &siglevel, &scale_siglevel);
+			is_cnr = do_stream_generator_cnr(generator_stat, &cnr, &scale_cnr);
 
 			if (is_siglevel) {
-				tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
+				if (scale_siglevel == TSDUMP_VALUE_DECIBEL) {
+					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
+				} else if (scale_siglevel == TSDUMP_VALUE_RELATIVE) {
+					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1f%"), siglevel*100);
+				} else {
+					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%d"), (int)siglevel);
+				}
 			}
 			if (is_cnr) {
-				tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), cnr);
+				if (scale_cnr == TSDUMP_VALUE_DECIBEL) {
+					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), cnr);
+				} else if (scale_cnr == TSDUMP_VALUE_RELATIVE) {
+					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1f%"), cnr*100);
+				} else {
+					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%d"), (int)cnr);
+				}
 			}
 			if (is_siglevel && is_siglevel) {
 				tsd_strcpy(sig_separator, TSD_TEXT(","));

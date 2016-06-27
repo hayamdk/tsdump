@@ -10,6 +10,12 @@ typedef enum {
 	TSDUMP_MODULE_V4 = 4,
 } module_ver;
 
+typedef enum {
+	TSDUMP_VALUE_NONE,
+	TSDUMP_VALUE_DECIBEL,
+	TSDUMP_VALUE_RELATIVE,
+} signal_value_scale_t;
+
 typedef struct{
 	const TSDCHAR *cmd_name;
 	const TSDCHAR *cmd_description;
@@ -52,8 +58,8 @@ typedef void(*hook_close_stream_t)();
 typedef void(*hook_stream_generator_t)(void *, unsigned char **, int *);
 typedef int (*hook_stream_generator_open_t)(void**, ch_info_t*);
 typedef int(*hook_stream_generator_wait_t)(void *, int);
-typedef int(*hook_stream_generator_siglevel_t)(void *, double *siglevel);
-typedef int(*hook_stream_generator_cnr_t)(void *, double *snr);
+typedef int(*hook_stream_generator_siglevel_t)(void *, double *siglevel, signal_value_scale_t *scale);
+typedef int(*hook_stream_generator_cnr_t)(void *, double *snr, signal_value_scale_t *scale);
 typedef void(*hook_stream_generator_close_t)(void *);
 
 typedef struct {
