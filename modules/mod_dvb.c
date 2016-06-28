@@ -30,6 +30,7 @@ typedef enum {
 	DVB_TUNER_PT,
 	DVB_TUNER_PT3,
 	DVB_TUNER_FRIIO_W,
+	DVB_TUNER_TBS6814,
 } tuner_model_t;
 
 typedef struct {
@@ -188,6 +189,8 @@ tuner_model_t check_tuner_model(const char *tuner_name)
 		return DVB_TUNER_PT3;
 	} else if (strcmp(tuner_name, "Comtech JDVBT90502 ISDB-T") == 0) {
 		return DVB_TUNER_FRIIO_W;
+	} else if (strcmp(tuner_name, "TurboSight TBS6814 ISDB-T frontend") == 0) {
+		return DVB_TUNER_TBS6814;
 	}
 	return DVB_TUNER_OTHER;
 }
@@ -402,6 +405,19 @@ static int get_cnr_friio_w(int fd, double *cnr, signal_value_scale_t *scale)
 	return 1;
 }
 
+static int get_siglevel_tbs6814(int fd, double *cnr, signal_value_scale_t *scale)
+{
+	uint16_t s = 0;
+	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) != 0 ) {
+		output_message(MSG_SYSERROR, "ioctl(FE_READ_SIGNAL_STRENGTH, adapter%d)", dvb_dev);
+		return 0;
+	}
+	/* 不明だが、数字を見る限りでは信号レベルがパーセントで返されているっぽい？ */
+	*cnr = (double)s / 100;
+	*scale = FE_SCALE_RELATIVE;
+	return 1;
+}
+
 static int get_cnr_siglevel(int fd, double *cnr, uint32_t cmd, const char *cmdname, signal_value_scale_t *sig_scale, int ignore_err)
 {
 	int64_t sval;
@@ -504,6 +520,8 @@ static int hook_stream_generator_siglevel(void *param, double *siglevel, signal_
 			return get_siglevel(pstat->fd_fe, siglevel, scale, 0);
 		case DVB_TUNER_FRIIO_W:
 			return 0; /* 非対応 */
+		case DVB_TUNER_TBS6814:
+			return get_siglevel_tbs6814(pstat->fd_fe, siglevel, scale);
 		default: /* do nothing */ break;
 	}
 	return get_siglevel_default(pstat->fd_fe, siglevel, scale);
@@ -520,6 +538,8 @@ static int hook_stream_generator_cnr(void *param, double *cnr, signal_value_scal
 			return get_cnr(pstat->fd_fe, cnr, scale, 0);
 		case DVB_TUNER_FRIIO_W:
 			return get_cnr_friio_w(pstat->fd_fe, cnr, scale);
+		case DVB_TUNER_TBS6814:
+			return 0; /* 非対応 */
 		default: /* do nothing */ break;
 	}
 	return get_cnr_default(pstat->fd_fe, cnr, scale);
