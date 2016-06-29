@@ -473,6 +473,10 @@ int parse_ts_header(const uint8_t *packet, ts_header_t *tsh)
 	tsh->adaptation_field_control		= get_bits(packet, 26, 2);
 	tsh->continuity_counter				= get_bits(packet, 28, 4);
 
+	if(tsh->transport_scrambling_control) {
+		return 1;
+	}
+
 	pos = 4;
 	tsh->adaptation_field_len = 0;
 	if (tsh->adaptation_field_control & 0x02) {

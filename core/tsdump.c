@@ -473,6 +473,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 			}
 
+			if (tsh.transport_scrambling_control) {
+				continue;
+			}
+
 			if (!valid_ts_header) {
 				if (tsh.valid_sync_byte) {
 					/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
