@@ -22,6 +22,7 @@
 #include "core/module_hooks.h"
 #include "core/tsdump.h"
 #include "core/load_modules.h"
+#include "utils/ts_parser.h"
 #include "core/default_decoder.h"
 #include "modules/modules.h"
 
@@ -403,14 +404,22 @@ void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, cons
 	}
 }
 
+int is_implemented_stream_decoder_stats()
+{
+	if (hooks_stream_decoder && hooks_stream_decoder->stats_handler) {
+		return 1;
+	}
+	return 0;
+}
+
 void do_stream_decoder_stats(void *param, decoder_stats_t *stats)
 {
-	if (hooks_stream_decoder) {
+	if ( is_implemented_stream_decoder_stats() ) {
 		hooks_stream_decoder->stats_handler(param, stats);
 	} else {
 		stats->n_dropped = ts_n_drops;
 		stats->n_input = ts_n_total;
-		stats->n_scrambled = 0;
+		stats->n_scrambled = ts_n_scrambled;
 		stats->n_output = ts_n_total;
 	}
 }

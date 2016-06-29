@@ -24,6 +24,7 @@ void do_stream_generator_close(void *param);
 void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, const unsigned char *src_buf, int src_size);
 int do_stream_decoder_open(void **param, int *);
 int do_stream_generator_wait(void *param, int timeout_ms);
+int is_implemented_stream_decoder_stats();
 void do_stream_decoder_stats(void *param, decoder_stats_t *stats);
 void do_stream_decoder_close(void *param);
 void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg);

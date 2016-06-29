@@ -30,6 +30,7 @@
 #include "utils/tsdstr.h"
 #include "utils/aribstr.h"
 #include "utils/path.h"
+#include "core/default_decoder.h"
 
 //#define HAVE_TIMECALC_DECLARATION
 //#include "timecalc.h"
@@ -457,9 +458,22 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, encrypted);
 
+		int valid_ts_header;
+		int need_default_counter = !(is_implemented_stream_decoder_stats());
+
 		for (i = 0; i < n_dec; i+=188) {
 			packet = &decbuf[i];
-			if (!parse_ts_header(packet, &tsh)) {
+			valid_ts_header = parse_ts_header(packet, &tsh);
+
+			if (need_default_counter) {
+				if (!valid_ts_header) {
+					ts_statics_counter(NULL);
+				} else {
+					ts_statics_counter(&tsh);
+				}
+			}
+
+			if (!valid_ts_header) {
 				if (tsh.valid_sync_byte) {
 					/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
 					   PESパケットの規格を要調査 */
