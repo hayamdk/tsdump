@@ -13,6 +13,7 @@ extern module_def_t mod_pipeoutput_win;
 extern module_def_t mod_cmdexec_win;
 #else
 extern module_def_t mod_dvb;
+extern module_def_t mod_arib25;
 #endif
 
 module_def_t *static_modules[] = {
@@ -28,5 +29,6 @@ module_def_t *static_modules[] = {
 	&mod_cmdexec_win,
 #else
 	&mod_dvb,
+	&mod_arib25,
 #endif
 };
