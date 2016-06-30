@@ -497,6 +497,11 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 				if (!printservice) {
 					printservice = print_services(&service_list);
+					if(printservice) {
+						ts_n_drops = 0;
+						ts_n_total = 0;
+						ts_n_scrambled = 0;
+					}
 				}
 			}
 			parse_PCR(packet, &tsh, &service_list, find_curr_service_pcr_pid);
