@@ -4,32 +4,25 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <process.h>
-
-#include <shlwapi.h>
+#include <time.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
 
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
-
-typedef struct{
-	HANDLE master_event;
-	HANDLE slave_event;
-	HANDLE h_thread;
-	HANDLE fh;
-	int busy;
-	int endflag;
-	int write_size;
-	const uint8_t *write_buf;
-	int err;
-	DWORD errcode;
-	const WCHAR *errmsg;
-} my_nonblockio_t;
+#include "utils/tsdstr.h"
+#include "core/tsdump.h"
 
 typedef struct{
 	int used;
+	int write_busy;
+	const uint8_t *buf;
+	int write_bytes;
+	int written_bytes;
+	OVERLAPPED ol;
 	HANDLE write_pipe;
 	HANDLE child_process;
-	my_nonblockio_t nbio;
 } pipestat_t;
 
 #define MAX_PIPECMDS 32
@@ -39,189 +32,77 @@ static WCHAR *pipecmds[MAX_PIPECMDS];
 static int pcwindow_min = 0;
 static int waitmode = 0;
 
-static unsigned int __stdcall my_nonblockio_worker(void *param)
-{
-	my_nonblockio_t *nbio = (my_nonblockio_t*)param;
-	DWORD ret, written_total, written;
-
-	for (;;) {
-		ret = WaitForSingleObject(nbio->master_event, INFINITE);
-		if (ret == WAIT_OBJECT_0) {
-			if (nbio->endflag) {
-				nbio->err = 0;
-				SetEvent(nbio->slave_event);
-				return 0;
-			}
-		} else {
-			nbio->err = 1;
-			nbio->errcode = GetLastError();
-			nbio->errmsg = L"スレッドのWaitForSingleObject()が失敗しました";
-			SetEvent(nbio->slave_event);
-			return 1;
-		}
-
-		written_total = 0;
-		while (written_total < (DWORD)nbio->write_size) {
-			ret = WriteFile(nbio->fh,
-					&nbio->write_buf[written_total],
-					nbio->write_size - written_total,
-					&written,
-					NULL);
-			if (!ret) {
-				if (nbio->endflag) {
-					/* masterからの指示でエラーになった */
-					break;
-				}
-				nbio->err = 1;
-				nbio->errcode = GetLastError();
-				nbio->errmsg = L"WriteFile()が失敗しました";
-				SetEvent(nbio->slave_event);
-				return 1;
-			}
-			written_total += written;
-		}
-		SetEvent(nbio->slave_event);
-	}
-}
-
-static int my_nonblockio_create(my_nonblockio_t *nbio, HANDLE fh)
-{
-	nbio->master_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (nbio->master_event == NULL) {
-		nbio->err = 1;
-		nbio->errcode = GetLastError();
-		nbio->errmsg = L"イベントの生成が失敗しました(CreateEvent)";
-		return 0;
-	}
-	nbio->slave_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (nbio->slave_event == NULL) {
-		nbio->err = 1;
-		nbio->errcode = GetLastError();
-		nbio->errmsg = L"イベントの生成が失敗しました(CreateEvent)";
-		CloseHandle(nbio->master_event);
-		return 0;
-	}
-	nbio->h_thread = (HANDLE)_beginthreadex(NULL, 0, my_nonblockio_worker, nbio, 0, NULL);
-	if (nbio->h_thread == NULL) {
-		nbio->err = 1;
-		nbio->errcode = ERROR_SUCCESS;
-		nbio->errmsg = L"スレッドの生成が失敗しました";
-		CloseHandle(nbio->master_event);
-		CloseHandle(nbio->slave_event);
-		return 0;
-	}
-	nbio->fh = fh;
-	nbio->endflag = 0;
-	nbio->err = 0;
-	nbio->busy = 0;
-	return 1;
-}
-
-static int my_nonblockio_check(my_nonblockio_t *nbio, DWORD wait_ms)
-{
-	DWORD ret;
-	if (nbio->busy) {
-		ret = WaitForSingleObject(nbio->slave_event, wait_ms);
-		if (ret == WAIT_OBJECT_0) {
-			nbio->busy = 0;
-		} else if (ret == WAIT_TIMEOUT) {
-			nbio->busy = 1;
-		} else {
-			nbio->busy = 0;
-			nbio->err = 1;
-			nbio->errcode = GetLastError();
-			nbio->errmsg = L"WaitForSingleObject()が失敗しました";
-		}
-	}
-
-	if (nbio->err) {
-		return -1;
-	}
-	return nbio->busy;
-}
-
-static int my_nonblockio_write(my_nonblockio_t *nbio, const uint8_t *buf, int size)
-{
-	while (nbio->busy) {
-		//printf("ここには来ない！\n");
-		my_nonblockio_check(nbio, INFINITE);
-	}
-	if (nbio->err) {
-		return 0;
-	}
-
-	if (nbio->busy == 0) {
-		nbio->write_size = size;
-		nbio->write_buf = buf;
-		nbio->busy = 1;
-		SetEvent(nbio->master_event);
-	}
-	return 1;
-}
-
-static void my_nonblockio_setendflag(my_nonblockio_t *nbio)
-{
-	nbio->endflag= 1;
-}
-
-static void my_nonblockio_close(my_nonblockio_t *nbio)
-{
-	DWORD ret;
-
-	my_nonblockio_setendflag(nbio);
-	SetEvent(nbio->master_event);
-	ret = WaitForSingleObject(nbio->h_thread, 500);
-	if (ret != WAIT_OBJECT_0) {
-		output_message(MSG_SYSERROR, L"スレッドが応答しないので強制終了します(WaitForSingleObject)");
-		TerminateThread(nbio->h_thread, 1);
-	}
-	CloseHandle(nbio->h_thread);
-	CloseHandle(nbio->slave_event);
-	CloseHandle(nbio->master_event);
-}
-
-static const WCHAR* my_nonblockio_errinfo(my_nonblockio_t *nbio, DWORD *errcode)
-{
-	if (!nbio->err) {
-		return NULL;
-	}
-	*errcode = nbio->errcode;
-	return nbio->errmsg;
-}
-
 static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname)
 {
-	HANDLE hRead, hWrite, hReadTemp;
+	HANDLE h_pipe, h_read_temp, h_read;
 	STARTUPINFO si = {0};
 	PROCESS_INFORMATION pi = {0};
+	BOOL res;
+	DWORD err;
 
-	WCHAR cmdarg[2048];
+	WCHAR cmdarg[2048], pipe_path[1024];
 
 	ps->used = 0;
 
-	if (!CreatePipe(&hReadTemp, &hWrite, NULL, 0)) {
-		output_message(MSG_SYSERROR, L"パイプの作成に失敗(CreatePipe)");
-		return;
-	}
-	if ( !DuplicateHandle(
-			GetCurrentProcess(),
-			hReadTemp,
-			GetCurrentProcess(),
-			&hRead,
+	tsd_snprintf(pipe_path, 1024 - 1, TSD_TEXT("\\\\.\\pipe\\tsdump_pipe_%d_%"PRId64""), _getpid(), gettime());
+
+	h_pipe = CreateNamedPipe(pipe_path,
+			PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
+			PIPE_TYPE_BYTE,
+			2,
+			1024*1024,
 			0,
-			TRUE,
-			DUPLICATE_SAME_ACCESS) ) {
-		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
-		CloseHandle(hWrite);
-		CloseHandle(hReadTemp);
+			100,
+			NULL
+		);
+	if (h_pipe == INVALID_HANDLE_VALUE) {
+		output_message(MSG_SYSERROR, L"パイプの作成に失敗(CreateNamedPipe)");
 		return;
 	}
 
-	CloseHandle(hReadTemp);
+	h_read_temp = CreateFile(pipe_path,
+			GENERIC_READ,
+			0,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+		NULL);
+	if (h_read_temp == INVALID_HANDLE_VALUE) {
+		output_message(MSG_SYSERROR, L"パイプのオープンに失敗(CreateFile)");
+		return;
+	}
+
+	if (!ConnectNamedPipe(h_pipe, NULL)) {
+		err = GetLastError();
+		if (err != 535) {
+			output_message(MSG_SYSERROR, L"パイプの接続に失敗(ConnectNamedPipe)");
+			CloseHandle(h_read_temp);
+			CloseHandle(h_pipe);
+			return;
+		}
+	}
+
+	res = DuplicateHandle(
+			GetCurrentProcess(),
+			h_read_temp,
+			GetCurrentProcess(),
+			&h_read,
+			0,
+			TRUE,
+			DUPLICATE_SAME_ACCESS
+		);
+	if (!res) {
+		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
+		CloseHandle(h_read_temp);
+		CloseHandle(h_pipe);
+		return;
+	}
+
+	CloseHandle(h_read_temp);
 
 	si.cb = sizeof(STARTUPINFO);
 	si.dwFlags = STARTF_USESTDHANDLES;
-	si.hStdInput = hRead;
+	si.hStdInput = h_read;
 	si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
@@ -230,33 +111,25 @@ static void create_pipe(pipestat_t *ps, const WCHAR *cmdname, const WCHAR *fname
 		si.wShowWindow = SW_MINIMIZE;
 	}
 
-	if (!my_nonblockio_create(&ps->nbio, hWrite)) {
-		if (ps->nbio.errcode == ERROR_SUCCESS) {
-			output_message(MSG_ERROR, ps->nbio.errmsg);
-		} else {
-			SetLastError(ps->nbio.errcode);
-			output_message(MSG_SYSERROR, ps->nbio.errmsg);
-		}
-		return;
-	}
-
 	swprintf(cmdarg, 2048 - 1, L"\"%s\" \"%s\"", cmdname, fname);
 
 	output_message(MSG_NOTIFY, L"パイプコマンド実行: %s", cmdarg);
 
 	if (!CreateProcess(cmdname, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
 		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess)");
-		CloseHandle(hWrite);
-		CloseHandle(hRead);
+		CloseHandle(h_read);
+		CloseHandle(h_pipe);
 		return;
 	}
 
 	ps->child_process = pi.hProcess;
-	ps->write_pipe = hWrite;
+	ps->write_pipe = h_pipe;
 	ps->used = 1;
+	ps->write_busy = 0;
+	memset(&ps->ol, 0, sizeof(OVERLAPPED));
 
 	CloseHandle(pi.hThread);
-	CloseHandle(hRead);
+	CloseHandle(h_read);
 
 	return;
 }
@@ -276,6 +149,7 @@ static void *hook_pgoutput_create(const WCHAR *fname, const proginfo_t *pi, cons
 
 static void close_pipe(pipestat_t *ps)
 {
+	ps->write_busy = 0;
 	if (ps->used) {
 		CloseHandle(ps->write_pipe);
 	}
@@ -295,52 +169,137 @@ static void wait_child_process(pipestat_t *ps)
 	}
 }
 
-static void hook_pgoutput(void *stat, const unsigned char *buf, const size_t size)
+static void ps_write(pipestat_t *ps)
 {
-	pipestat_t *ps = (pipestat_t*)stat;
-	int i, ret, error;
-	const WCHAR *errmsg;
-	DWORD errcode;
+	int remain;
+	DWORD written, errcode;
+
+	if (ps->write_busy) {
+		return;
+	}
+
+	while (1) {
+		remain = ps->write_bytes - ps->written_bytes;
+		if (remain <= 0) {
+			ps->write_bytes = 0;
+			break;
+		}
+		if (!WriteFile(ps->write_pipe, &ps->buf[ps->written_bytes], remain, &written, &ps->ol)) {
+			if ((errcode=GetLastError()) == ERROR_IO_PENDING) {
+				ps->write_busy = 1;
+			} else {
+				output_message(MSG_SYSERROR, L"書き込みエラーのためパイプを閉じます(WriteFile):");
+				close_pipe(ps);
+				wait_child_process(ps);
+				return;
+			}
+			break;
+		}
+		ps->written_bytes += written;
+	}
+}
+
+static void ps_check(pipestat_t *ps, int canceled)
+{
+	int remain;
+	DWORD written, errcode;
+	BOOL wait = FALSE;
+
+	if (!ps->write_busy) {
+		return;
+	}
+
+	if (canceled) {
+		wait = TRUE;
+	}
+
+	if (!GetOverlappedResult(ps->write_pipe, &ps->ol, &written, wait)) {
+		if ((errcode=GetLastError()) == ERROR_IO_INCOMPLETE) {
+			/* do nothing */
+		} else {
+			if (errcode == ERROR_OPERATION_ABORTED && canceled) {
+				output_message(MSG_WARNING, L"パイプへの書き込みが滞っているためIOをキャンセルしました");
+			} else {
+				output_message(MSG_SYSERROR, L"書き込みエラーのためパイプを閉じます(GetOverlappedResult)");
+				close_pipe(ps);
+				wait_child_process(ps);
+				return;
+			}
+			ps->write_busy = 0;
+		}
+	} else {
+		ps->written_bytes += written;
+		remain = ps->write_bytes - ps->written_bytes;
+		if (remain > 0) {
+			if (canceled) {
+				output_message(MSG_WARNING, L"パイプへの書き込みが滞っているためIOをキャンセルしました");
+				ps->write_busy = 0;
+			} else {
+				ps_write(ps);
+			}
+		} else {
+			ps->write_busy = 0;
+		}
+	}
+}
+
+static void hook_pgoutput(void *stat, const uint8_t *buf, const size_t size)
+{
+	pipestat_t *pss = (pipestat_t*)stat;
+	int i;
 
 	for (i = 0; i < n_pipecmds; i++) {
-		if (!ps[i].used) {
+		if (!pss[i].used) {
 			continue;
 		}
 
-		error = 0;
-		if ( !my_nonblockio_write(&ps[i].nbio, buf, size) ) {
-			/* 書き込み指令失敗 */
-			error = 1;
+		if (!pss[i].write_busy) {
+			pss[i].buf = buf;
+			pss[i].written_bytes = 0;
+			pss[i].write_bytes = size;
+			ps_write(&pss[i]);
 		} else {
-			/* IO状態をチェック */
-			ret = my_nonblockio_check(&ps[i].nbio, 1000);
-			if (ret < 0) {
-				/* エラーが発生 */
-				error = 1;
-			} else if (ret) {
-				/* タイムアウト(スレッドがブロック) */
-				my_nonblockio_setendflag(&ps[i].nbio);
-				TerminateProcess(ps[i].child_process, 1);
-				output_message(MSG_ERROR, L"パイプがブロックしているのでプロセスを強制終了しました");
-				my_nonblockio_close(&ps[i].nbio);
-				close_pipe(&ps[i]);
-				wait_child_process(&ps[i]);
-			}
-		}
-
-		if(error) {
-			errmsg = my_nonblockio_errinfo(&ps[i].nbio, &errcode);
-			if (errcode != ERROR_SUCCESS) {
-				SetLastError(errcode);
-				output_message(MSG_SYSERROR, L"エラーが発生したのでパイプをクローズします: %s", errmsg, errcode);
-			} else {
-				output_message(MSG_ERROR, L"エラーが発生したのでパイプをクローズします: %s", errmsg, errcode);
-			}
-			my_nonblockio_close(&ps[i].nbio);
-			close_pipe(&ps[i]);
-			wait_child_process(&ps[i]);
+			/* never come */
+			*(char*)(NULL) = 'A';
 		}
 	}
+}
+
+static int hook_pgoutput_check(void *stat)
+{
+	pipestat_t *pss = (pipestat_t*)stat;
+	int i, ret = 0;
+
+	for (i = 0; i < n_pipecmds; i++) {
+		if (!pss[i].used) {
+			continue;
+		}
+		if (pss[i].write_busy) {
+			ps_check(&pss[i], 0);
+		}
+		ret |= pss[i].write_busy;
+	}
+	return ret;
+}
+
+static int hook_pgoutput_wait(void *stat)
+{
+	pipestat_t *pss = (pipestat_t*)stat;
+	int i, ret = 0;
+
+	for (i = 0; i < n_pipecmds; i++) {
+		if (!pss[i].used) {
+			continue;
+		}
+		if (pss[i].write_busy) {
+			ps_check(&pss[i], 0);
+		}
+		if (pss[i].write_busy) {
+			CancelIo(pss[i].write_pipe);
+			ps_check(&pss[i], 1);
+		}
+	}
+	return ret;
 }
 
 static void hook_pgoutput_close(void *pstat, const proginfo_t *pi)
@@ -350,9 +309,6 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *pi)
 	pipestat_t *ps = (pipestat_t*)pstat;
 	int i;
 	for (i = 0; i < n_pipecmds; i++) {
-		if (ps[i].used) {
-			my_nonblockio_close(&ps[i].nbio);
-		}
 		close_pipe(&ps[i]);
 	}
 	for (i = 0; i < n_pipecmds; i++) {
@@ -382,6 +338,8 @@ static void register_hooks()
 {
 	register_hook_pgoutput_create(hook_pgoutput_create);
 	register_hook_pgoutput(hook_pgoutput);
+	register_hook_pgoutput_check(hook_pgoutput_check);
+	register_hook_pgoutput_wait(hook_pgoutput_wait);
 	register_hook_pgoutput_close(hook_pgoutput_close);
 }
 
