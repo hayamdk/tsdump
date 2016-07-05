@@ -661,6 +661,13 @@ int init_modules(int argc, const TSDCHAR* argv[])
 		}
 	}
 
+	/* init */
+	for (i = 0; i < n_modules; i++) {
+		if( modules[i].def->init_handler ) {
+			modules[i].def->init_handler();
+		}
+	}
+
 	/* cmds */
 	for (i = 0; i < n_modules; i++) {
 		if ( modules[i].def->cmds ) {

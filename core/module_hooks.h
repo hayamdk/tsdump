@@ -28,6 +28,7 @@ typedef struct{
 	const TSDCHAR *modname;
 	register_hooks_t register_hooks;
 	cmd_def_t *cmds;
+	void(*init_handler)();
 } module_def_t;
 
 typedef struct{
