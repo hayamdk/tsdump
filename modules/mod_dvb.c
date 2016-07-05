@@ -414,7 +414,7 @@ static int get_siglevel_tbs6814(int fd, double *cnr, signal_value_scale_t *scale
 	}
 	/* 不明だが、数字を見る限りでは信号レベルがパーセントで返されているっぽい？ */
 	*cnr = (double)s / 100;
-	*scale = FE_SCALE_RELATIVE;
+	*scale = TSDUMP_VALUE_RELATIVE;
 	return 1;
 }
 
