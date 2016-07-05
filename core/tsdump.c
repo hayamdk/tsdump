@@ -584,7 +584,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				if (scale_siglevel == TSDUMP_VALUE_DECIBEL) {
 					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
 				} else if (scale_siglevel == TSDUMP_VALUE_RELATIVE) {
-					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1f%"), siglevel*100);
+					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1f%%"), siglevel*100);
 				} else {
 					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%d"), (int)siglevel);
 				}
@@ -593,7 +593,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				if (scale_cnr == TSDUMP_VALUE_DECIBEL) {
 					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), cnr);
 				} else if (scale_cnr == TSDUMP_VALUE_RELATIVE) {
-					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1f%"), cnr*100);
+					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1f%%"), cnr*100);
 				} else {
 					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%d"), (int)cnr);
 				}
