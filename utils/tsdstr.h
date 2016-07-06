@@ -26,6 +26,15 @@ int tsd_strcmp(const TSDCHAR *s1, const TSDCHAR *s2);
 int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n);
 void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match);
 
+#define TSD_REPLACE_ADD_SET(sets, n, _old, _new) \
+	do { \
+		(sets)[(n)].old = (_old); \
+		(sets)[(n)].new = (_new); \
+		(sets)[(n)].old_len = 0; \
+		(sets)[(n)].new_len = 0; \
+		(n)++; \
+	} while(0)
+
 #ifdef va_start
 int tsd_vsnprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, va_list ap);
 #endif
