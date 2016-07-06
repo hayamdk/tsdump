@@ -13,6 +13,7 @@
 #include "core/module_hooks.h"
 #include "utils/tsdstr.h"
 #include "core/tsdump.h"
+#include "utils/path.h"
 
 typedef struct {
 	int used;
@@ -42,6 +43,7 @@ static void generate_arg(WCHAR *arg, size_t maxlen_arg, const pipe_cmd_t *pipe_c
 {
 	const WCHAR *chname = TSD_TEXT("unknown"), *progname = TSD_TEXT("unkonwn");
 	int year, mon, day, hour, min, sec;
+	WCHAR fname_base[MAX_PATH_LEN];
 	WCHAR tn_str[21], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
 	WCHAR mon_str0[3], day_str0[3], hour_str0[3], min_str0[3], sec_str0[3];
 	time_t t;
@@ -78,6 +80,9 @@ static void generate_arg(WCHAR *arg, size_t maxlen_arg, const pipe_cmd_t *pipe_c
 		sec = lt.tm_sec;
 	}
 
+	tsd_strncpy(fname_base, fname, MAX_PATH_LEN);
+	path_removeext(fname_base);
+
 	tsd_snprintf(tn_str, 20, TSD_TEXT("%"PRId64), timenum );
 	tsd_snprintf(year_str, 5, TSD_TEXT("%d"), year);
 	tsd_snprintf(mon_str, 3, TSD_TEXT("%d"), mon);
@@ -94,6 +99,7 @@ static void generate_arg(WCHAR *arg, size_t maxlen_arg, const pipe_cmd_t *pipe_c
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%Q%"), TSD_TEXT("\""));
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%%"), TSD_TEXT("%"));
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILE%"), fname);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILENE%"), fname_base);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%CH%"), chname);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PROG%"), progname);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%TN%"), tn_str);
