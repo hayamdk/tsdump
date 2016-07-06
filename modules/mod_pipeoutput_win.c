@@ -245,7 +245,7 @@ static void wait_child_process(pipestat_t *ps)
 {
 	DWORD ret;
 	if (ps->used) {
-		ret = WaitForSingleObject(ps->child_process, 500);
+		ret = WaitForSingleObject(ps->child_process, 5*1000);
 		if (ret != WAIT_OBJECT_0) {
 			output_message(MSG_SYSERROR, L"プロセスが応答しないので強制終了します(WaitForSingleObject)");
 			TerminateProcess(ps->child_process, 1);
