@@ -33,7 +33,9 @@ static double mbps;
 typedef struct {
 	int bytes;
 	int eof;
+	int64_t last_timestamp;
 	int64_t timestamp;
+	int timestamp_ns;
 	uint8_t buf[BLOCK_SIZE];
 	uint8_t tmp_buf[BLOCK_SIZE];
 #ifdef TSD_PLATFORM_MSVC
@@ -71,6 +73,51 @@ static int hook_postconfig()
 		return 0;
 	}
 	return 1;
+}
+
+void forward_timpstamp(filein_stat_t *stat, const uint8_t *buf, int size)
+{
+	UNREF_ARG(buf);
+	double tick_ns = (double)size / mbps / 1024 / 1024 * 8 * 1000 * 1000 * 1000;
+	int64_t tick_ms = (int64_t)(tick_ns / 1000 / 1000);
+	int tick_ns_i = (int)(tick_ns - tick_ms);
+	if (tick_ns_i < 0) {
+		tick_ns_i = 0;
+	}
+	stat->timestamp_ns += tick_ns_i;
+	if (stat->timestamp_ns >= 1000 * 1000) {
+		stat->timestamp_ns -= 1000 * 1000;
+		stat->timestamp++;
+	}
+	stat->timestamp += tick_ms;
+}
+
+int wait_timestamp(filein_stat_t *stat, int timeout_ms)
+{
+	int64_t tn = gettime();
+	int64_t offset;
+	int remain = 0;
+
+	if (tn < stat->last_timestamp || tn > stat->last_timestamp + 5*1000) {
+		/* 時間が巻き戻った、あるいは前回より5秒以上たっていたら不正なタイムスタンプとしてリセットする */
+		stat->timestamp = tn;
+	}
+	offset = stat->timestamp - tn;
+	if (offset > timeout_ms) {
+		remain = (int)(offset - timeout_ms);
+		offset = timeout_ms;
+	}
+
+	if (offset > 0) {
+#ifdef TSD_PLATFORM_MSVC
+		Sleep((int)offset);
+#else
+		usleep((int)offset * 1000);
+#endif
+	}
+
+	stat->last_timestamp = tn;
+	return remain;
 }
 
 #ifdef TSD_PLATFORM_MSVC
@@ -235,9 +282,13 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 	{
 #endif
 		if (stat->bytes < 188) {
-			*size = 0;
-			*buf = NULL;
-			return;
+			goto RET_ZERO;
+		}
+
+		if (flg_set_mbps) {
+			if (wait_timestamp(stat, 0) > 0) {
+				goto RET_ZERO;
+			}
 		}
 
 		bytes188 = stat->bytes / 188 * 188;
@@ -255,9 +306,12 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 			stat->bytes = 0;
 		}
 
+		forward_timpstamp(stat, *buf, *size);
+
 		return;
 	}
 
+RET_ZERO:
 	*size = 0;
 	*buf = NULL;
 }
@@ -272,6 +326,13 @@ static int hook_stream_generator_wait(void *param, int timeout_ms)
 		usleep(timeout_ms*1000);
 #endif
 		return 0;
+	} else {
+		if (flg_set_mbps) {
+			timeout_ms = wait_timestamp(stat, timeout_ms);
+			if(timeout_ms <= 0) {
+				return 1;
+			}
+		}
 	}
 	return check_read(stat, timeout_ms);
 }
@@ -303,6 +364,8 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	stat = (filein_stat_t*)malloc(sizeof(filein_stat_t));
 	stat->bytes = 0;
 	stat->eof = 0;
+	stat->timestamp = gettime();
+	stat->timestamp_ns = 0;
 #ifdef TSD_PLATFORM_MSVC
 	stat->read_busy = 0;
 	memset(&stat->ol, 0, sizeof(OVERLAPPED));
@@ -358,6 +421,9 @@ static const TSDCHAR *set_mbps(const TSDCHAR* param)
 {
 	flg_set_mbps = 1;
 	mbps = tsd_atof(param);
+	if (mbps <= 0) {
+		return TSD_TEXT("不正なビットレートです");
+	}
 	return NULL;
 }
 
