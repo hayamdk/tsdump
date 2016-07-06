@@ -184,8 +184,6 @@ static void create_pipe(pipestat_t *ps, const pipe_cmd_t *pipe_cmd, const WCHAR 
 	si.cb = sizeof(STARTUPINFO);
 	si.dwFlags = STARTF_USESTDHANDLES;
 	si.hStdInput = h_read;
-	si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
 	if (pcwindow_min) {
 		si.dwFlags |= STARTF_USESHOWWINDOW;
