@@ -137,43 +137,7 @@ static void create_new_proginfo_file(const TSDCHAR *fname_ts, const TSDCHAR *fna
 	create_proginfo_file(fname, fname_ts, pi);
 }
 
-static int nonblock_write(file_output_stat_t *fos, const uint8_t *buf, const size_t size)
-{
 #ifdef TSD_PLATFORM_MSVC
-	DWORD written, errnum;
-	if ( !WriteFile(fos->fh, buf, (DWORD)size, &written, &(fos->ol)) ) {
-		if ((errnum = GetLastError()) == ERROR_IO_PENDING) {
-#else
-	int written = write(fos->fd, buf, size);
-	if (written < 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-#endif
-			written = 0;
-		} else {
-#ifdef TSD_PLATFORM_MSVC
-			output_message(MSG_SYSERROR, TSD_TEXT("WriteFile()に失敗しました"));
-#else
-			output_message(MSG_SYSERROR, "write(fd=%d)", fos->fd);
-#endif
-			fos->write_busy = 0;
-			return 0;
-		}
-	}
-
-	if (written < size) {
-		fos->writebuf = buf;
-		fos->write_bytes = size;
-		fos->written_bytes = written;
-		fos->write_busy = 1;
-	} else {
-		fos->write_busy = 0;
-	}
-
-	return 1;
-}
-
-#ifdef TSD_PLATFORM_MSVC
-
 static void add_ovelapped_offset(OVERLAPPED *ol, int add_offset)
 {
 	LARGE_INTEGER new_offset;
@@ -183,12 +147,58 @@ static void add_ovelapped_offset(OVERLAPPED *ol, int add_offset)
 	ol->OffsetHigh = new_offset.HighPart;
 	ol->Offset = new_offset.LowPart;
 }
+#endif
+
+static int nonblock_write(file_output_stat_t *fos)
+{
+	int remain;
+#ifdef TSD_PLATFORM_MSVC
+	DWORD written, errnum;
+#else
+	int written;
+#endif
+
+	while(1) {
+		remain = fos->write_bytes - fos->written_bytes;
+		if (remain < 0) {
+			fos->write_busy = 0;
+			break;
+		}
+
+#ifdef TSD_PLATFORM_MSVC
+		if ( !WriteFile(fos->fh, &fos->writebuf[fos->written_bytes], (DWORD)remain, &written, &(fos->ol)) ) {
+			if ((errnum = GetLastError()) == ERROR_IO_PENDING) {
+#else
+		written = write(fos->fd, &fos->writebuf[fos->written_bytes], remain);
+		if (written < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+#endif
+				/* do nothing */
+			} else {
+#ifdef TSD_PLATFORM_MSVC
+				output_message(MSG_SYSERROR, TSD_TEXT("WriteFile()に失敗しました"));
+#else
+				output_message(MSG_SYSERROR, "write(fd=%d)", fos->fd);
+#endif
+				fos->write_busy = 0;
+				break;
+			}
+			break;
+		} else {
+			fos->written_bytes += written;
+			add_ovelapped_offset(&(fos->ol), written);
+		}
+	}
+	return fos->write_busy;
+}
+
+#ifdef TSD_PLATFORM_MSVC
 
 static int check_io_status(file_output_stat_t *fos, int wait_mode)
 {
 	static int64_t last = 0;
 	static DWORD errnum_last = 0;
-	DWORD errnum;
+	DWORD written, errnum;
 	int64_t now;
 	int remain;
 
@@ -196,8 +206,7 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 		return 1;
 	}
 
-	static DWORD wb;
-	if (!GetOverlappedResult(fos->fh, &(fos->ol), &wb, wait_mode)) {
+	if (!GetOverlappedResult(fos->fh, &(fos->ol), &written, wait_mode)) {
 		if ((errnum = GetLastError()) == ERROR_IO_INCOMPLETE) {
 			/* do nothing */
 			return 1;
@@ -214,22 +223,16 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 		}
 	}
 
-	fos->written_bytes += wb;
+	add_ovelapped_offset(&fos->ol, written);
+	fos->written_bytes += written;
 	remain = fos->write_bytes - fos->written_bytes;
-	if (remain == 0) {
-		add_ovelapped_offset(&fos->ol, fos->write_bytes);
+	if (remain <= 0) {
 		fos->write_busy = 0;
-
-		/*if (fos->close_flag) {
-			fos->close_remain -= fos->oli.write_bytes;
-		}*/
 	} else {
-		add_ovelapped_offset(&fos->ol, fos->written_bytes);
-		/* 残っているバッファの書き出し */
-		return nonblock_write(fos, &fos->writebuf[fos->written_bytes], remain);
+		nonblock_write(fos);
 	}
 
-	return 1;
+	return fos->write_busy;
 }
 
 #else
@@ -304,7 +307,12 @@ static void hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 		return;
 	}
 
-	nonblock_write(fos, buf, size);
+	fos->writebuf = buf;
+	fos->write_bytes = size;
+	fos->written_bytes = 0;
+	fos->write_busy = 1;
+
+	nonblock_write(fos);
 }
 
 static const int hook_pgoutput_check(void *pstat)
