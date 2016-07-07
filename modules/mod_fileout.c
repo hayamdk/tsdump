@@ -186,7 +186,9 @@ static int nonblock_write(file_output_stat_t *fos)
 			break;
 		} else {
 			fos->written_bytes += written;
+#ifdef TSD_PLATFORM_MSVC
 			add_ovelapped_offset(&(fos->ol), written);
+#endif
 		}
 	}
 	return fos->write_busy;
@@ -223,7 +225,9 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 		}
 	}
 
+#ifdef TSD_PLATFORM_MSVC
 	add_ovelapped_offset(&fos->ol, written);
+#endif
 	fos->written_bytes += written;
 	remain = fos->write_bytes - fos->written_bytes;
 	if (remain <= 0) {
@@ -245,7 +249,7 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 	}
 
 	remain = fos->write_bytes - fos->written_bytes;
-	return nonblock_write(fos, &fos->writebuf[fos->written_bytes], remain);
+	return nonblock_write(fos);
 }
 
 #endif
