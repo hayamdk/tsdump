@@ -160,7 +160,7 @@ static int nonblock_write(file_output_stat_t *fos)
 
 	while(1) {
 		remain = fos->write_bytes - fos->written_bytes;
-		if (remain < 0) {
+		if (remain <= 0) {
 			fos->write_busy = 0;
 			break;
 		}
