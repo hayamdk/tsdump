@@ -234,6 +234,9 @@ static void read_from_file(filein_stat_t *stat)
 			output_message(MSG_SYSERROR, "read(fd=%d)", stat->fd);
 		}
 	} else {
+		if (ret == 0) {
+			stat->eof = 1;
+		}
 		stat->bytes += ret;
 	}
 }
