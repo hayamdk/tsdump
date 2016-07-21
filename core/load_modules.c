@@ -631,7 +631,7 @@ static int get_cmd_params( int argc, const TSDCHAR* argv[] )
 		if ( cmd_def->have_option ) {
 			if ( i == argc-1 ) {
 				output_message(MSG_ERROR, TSD_TEXT("コマンドオプション %s に値を指定してください"), argv[i]);
-				return 1;
+				return 0;
 			} else {
 				cmd_def->cmd_handler(argv[i+1]);
 				i++;
