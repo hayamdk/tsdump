@@ -33,13 +33,10 @@
     <ClCompile Include="modules/mod_bondriver.cpp" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_cmdexec_win.c" >
+    <ClCompile Include="modules/mod_cmdexec.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="modules/mod_path_resolver.c" >
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="modules/mod_pipeoutput_win.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="modules/mod_log.c" >
