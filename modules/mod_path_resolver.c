@@ -139,7 +139,7 @@ static int hook_postconfig()
 
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--dir"), TSD_TEXT("出力先ディレクトリ *"), 1, set_dir },
-	NULL,
+	{ NULL },
 };
 
 static void register_hooks()

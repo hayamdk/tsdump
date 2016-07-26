@@ -243,12 +243,9 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 
 static int check_io_status(file_output_stat_t *fos, int wait_mode)
 {
-	int ret, remain;
 	if (!fos->write_busy) {
 		return 1;
 	}
-
-	remain = fos->write_bytes - fos->written_bytes;
 	return nonblock_write(fos);
 }
 

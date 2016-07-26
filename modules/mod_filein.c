@@ -433,7 +433,7 @@ static const TSDCHAR *set_mbps(const TSDCHAR* param)
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--filein"), TSD_TEXT("入力ファイル"), 1, set_infile },
 	{ TSD_TEXT("--filembps"), TSD_TEXT("ファイル読み込みのビットレート(Mbps)を指定"), 1, set_mbps },
-	NULL,
+	{ NULL },
 };
 
 MODULE_DEF module_def_t mod_filein = {

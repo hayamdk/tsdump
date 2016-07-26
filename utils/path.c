@@ -117,7 +117,6 @@ static void path_split(const TSDCHAR **dir, int *dir_len, TSDCHAR **file, int *f
 
 int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
 {
-	TSDCHAR *p;
 	int add_delimiter = 0;
 	int base_len = tsd_strlen(base);
 	int addition_len = tsd_strlen(addition);
@@ -191,10 +190,14 @@ TSDCHAR* path_getext(const TSDCHAR *path)
 
 int path_addext(TSDCHAR *path, const TSDCHAR *ext)
 {
-	int maxlen;
+	int maxlen, ret=1;
 	TSDCHAR *pext = path_getext(path);
 	maxlen = &path[MAX_PATH_LEN-1] - pext;
+	if (maxlen < strlen(pext)) {
+		ret = 0;
+	}
 	strncpy(pext, ext, maxlen);
+	return ret;
 }
 
 int path_isexist(const TSDCHAR *path)

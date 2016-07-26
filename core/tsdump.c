@@ -88,11 +88,12 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 	tsd_syserr_t lasterr, *plasterr = NULL;
 	TSDCHAR msg[2048];
 	const TSDCHAR *modname;
-	const char *cp;
-	int len;
 
 	/* 拡張子を除いたファイル名=モジュール名をコピー */
 #ifdef TSD_PLATFORM_MSVC
+	const char *cp;
+	int len;
+
 	WCHAR modpath[MAX_PATH_LEN], *wcp;
 		for (wcp = modpath, cp = fname;
 			*cp != '\0' && *cp != '.' && wcp < &modpath[MAX_PATH_LEN];
@@ -859,7 +860,7 @@ static void register_hooks()
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--sv"), TSD_TEXT("サービス番号(複数指定可能)"), 1, set_sv },
 	{ TSD_TEXT("--nowait"), TSD_TEXT("バッファフル時にあふれたデータは捨てる"), 0, set_nowait },
-	NULL,
+	{ NULL },
 };
 
 MODULE_DEF module_def_t mod_core = {

@@ -22,6 +22,7 @@
 #include "core/module_hooks.h"
 
 static int output_log = 0;
+static int set_log_fname = 0;
 static TSDCHAR log_fname[MAX_PATH_LEN] = {TSD_CHAR('\0')};
 static FILE *logfp = NULL;
 
@@ -35,6 +36,7 @@ static const TSDCHAR* set_log(const TSDCHAR *param)
 static const TSDCHAR *set_logfile(const TSDCHAR* param)
 {
 	output_log = 1;
+	set_log_fname = 1;
 	tsd_strncpy(log_fname, param, MAX_PATH_LEN-1);
 	return NULL;
 }
@@ -49,7 +51,7 @@ static int hook_postconfig()
 		return 1;
 	}
 
-	if (log_fname) {
+	if (set_log_fname) {
 		pfname = log_fname;
 	} else {
 #ifdef TSD_PLATFORM_MSVC
@@ -168,7 +170,7 @@ static void register_hooks()
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--log"), TSD_TEXT("ログを出力する"), 0, set_log },
 	{ TSD_TEXT("--logfile"), TSD_TEXT("ログのファイル名"), 1, set_logfile },
-	NULL,
+	{ NULL },
 };
 
 MODULE_DEF module_def_t mod_log = {

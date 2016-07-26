@@ -257,18 +257,6 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 	return 0;
 }
 
-static const char *get_stream_type_str(int stream_type) {
-	static const char *table[] = { "reserved", "video", "video", "audio", "audio",
-		"private_sections", "private data", "MHEG", "DSM-CC", "H.222.1",
-		"typeA", "typeB", "typeC", "typeD", "auxiliary", "audio" };
-	if (stream_type <= 0xf) {
-		return table[stream_type];
-	}
-	else {
-		return "unkonwn";
-	}
-}
-
 /* MJD(C³ƒ†ƒŠƒEƒX“ú) -> YMD */
 void mjd_to_ymd(const unsigned int mjd16, int *year, int *mon, int *day)
 {
