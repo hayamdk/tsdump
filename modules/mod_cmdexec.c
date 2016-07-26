@@ -373,6 +373,12 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *f
 		goto ERROR2;
 	}
 
+	if (fcntl(pipefds[1], F_SETFD, FD_CLOEXEC) < 0) {
+		/* FD_CLOEXECを指定しないと複数の子プロセスを作ったときにパイプが閉じられない */
+		output_message(MSG_SYSERROR, "パイプにFD_CLOEXECを設定できませんでした(fcntl)");
+		goto ERROR2;
+	}
+
 	if (pipe_cmd->set_opt) {
 		generate_arg(argline, 2048 - 1, pipe_cmd, fname, proginfo);
 		args[0] = (char*)pipe_cmd->cmd;
@@ -531,22 +537,42 @@ int my_sigtimedwait(sigset_t *set, siginfo_t *info, const struct timespec *timeo
 #ifdef __CYGWIN__
 	/* cygwinにはsigtimedwaitが存在しないので、同等のものをpselectでエミュレートする */
 	int ret;
-	ret = pselect(0, NULL, NULL, NULL, timeout, set);
+	sigset_t empty, inv_set;
+	/* sigtimedwaitではsetは得たいシグナルの集合なのに対し、pselectでは逆にマスクされたシグナルを指定する */
+	/* よって与えられたsetから反転したセットを作る */
+	sigemptyset(&empty);
+	sigfillset(&inv_set);
+	inv_set ^= (empty ^ *set); /* シグナルセットが整数型のビットで表されているはずと仮定（！） */ 
+	ret = pselect(0, NULL, NULL, NULL, timeout, &inv_set);
 	if (ret < 0) {
 		if (errno == EINTR) {
 			/* シグナルを受信した */
 			return 1;
 		}
+	} else if (ret == 0) {
+		errno = EAGAIN;
+		ret = -1;
 	}
 	return ret;
 #else
 	return sigtimedwait(set, info, timeout);
 #endif
 }
+
+void dummy_handler(int signo)
+{
+	UNREF_ARG(signo);
+	/* do nothing */
+}
+
 #endif
 
 static void wait_child_process(pipestat_t *ps, int timeout)
 {
+#ifndef TSD_PLATFORM_MSVC
+	int error = 0;
+#endif
+
 	if (ps->used) {
 #ifdef TSD_PLATFORM_MSVC
 		DWORD ret = WaitForSingleObject(ps->child_process, timeout);
@@ -558,34 +584,42 @@ static void wait_child_process(pipestat_t *ps, int timeout)
 #else
 		int64_t time1;
 		int ret, status;
-		sigset_t set, oldset;
+		sigset_t set, set_old;
 		struct timespec ts;
+		struct sigaction sa, sa_old;
+
+		memset(&sa, 0, sizeof(sa));
+		sa.sa_handler = dummy_handler;
+		sa.sa_flags = 0;
+
+		/* SIGCHLDのハンドラを設定する */
+		/* ハンドラを指定しないとシグナルが送出されない */
+		if (sigaction(SIGCHLD, &sa, &sa_old) < 0) {
+			output_message(MSG_SYSERROR, "sigactionに失敗しました");
+			goto END_KILL;
+		}
 
 		sigemptyset(&set);
 		if (sigaddset(&set, SIGCHLD) != 0) {
 			output_message(MSG_ERROR, "sigaddsetに失敗しました");
-			kill_child_process(ps);
-			return;
+			goto END_KILL;
 		}
-		if (sigprocmask(SIG_BLOCK, &set, &oldset) != 0) {
+		if (sigprocmask(SIG_BLOCK, &set, &set_old) != 0) {
 			output_message(MSG_ERROR, "sigprocmaskに失敗しました");
-			kill_child_process(ps);
-			return;
+			goto END_KILL;
 		}
 
 		while(1) {
 			ret = waitpid(ps->pid_child, &status, WNOHANG);
 			if (ret < 0) {
 				output_message(MSG_SYSERROR, "waitpidに失敗しました");
-				sigprocmask(SIG_SETMASK, &oldset, NULL);
-				kill_child_process(ps);
-				return;
+				error = 1;
+				goto END;
 			} else if (ret == 0) {
 				if (timeout == 0) {
 					output_message(MSG_ERROR, "プロセスが応答しないので強制終了します(waitpid)");
-					sigprocmask(SIG_SETMASK, &oldset, NULL);
-					kill_child_process(ps);
-					return;
+					error = 1;
+					goto END;
 				}
 				time1 = gettime();
 				ts.tv_sec = timeout / 1000;
@@ -597,9 +631,8 @@ static void wait_child_process(pipestat_t *ps, int timeout)
 					} else {
 						output_message(MSG_SYSERROR, "sigtimedwaitに失敗しました");
 					}
-					sigprocmask(SIG_SETMASK, &oldset, NULL);
-					kill_child_process(ps);
-					return;
+					error = 1;
+					goto END;
 				}
 				timeout -= (int)(gettime() - time1);
 				if (timeout < 0) {
@@ -610,7 +643,15 @@ static void wait_child_process(pipestat_t *ps, int timeout)
 				break;
 			}
 		}
-		sigprocmask(SIG_SETMASK, &oldset, NULL);
+
+END:
+		/* シグナルマスクとシグナルハンドラを元に戻す */
+		sigprocmask(SIG_SETMASK, &set_old, NULL);
+		sigaction(SIGCHLD, &sa_old, NULL);
+		if (error) {
+END_KILL:
+			kill_child_process(ps);
+		}
 #endif
 		ps->used = 0;
 	}
