@@ -459,6 +459,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, encrypted);
 
+		do_tick(nowtime);
+
 		int valid_ts_header;
 		int need_default_counter = !(is_implemented_stream_decoder_stats());
 

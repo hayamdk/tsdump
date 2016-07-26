@@ -62,6 +62,7 @@ typedef int(*hook_stream_generator_wait_t)(void *, int);
 typedef int(*hook_stream_generator_siglevel_t)(void *, double *siglevel, signal_value_scale_t *scale);
 typedef int(*hook_stream_generator_cnr_t)(void *, double *snr, signal_value_scale_t *scale);
 typedef void(*hook_stream_generator_close_t)(void *);
+typedef void(*hook_tick_t)(int64_t);
 
 typedef struct {
 	hook_stream_generator_open_t open_handler;
@@ -135,3 +136,4 @@ MODULE_EXPORT_FUNC int register_hooks_stream_generator(hooks_stream_generator_t 
 MODULE_EXPORT_FUNC int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
 MODULE_EXPORT_FUNC void register_hook_message(hook_message_t handler);
 MODULE_EXPORT_FUNC int register_hook_path_resolver(hook_path_resolver_t handler);
+MODULE_EXPORT_FUNC void register_hook_tick(hook_tick_t handler);

@@ -44,6 +44,7 @@ typedef struct {
 	hook_stream_t hook_stream;
 	hook_close_stream_t hook_close_stream;
 	hook_message_t hook_message;
+	hook_tick_t hook_tick;
 } module_hooks_t;
 
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
@@ -141,6 +142,11 @@ void register_hook_stream(hook_stream_t handler)
 void register_hook_close_stream(hook_close_stream_t handler)
 {
 	module_hooks_current->hook_close_stream = handler;
+}
+
+void register_hook_tick(hook_tick_t handler)
+{
+	module_hooks_current->hook_tick = handler;
 }
 
 int register_hooks_stream_generator(hooks_stream_generator_t *handlers)
@@ -328,6 +334,16 @@ void do_close_stream()
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_close_stream) {
 			modules[i].hooks.hook_close_stream();
+		}
+	}
+}
+
+void do_tick(int64_t time_ms)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_tick) {
+			modules[i].hooks.hook_tick(time_ms);
 		}
 	}
 }
