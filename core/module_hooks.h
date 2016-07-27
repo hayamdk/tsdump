@@ -6,8 +6,9 @@ typedef enum {
 	TSDUMP_MODULE_NONE = 0,
 /*	TSDUMP_MODULE_V1 = 1,
 	TSDUMP_MODULE_V2 = 2,
-	TSDUMP_MODULE_V3 = 3,*/
-	TSDUMP_MODULE_V4 = 4,
+	TSDUMP_MODULE_V3 = 3,
+	TSDUMP_MODULE_V4 = 4,*/
+	TSDUMP_MODULE_V5 = 5,
 } module_ver;
 
 typedef enum {

@@ -382,7 +382,7 @@ static void register_hooks()
 }
 
 MODULE_DEF module_def_t mod_fileout = {
-	TSDUMP_MODULE_V4,
+	TSDUMP_MODULE_V5,
 	TSD_TEXT("mod_fileout"),
 	register_hooks,
 	NULL

@@ -140,11 +140,11 @@ static const char *set_arib25(const char *param)
 
 static cmd_def_t cmds[] = {
 	{ "--arib25", "arib25によってデコードを行う", 0, set_arib25 },
-	NULL,
+	{ NULL },
 };
 
 MODULE_DEF module_def_t mod_arib25 = {
-	TSDUMP_MODULE_V4,
+	TSDUMP_MODULE_V5,
 	"mod_arib25",
 	register_hooks,
 	cmds

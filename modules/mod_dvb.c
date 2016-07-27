@@ -616,7 +616,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_dvb = {
-	TSDUMP_MODULE_V4,
+	TSDUMP_MODULE_V5,
 	"mod_dvb",
 	register_hooks,
 	cmds

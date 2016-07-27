@@ -149,7 +149,7 @@ static void register_hooks()
 }
 
 MODULE_DEF module_def_t mod_path_resolver = {
-	TSDUMP_MODULE_V4,
+	TSDUMP_MODULE_V5,
 	TSD_TEXT("mod_path_resolver"),
 	register_hooks,
 	cmds,

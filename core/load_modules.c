@@ -518,7 +518,7 @@ static int load_module(module_def_t *mod, HMODULE hdll)
 static int load_module(module_def_t *mod, void *dummy)
 #endif
 {
-	if ( mod->mod_ver != TSDUMP_MODULE_V4 ) {
+	if ( mod->mod_ver != TSDUMP_MODULE_V5 ) {
 		output_message(MSG_ERROR, TSD_TEXT("ŒÝŠ·«‚Ì–³‚¢ƒ‚ƒWƒ…[ƒ‹‚Å‚·: %s"), mod->modname);
 		return 0;
 	}

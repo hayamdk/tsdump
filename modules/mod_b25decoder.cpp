@@ -132,7 +132,7 @@ static cmd_def_t cmds[] = {
 };
 
 MODULE_DEF module_def_t mod_b25decoder = {
-	TSDUMP_MODULE_V4,
+	TSDUMP_MODULE_V5,
 	L"mod_b25decoder",
 	register_hooks,
 	cmds
