@@ -94,6 +94,14 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 	const char *cp;
 	int len;
 
+	if (msgtype == MSG_SYSERROR) {
+		lasterr = GetLastError();
+		plasterr = &lasterr;
+	} else if (msgtype == MSG_WINSOCKERROR) {
+		lasterr = WSAGetLastError();
+		plasterr = &lasterr;
+	}
+
 	WCHAR modpath[MAX_PATH_LEN], *wcp;
 		for (wcp = modpath, cp = fname;
 			*cp != '\0' && *cp != '.' && wcp < &modpath[MAX_PATH_LEN];
@@ -104,22 +112,14 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 
 	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
 	modname = path_getfile(modpath);
-
-	if (msgtype == MSG_SYSERROR) {
-		lasterr = GetLastError();
-		plasterr = &lasterr;
-	} else if (msgtype == MSG_WINSOCKERROR) {
-		lasterr = WSAGetLastError();
-		plasterr = &lasterr;
-	}
 #else
-	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
-	modname = path_getfile(fname);
-
 	if (msgtype == MSG_SYSERROR) {
 		lasterr = errno;
 		plasterr = &lasterr;
 	}
+
+	/* __FILE__にフルパスが入っている場合があるのでファイル名のみ取り出す */
+	modname = path_getfile(fname);
 #endif
 
 	tsd_vsnprintf(msg, 2048-1, fmt, list);
