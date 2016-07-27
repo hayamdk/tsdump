@@ -402,10 +402,10 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *f
 
 	if (pipe_cmd->set_opt) {
 		generate_arg(argline, 2048 - 1, pipe_cmd, fname, proginfo);
+		output_message(MSG_NOTIFY, "パイプコマンド実行: %s %s", pipe_cmd->cmd, argline);
 		args[0] = (char*)pipe_cmd->cmd;
 		split_args(argline, &args[1], &n_args, 32 - 2);
 		args[1 + n_args] = NULL;
-		output_message(MSG_NOTIFY, "パイプコマンド実行: %s %s", pipe_cmd->cmd, argline);
 	} else {
 		args[0] = (char*)pipe_cmd->cmd;
 		args[1] = (char*)fname;
@@ -469,10 +469,10 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 
 	if (cmd->set_opt) {
 		generate_arg(argline, 2048 - 1, cmd, fname, proginfo);
+		output_message(MSG_NOTIFY, "コマンド実行: %s %s", cmd->cmd, argline);
 		args[0] = (char*)cmd->cmd;
 		split_args(argline, &args[1], &n_args, 32 - 2);
 		args[1 + n_args] = NULL;
-		output_message(MSG_NOTIFY, "コマンド実行: %s %s", cmd->cmd, argline);
 	} else {
 		args[0] = (char*)cmd->cmd;
 		args[1] = (char*)fname;
