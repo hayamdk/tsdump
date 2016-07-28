@@ -1095,9 +1095,9 @@ static cmd_def_t cmds[] = {
 	{ NULL },
 };
 
-MODULE_DEF module_def_t mod_cmdexec = {
-	TSDUMP_MODULE_V5,
-	TSD_TEXT("mod_cmdexec"),
+TSD_MODULE_DEF(
+	mod_cmdexec,
 	register_hooks,
 	cmds,
-};
+	NULL
+);

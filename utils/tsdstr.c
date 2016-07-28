@@ -230,3 +230,22 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 		}
 	}
 }
+
+void tsd_rstrip(TSDCHAR *str)
+{
+	int i;
+	size_t len = tsd_strlen(str);
+	for (i = len - 1; i > 0; i--) {
+		switch (str[i]) {
+		case TSD_CHAR(' '):
+		case TSD_CHAR('\t'):
+		case TSD_CHAR('\n'):
+		case TSD_CHAR('\r'):
+			str[i] = TSD_NULLCHAR;
+			break;
+		default:
+			i = 0;
+			break;
+		}
+	}
+}

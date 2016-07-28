@@ -381,9 +381,9 @@ static void register_hooks()
 	register_hook_pgoutput_close(hook_pgoutput_close);
 }
 
-MODULE_DEF module_def_t mod_fileout = {
-	TSDUMP_MODULE_V5,
-	TSD_TEXT("mod_fileout"),
+TSD_MODULE_DEF(
+	mod_fileout,
 	register_hooks,
+	NULL,
 	NULL
-};
+);

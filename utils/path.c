@@ -72,9 +72,12 @@ int path_addext(TSDCHAR *path, const TSDCHAR *ext)
 	return PathAddExtension(path, ext);
 }
 
-#else
+int path_self(TSDCHAR *path)
+{
+	return GetModuleFileName(NULL, path, MAX_PATH_LEN);
+}
 
-#define PATH_DELIMITER TSD_CHAR('/')
+#else
 
 static void path_split(const TSDCHAR **dir, int *dir_len, TSDCHAR **file, int *file_len, TSDCHAR **ext, int *ext_len, const TSDCHAR *path)
 {
@@ -169,7 +172,8 @@ int path_getdir(TSDCHAR *dst, const TSDCHAR *path)
 		dst[0] = TSD_NULLCHAR;
 	}
 
-	tsd_strncpy(dst, dir, dir_len);
+	memcpy(dst, dir, sizeof(TSDCHAR)*dir_len);
+	dst[dir_len] = TSD_NULLCHAR;
 
 	return ret;
 }
@@ -219,6 +223,17 @@ int path_isexist(const TSDCHAR *path)
 		return TSD_PATH_ISFILE;
 	}
 	return TSD_PATH_OTHER;
+}
+
+int path_self(TSDCHAR *path)
+{
+	ssize_t ret;
+	ret = readlink("/proc/self/exe", path, MAX_PATH_LEN-1);
+	if (ret <= 0) {
+		return 0;
+	}
+	path[ret] = TSD_NULLCHAR;
+	return 1;
 }
 
 #endif

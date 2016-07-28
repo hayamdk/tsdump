@@ -436,9 +436,9 @@ static cmd_def_t cmds[] = {
 	{ NULL },
 };
 
-MODULE_DEF module_def_t mod_filein = {
-	TSDUMP_MODULE_V5,
-	TSD_TEXT("mod_filein"),
+TSD_MODULE_DEF(
+	mod_filein,
 	register_hooks,
-	cmds
-};
+	cmds,
+	NULL
+);

@@ -143,9 +143,9 @@ static cmd_def_t cmds[] = {
 	{ NULL },
 };
 
-MODULE_DEF module_def_t mod_arib25 = {
-	TSDUMP_MODULE_V5,
-	"mod_arib25",
+TSD_MODULE_DEF(
+	mod_arib25,
 	register_hooks,
-	cmds
-};
+	cmds,
+	NULL
+);

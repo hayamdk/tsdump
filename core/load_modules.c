@@ -8,6 +8,7 @@
 #else
 #include <sys/types.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #endif
 
 #include <stdio.h>
@@ -17,6 +18,8 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 
+#define TSD_MODULES_HOOKS_API_SET
+
 #include "utils/tsdstr.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
@@ -25,6 +28,7 @@
 #include "utils/ts_parser.h"
 #include "core/default_decoder.h"
 #include "modules/modules.h"
+#include "utils/path.h"
 
 #define MAX_HOOKS_NUM 256
 
@@ -54,7 +58,9 @@ static hook_path_resolver_t hook_path_resolver = NULL;
 typedef struct {
 	module_def_t *def;
 #ifdef TSD_PLATFORM_MSVC
-	HMODULE hdll;
+	HMODULE handle;
+#else
+	void *handle;
 #endif
 	module_hooks_t hooks;
 } module_load_t;
@@ -513,12 +519,12 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 }
 
 #ifdef TSD_PLATFORM_MSVC
-static int load_module(module_def_t *mod, HMODULE hdll)
+static int load_module(module_def_t *mod, HMODULE handle)
 #else
-static int load_module(module_def_t *mod, void *dummy)
+static int load_module(module_def_t *mod, void *handle)
 #endif
 {
-	if ( mod->mod_ver != TSDUMP_MODULE_V5 ) {
+	if ( mod->mod_ver != TSDUMP_MODULE_API_VER ) {
 		output_message(MSG_ERROR, TSD_TEXT("互換性の無いモジュールです: %s"), mod->modname);
 		return 0;
 	}
@@ -530,9 +536,7 @@ static int load_module(module_def_t *mod, void *dummy)
 
 	modules[n_modules].def = mod;
 	memset(&modules[n_modules].hooks, 0, sizeof(module_hooks_t));
-#ifdef TSD_PLATFORM_MSVC
-	modules[n_modules].hdll = hdll;
-#endif
+	modules[n_modules].handle = handle;
 	n_modules++;
 	return 1;
 }
@@ -555,44 +559,43 @@ static int load_dll_modules()
 {
 	FILE *fp = NULL;
 	TSDCHAR exepath[MAX_PATH_LEN];
+	TSDCHAR exedir[MAX_PATH_LEN];
 	TSDCHAR confpath[MAX_PATH_LEN];
-	TSDCHAR dllname[MAX_PATH_LEN];
+	TSDCHAR modfile[MAX_PATH_LEN];
 	char modname[MAX_PATH_LEN];
 	module_def_t *mod;
 #ifdef TSD_PLATFORM_MSVC
-	HMODULE hdll;
+	HMODULE handle;
 	errno_t err;
-#endif
 	size_t len;
-
-#ifdef TSD_PLATFORM_MSVC
-	GetModuleFileName(NULL, exepath, MAX_PATH_LEN);
-	PathRemoveFileSpec(exepath);
 #else
-	strcpy(exepath, "dummy");
+	void *handle;
 #endif
-	tsd_snprintf(confpath, MAX_PATH_LEN-1, TSD_TEXT("%s\\modules.conf"), exepath);
+
+	if (!path_self(exepath)) {
+		output_message(MSG_SYSERROR, TSD_TEXT("実行ファイルのパスを取得できません"));
+		return 0;
+	}
+	path_getdir(exedir, exepath);
+	path_join(confpath, exedir, TSD_TEXT("modules.conf"));
 #ifdef TSD_PLATFORM_MSVC
 	err = _wfopen_s(&fp, confpath, L"r");
 	if (err == 0) {
-		while ( fgetws(dllname, MAX_PATH_LEN - 1, fp) != NULL ) {
+		while ( fgetws(modfile, MAX_PATH_LEN - 1, fp) != NULL ) {
 #else
 	fp = fopen(confpath, "r");
 	if (fp) {
-		while ( fgets(dllname, MAX_PATH_LEN - 1, fp) != NULL ) {
+		while ( fgets(modfile, MAX_PATH_LEN - 1, fp) != NULL ) {
 #endif
-			if ( (len = tsd_strlen(dllname)) > 0 ) {
-				if (dllname[len - 1] == L'\n') {
-					dllname[len - 1] = L'\0'; /* 末尾の改行を削除 */
-				}
-			}
+			/* 末尾の改行、空文字を削除 */
+			tsd_rstrip(modfile);
 
-			if (dllname[0] == L'#') {
+			if (modfile[0] == TSD_CHAR('#')) {
 				/* #から始まる行は無視する */
 				continue;
-			} else if (dllname[0] == L'!') {
+			} else if (modfile[0] == TSD_CHAR('!')) {
 				/* !から始まる行はモジュールを取り消す */
-				if (!unload_module(&dllname[1])) {
+				if (!unload_module(&modfile[1])) {
 					fclose(fp);
 					return 0;
 				}
@@ -600,30 +603,50 @@ static int load_dll_modules()
 			}
 
 #ifdef TSD_PLATFORM_MSVC
-			hdll = LoadLibrary(dllname);
-			if (hdll == NULL) {
-				output_message(MSG_SYSERROR, TSD_TEXT("DLLモジュールをロードできませんでした: %s (LoadLibrary)"), dllname);
+			handle = LoadLibrary(modfile);
+			if (handle == NULL) {
+				output_message(MSG_SYSERROR, TSD_TEXT("DLLモジュールをロードできませんでした: %s (LoadLibrary)"), modfile);
 				fclose(fp);
 				return 0;
 			}
-			wcstombs_s(&len, modname, MAX_PATH_LEN-1, dllname, MAX_PATH_LEN);
+			wcstombs_s(&len, modname, MAX_PATH_LEN-1, modfile, MAX_PATH_LEN);
 			PathRemoveExtensionA(modname);
 #pragma warning(push)
 #pragma warning(disable:4054)
-			mod = (module_def_t*)GetProcAddress(hdll, modname);
+			mod = (module_def_t*)GetProcAddress(handle, modname);
 #pragma warning(pop)
-			if (mod == NULL) {
-				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (GetProcAddress)"), dllname);
-				FreeLibrary(hdll);
+#else
+			handle = dlopen(modfile, RTLD_LAZY);
+			if (!handle) {
+				output_message(MSG_SYSERROR, "動的モジュールをロードできませんでした: %s (dlopen)", modfile);
 				fclose(fp);
 				return 0;
 			}
-			if ( ! load_module(mod, hdll) ) {
-				FreeLibrary(hdll);
-				fclose(fp);
-				return 0;
-			}
+			tsd_strncpy(modname, modfile, MAX_PATH_LEN - 1);
+			*(path_getext(modname)) = '\0';
+			mod = dlsym(handle, modname);
 #endif
+			if (mod == NULL) {
+#ifdef TSD_PLATFORM_MSVC
+				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (GetProcAddress)"), modfile);
+				FreeLibrary(handle);
+#else
+				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (dlsym)"), modfile);
+				dlclose(handle);
+#endif
+				
+				fclose(fp);
+				return 0;
+			}
+			if (!load_module(mod, handle)) {
+#ifdef TSD_PLATFORM_MSVC
+				FreeLibrary(handle);
+#else
+				dlclose(handle);
+#endif
+				fclose(fp);
+				return 0;
+			}
 		}
 		fclose(fp);
 	} else {
@@ -663,22 +686,28 @@ int init_modules(int argc, const TSDCHAR* argv[])
 {
 	int i;
 	cmd_def_t *cmd;
+	tsd_api_set_t api_set;
 
 	/* list */
 	for (i = 0; i < n_modules; i++) {
+		if (modules[i].handle) {
 #ifdef TSD_PLATFORM_MSVC
-		if (modules[i].hdll) {
 			output_message(MSG_NOTIFY, TSD_TEXT("module(dll): %s"), modules[i].def->modname);
-		} else {
 #else
-		{
+			output_message(MSG_NOTIFY, TSD_TEXT("module(dynamic): %s"), modules[i].def->modname);
 #endif
+		} else {
 			output_message(MSG_NOTIFY, TSD_TEXT("module: %s"), modules[i].def->modname);
 		}
 	}
 
 	/* init */
+	tsd_api_init_set(&api_set);
+
 	for (i = 0; i < n_modules; i++) {
+		if (modules[i].def->api_init_handler) {
+			modules[i].def->api_init_handler(&api_set);
+		}
 		if( modules[i].def->init_handler ) {
 			modules[i].def->init_handler();
 		}
@@ -734,11 +763,13 @@ void free_modules()
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
+		if (modules[i].handle) {
 #ifdef TSD_PLATFORM_MSVC
-		if (modules[i].hdll) {
-			FreeLibrary(modules[i].hdll);
-		}
+			FreeLibrary(modules[i].handle);
+#else
+			dlclose(modules[i].handle);
 #endif
+		}
 	}
 	n_modules = 0;
 }

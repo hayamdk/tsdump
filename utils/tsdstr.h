@@ -38,3 +38,5 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 #ifdef va_start
 int tsd_vsnprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, va_list ap);
 #endif
+
+void tsd_rstrip(TSDCHAR *str);

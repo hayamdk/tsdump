@@ -1,15 +1,11 @@
+#ifndef __TSD_MODULES_HOOKS
+#define __TSD_MODULES_HOOKS
+
 typedef void (*register_hooks_t)();
 
 typedef const TSDCHAR* (*cmd_handler_t)(const TSDCHAR*);
 
-typedef enum {
-	TSDUMP_MODULE_NONE = 0,
-/*	TSDUMP_MODULE_V1 = 1,
-	TSDUMP_MODULE_V2 = 2,
-	TSDUMP_MODULE_V3 = 3,
-	TSDUMP_MODULE_V4 = 4,*/
-	TSDUMP_MODULE_V5 = 5,
-} module_ver;
+#define TSDUMP_MODULE_API_VER 5
 
 typedef enum {
 	TSDUMP_VALUE_NONE,
@@ -25,11 +21,12 @@ typedef struct{
 } cmd_def_t;
 
 typedef struct{
-	module_ver mod_ver;
+	int mod_ver;
 	const TSDCHAR *modname;
 	register_hooks_t register_hooks;
 	cmd_def_t *cmds;
 	void(*init_handler)();
+	void(*api_init_handler)(void*);
 } module_def_t;
 
 typedef struct{
@@ -117,24 +114,118 @@ typedef const TSDCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_
 //typedef void(*hook_stream_splitter)();
 
 #define output_message(type, ...) _output_message( __FILE__ , type, __VA_ARGS__ )
-MODULE_EXPORT_FUNC void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...);
 
-MODULE_EXPORT_FUNC void register_hook_pgoutput_create(hook_pgoutput_create_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput(hook_pgoutput_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_check(hook_pgoutput_check_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_changed(hook_pgoutput_changed_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_end(hook_pgoutput_end_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_close(hook_pgoutput_close_t handler);
-MODULE_EXPORT_FUNC void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler);
-MODULE_EXPORT_FUNC void register_hook_postconfig(hook_postconfig_t handler);
-MODULE_EXPORT_FUNC void register_hook_close_module(hook_close_module_t handler);
-MODULE_EXPORT_FUNC void register_hook_open_stream(hook_open_stream_t handler);
-MODULE_EXPORT_FUNC void register_hook_encrypted_stream(hook_encrypted_stream_t handler);
-MODULE_EXPORT_FUNC void register_hook_stream(hook_stream_t handler);
-MODULE_EXPORT_FUNC void register_hook_close_stream(hook_close_stream_t handler);
-MODULE_EXPORT_FUNC int register_hooks_stream_generator(hooks_stream_generator_t *handlers);
-MODULE_EXPORT_FUNC int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers);
-MODULE_EXPORT_FUNC void register_hook_message(hook_message_t handler);
-MODULE_EXPORT_FUNC int register_hook_path_resolver(hook_path_resolver_t handler);
-MODULE_EXPORT_FUNC void register_hook_tick(hook_tick_t handler);
+#define TSD_API_DEF(type, name, args) type (* name) args
+#define __TSD_MODULES_HOOKS2
+typedef struct {
+#include "core/module_hooks.h"
+} tsd_api_set_t;
+#undef __TSD_MODULES_HOOKS2
+
+#undef TSD_API_DEF
+
+
+#ifdef IN_SHARED_MODULE
+
+#ifdef TSD_PLATFORM_MSVC
+#ifdef __cplusplus
+#define MODULE_DEF				extern "C" __declspec(dllexport)
+#else
+#define MODULE_DEF				__declspec(dllexport)
+#endif
+#else
+#ifdef __cplusplus
+#define MODULE_DEF				extern "C"
+#else
+#define MODULE_DEF
+#endif
+#endif
+
+#ifdef IS_SHARED_MODULE
+#define TSD_API_DEF(type, name, args) type (*name) args
+#else
+#define TSD_API_DEF(type, name, args) extern type (*name) args
+#endif
+
+#else /* IN_SHARED_MODULE */
+
+#ifdef __cplusplus
+#define MODULE_DEF				extern "C"
+#define MODULE_API_FUNC			extern "C"
+#else
+#define MODULE_DEF
+#define MODULE_API_FUNC
+#endif
+
+#define TSD_API_DEF(type, name, args) MODULE_API_FUNC type name args
+
+#endif /* IN_SHARED_MODULE */
+
+#endif /* __TSD_MODULES_HOOKS */
+
+TSD_API_DEF(void, _output_message, (const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...));
+
+TSD_API_DEF(void, register_hook_pgoutput_create, (hook_pgoutput_create_t));
+TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t));
+TSD_API_DEF(void, register_hook_pgoutput_check, (hook_pgoutput_check_t));
+TSD_API_DEF(void, register_hook_pgoutput_wait, (hook_pgoutput_wait_t));
+TSD_API_DEF(void, register_hook_pgoutput_changed, (hook_pgoutput_changed_t));
+TSD_API_DEF(void, register_hook_pgoutput_end, (hook_pgoutput_end_t));
+TSD_API_DEF(void, register_hook_pgoutput_close, (hook_pgoutput_close_t));
+TSD_API_DEF(void, register_hook_pgoutput_postclose, (hook_pgoutput_postclose_t));
+TSD_API_DEF(void, register_hook_postconfig, (hook_postconfig_t));
+TSD_API_DEF(void, register_hook_close_module, (hook_close_module_t));
+TSD_API_DEF(void, register_hook_open_stream, (hook_open_stream_t));
+TSD_API_DEF(void, register_hook_encrypted_stream, (hook_encrypted_stream_t));
+TSD_API_DEF(void, register_hook_stream, (hook_stream_t));
+TSD_API_DEF(void, register_hook_close_stream, (hook_close_stream_t));
+TSD_API_DEF(int, register_hooks_stream_generator, (hooks_stream_generator_t*));
+TSD_API_DEF(int, register_hooks_stream_decoder, (hooks_stream_decoder_t*));
+TSD_API_DEF(void, register_hook_message, (hook_message_t));
+TSD_API_DEF(int, register_hook_path_resolver, (hook_path_resolver_t));
+TSD_API_DEF(void, register_hook_tick, (hook_tick_t));
+
+
+#ifndef __TSD_MODULES_HOOKS2
+#define __TSD_MODULES_HOOKS2
+
+#ifdef IN_SHARED_MODULE
+
+#ifdef IS_SHARED_MODULE
+
+#undef TSD_API_DEF
+#define TSD_API_DEF(type, name, args) name = set->name
+static void __tsd_api_init(tsd_api_set_t *set)
+{
+#include "core/module_hooks.h"
+}
+
+#endif
+
+#else /* IN_SHARED_MODULE */
+
+#define __tsd_api_init NULL
+
+#ifdef TSD_MODULES_HOOKS_API_SET
+#undef TSD_API_DEF
+#define TSD_API_DEF(type, name, args) set->name = name
+static void tsd_api_init_set(void *p)
+{
+	tsd_api_set_t *set =(tsd_api_set_t*)p;
+#include "core/module_hooks.h"
+}
+#endif
+
+#endif
+
+#define TSD_MODULE_DEF(name, reg_hooks, cmds, init_handler) \
+MODULE_DEF module_def_t name = { \
+	TSDUMP_MODULE_API_VER, \
+	TSD_TEXT(#name), \
+	reg_hooks, \
+	cmds, \
+	init_handler, \
+	__tsd_api_init \
+}
+
+#endif /* __TSD_MODULES_HOOKS2 */

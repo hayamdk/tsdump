@@ -148,9 +148,9 @@ static void register_hooks()
 	register_hook_path_resolver(hook_path_resolver);
 }
 
-MODULE_DEF module_def_t mod_path_resolver = {
-	TSDUMP_MODULE_V5,
-	TSD_TEXT("mod_path_resolver"),
+TSD_MODULE_DEF(
+	mod_path_resolver,
 	register_hooks,
 	cmds,
-};
+	NULL
+);

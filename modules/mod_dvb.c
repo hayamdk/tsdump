@@ -615,10 +615,10 @@ static cmd_def_t cmds[] = {
 	{ NULL },
 };
 
-MODULE_DEF module_def_t mod_dvb = {
-	TSDUMP_MODULE_V5,
-	"mod_dvb",
+TSD_MODULE_DEF(
+	mod_dvb,
 	register_hooks,
-	cmds
-};
+	cmds,
+	NULL
+);
 

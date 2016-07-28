@@ -865,9 +865,9 @@ static cmd_def_t cmds[] = {
 	{ NULL },
 };
 
-MODULE_DEF module_def_t mod_core = {
-	TSDUMP_MODULE_V5,
-	TSD_TEXT("mod_core"),
+TSD_MODULE_DEF(
+	mod_core,
 	register_hooks,
-	cmds
-};
+	cmds,
+	NULL
+);
