@@ -618,20 +618,20 @@ static int load_dll_modules()
 #else
 			handle = dlopen(modfile, RTLD_LAZY);
 			if (!handle) {
-				output_message(MSG_SYSERROR, "動的モジュールをロードできませんでした: %s (dlopen)", modfile);
+				output_message(MSG_ERROR, "動的モジュールをロードできませんでした(dlopen): %s", dlerror());
 				fclose(fp);
 				return 0;
 			}
 			tsd_strncpy(modname, modfile, MAX_PATH_LEN - 1);
 			*(path_getext(modname)) = '\0';
-			mod = dlsym(handle, modname);
+			mod = dlsym(handle, path_getfile(modname));
 #endif
 			if (mod == NULL) {
 #ifdef TSD_PLATFORM_MSVC
 				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (GetProcAddress)"), modfile);
 				FreeLibrary(handle);
 #else
-				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした: %s (dlsym)"), modfile);
+				output_message(MSG_SYSERROR, TSD_TEXT("モジュールポインタを取得できませんでした(dlsym): %s"), dlerror());
 				dlclose(handle);
 #endif
 				
@@ -650,7 +650,11 @@ static int load_dll_modules()
 		}
 		fclose(fp);
 	} else {
+#ifdef TSD_PLATFORM_MSVC
 		output_message(MSG_NOTIFY, TSD_TEXT("modules.confを開けないのでDLLモジュールをロードしません"));
+#else
+		output_message(MSG_NOTIFY, TSD_TEXT("modules.confを開けないので動的モジュールをロードしません"));
+#endif
 	}
 	return 1;
 }
