@@ -17,7 +17,7 @@ OBJS = $(OBJS1) $(OBJS2)
 CFLAGS = -Ofast -march=native -Wall -flto -I$(CURDIR)
 #CFLAGS = -O0 -Wall -g -I$(CURDIR)
 
-LDFLAGS = -flto -lm
+LDFLAGS = -flto -lm -ldl
 LDFLAGS := $(if $(shell uname -a | grep -i linux), $(LDFLAGS) -larib25, $(LDFLAGS))
 LDFLAGS := $(if $(shell uname -a | grep -i cygwin), $(LDFLAGS) -liconv, $(LDFLAGS))
 
