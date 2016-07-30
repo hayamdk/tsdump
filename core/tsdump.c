@@ -666,20 +666,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 void load_ini()
 {
-#ifdef TSD_PLATFORM_MSVC
-	int bufsize = GetPrivateProfileInt(L"TSDUMP", L"BUFSIZE", BUFSIZE_DEFAULT, L".\\tsdump.ini");
-	int overlap_sec = GetPrivateProfileInt(L"TSDUMP", L"OVERLAP_SEC", OVERLAP_SEC_DEFAULT, L".\\tsdump.ini");
-	int check_interval = GetPrivateProfileInt(L"TSDUMP", L"CHECK_INTERVAL", CHECK_INTERVAL_DEFAULT, L".\\tsdump.ini");
-	int max_pgoverlap = GetPrivateProfileInt(L"TSDUMP", L"MAX_PGOVERLAP", MAX_PGOVERLAP_DEFAULT, L".\\tsdump.ini");
-
-	BUFSIZE = bufsize * 1024 * 1024;
-	OVERLAP_SEC = overlap_sec;
-	CHECK_INTERVAL = check_interval;
-	MAX_PGOVERLAP = max_pgoverlap;
-#endif
-
-	output_message(MSG_NONE, TSD_TEXT("BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n"),
-		BUFSIZE/1024/1024, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 }
 
 #ifdef TSD_PLATFORM_MSVC
@@ -700,9 +686,6 @@ int main(int argc, const char* argv[])
 
 	output_message(MSG_NONE, TSD_TEXT("tsdump ver%s (%s)\n"), VERSION_STR, DATE_STR);
 
-	/* iniファイルをロード */
-	load_ini();
-
 	/* モジュールをロード */
 	if (load_modules() < 0) {
 		output_message(MSG_ERROR, TSD_TEXT("モジュールのロード時にエラーが発生しました!"));
@@ -717,6 +700,9 @@ int main(int argc, const char* argv[])
 		ret = 1;
 		goto END;
 	}
+
+	output_message(MSG_NONE, TSD_TEXT("BUFSIZE: %dMiB\nOVERLAP_SEC: %ds\nCHECK_INTERVAL: %dms\nMAX_PGOVERLAP: %d\n"),
+		BUFSIZE / 1024 / 1024, OVERLAP_SEC, CHECK_INTERVAL, MAX_PGOVERLAP);
 
 #ifdef TSD_PLATFORM_MSVC
 	SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
@@ -797,6 +783,36 @@ static const TSDCHAR* set_sv(const TSDCHAR *param)
 	return NULL;
 }
 
+static const TSDCHAR* set_bufsize(const TSDCHAR *param)
+{
+	int bs = tsd_atoi(param);
+	if (bs <= 0) {
+		return TSD_TEXT("不正なバッファサイズが指定されました");
+	}
+	BUFSIZE = bs;
+	return NULL;
+}
+
+static const TSDCHAR* set_pginterval(const TSDCHAR *param)
+{
+	int i = tsd_atoi(param);
+	if (i <= 0 || i > 1000) {
+		return TSD_TEXT("不正なインターバル時間が指定されました");
+	}
+	CHECK_INTERVAL = i;
+	return NULL;
+}
+
+static const TSDCHAR* set_pgmargin(const TSDCHAR *param)
+{
+	int i = tsd_atoi(param);
+	if (i <= 0 || i > 60) {
+		return TSD_TEXT("不正なマージン時間が指定されました");
+	}
+	OVERLAP_SEC = i;
+	return NULL;
+}
+
 void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg)
 {
 	const TSDCHAR *msgtype_str = TSD_TEXT("");
@@ -862,6 +878,9 @@ static void register_hooks()
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--sv"), TSD_TEXT("サービス番号(複数指定可能)"), 1, set_sv },
 	{ TSD_TEXT("--nowait"), TSD_TEXT("バッファフル時にあふれたデータは捨てる"), 0, set_nowait },
+	{ TSD_TEXT("--bufsize"), TSD_TEXT("バッファサイズを指定(MiB)"), 0, set_bufsize },
+	{ TSD_TEXT("--pginterval"), TSD_TEXT("番組情報チェックのインターバル(ms)"), 0, set_pginterval },
+	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 0, set_pgmargin },
 	{ NULL },
 };
 
