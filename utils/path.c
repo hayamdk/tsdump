@@ -136,8 +136,7 @@ int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
 	}
 
 	if (base_len + add_delimiter >= MAX_PATH_LEN) {
-		tsd_strncpy(dst, base, MAX_PATH_LEN - 1);
-		dst[MAX_PATH_LEN-1] = TSD_NULLCHAR;
+		tsd_strlcpy(dst, base, MAX_PATH_LEN - 1);
 		return 0;
 	}
 	tsd_strcpy(dst, base);
@@ -147,8 +146,7 @@ int path_join(TSDCHAR *dst, const TSDCHAR *base, const TSDCHAR *addition)
 	}
 
 	if (base_len + addition_len >= MAX_PATH_LEN) {
-		tsd_strncpy(&dst[base_len], addition, MAX_PATH_LEN - 1 - base_len);
-		dst[MAX_PATH_LEN - 1] = TSD_NULLCHAR;
+		tsd_strlcpy(&dst[base_len], addition, MAX_PATH_LEN - 1 - base_len);
 		return 0;
 	}
 	tsd_strcpy(&dst[base_len], addition);

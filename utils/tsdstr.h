@@ -13,7 +13,7 @@ typedef struct {
 	size_t new_len;
 } tsdstr_replace_set_t;
 
-const TSDCHAR* tsd_strncpy(TSDCHAR *dst, const TSDCHAR *src, size_t n);
+size_t tsd_strlcpy(TSDCHAR *dst, const TSDCHAR *src, size_t n);
 const TSDCHAR* tsd_strcpy(TSDCHAR *dst, const TSDCHAR *src);
 size_t tsd_strlen(const TSDCHAR *str);
 const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src);

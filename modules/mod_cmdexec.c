@@ -123,7 +123,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		sec = lt.tm_sec;
 	}
 
-	tsd_strncpy(fname_base, fname, MAX_PATH_LEN);
+	tsd_strlcpy(fname_base, fname, MAX_PATH_LEN - 1);
 	path_removeext(fname_base);
 
 	tsd_snprintf(tn_str, 20, TSD_TEXT("%"PRId64), timenum );
@@ -159,7 +159,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%mm%"), min_str0);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%ss%"), sec_str0);
 
-	tsd_strncpy(arg, cmd->opt, maxlen_arg - 1);
+	tsd_strlcpy(arg, cmd->opt, maxlen_arg - 1);
 	tsd_replace_sets(arg, maxlen_arg - 1, sets, n_sets, 0);
 }
 
@@ -506,7 +506,7 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 	for (i = 0; i < n_pipecmds; i++) {
 		create_pipe(&stat->pipestats[i], &pipecmds[i], fname, pi);
 	}
-	tsd_strncpy(stat->filename, fname, MAX_PATH_LEN - 1);
+	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
 	return stat;
 }
 
@@ -1017,7 +1017,7 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 	if (n_pipecmds >= MAX_PIPECMDS) {
 		return TSD_TEXT("指定するパイプ実行コマンドの数が多すぎます");
 	}
-	tsd_strncpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
+	tsd_strlcpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
 	pipecmds[n_pipecmds].set_opt = 0;
 	n_pipecmds++;
 	return NULL;
@@ -1031,7 +1031,7 @@ static const TSDCHAR* set_pipe_opt(const TSDCHAR *param)
 	if (pipecmds[n_pipecmds - 1].set_opt) {
 		return TSD_TEXT("パイプ実行コマンドのオプションは既に指定されています");
 	}
-	tsd_strncpy(pipecmds[n_pipecmds-1].opt, param, 2048 - 1);
+	tsd_strlcpy(pipecmds[n_pipecmds-1].opt, param, 2048 - 1);
 	pipecmds[n_pipecmds - 1].set_opt = 1;
 	return NULL;
 }
@@ -1048,7 +1048,7 @@ static const TSDCHAR* set_cmd(const TSDCHAR *param)
 	if (n_execcmds >= MAX_CMDS) {
 		return TSD_TEXT("指定する番組終了時実行コマンドの数が多すぎます");
 	}
-	tsd_strncpy(execcmds[n_execcmds].cmd, param, MAX_PATH_LEN - 1);
+	tsd_strlcpy(execcmds[n_execcmds].cmd, param, MAX_PATH_LEN - 1);
 	execcmds[n_execcmds].set_opt = 0;
 	n_execcmds++;
 	return NULL;
@@ -1062,7 +1062,7 @@ static const TSDCHAR* set_cmd_opt(const TSDCHAR *param)
 	if (execcmds[n_execcmds - 1].set_opt) {
 		return TSD_TEXT("番組終了時実行コマンドのオプションは既に指定されています");
 	}
-	tsd_strncpy(execcmds[n_execcmds - 1].opt, param, 2048 - 1);
+	tsd_strlcpy(execcmds[n_execcmds - 1].opt, param, 2048 - 1);
 	execcmds[n_execcmds - 1].set_opt = 1;
 	return NULL;
 }

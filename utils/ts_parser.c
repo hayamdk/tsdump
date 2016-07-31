@@ -129,13 +129,13 @@ int get_extended_text(TSDCHAR *dst, size_t n, const proginfo_t *pi)
 	}
 
 	for (i = 0; i < pi->n_items && p < end; i++) {
-		tsd_strncpy(p, pi->items[i].desc.str, end - p);
+		tsd_strlcpy(p, pi->items[i].desc.str, end - p);
 		while (*p != L'\0') { p++; }
-		tsd_strncpy(p, TSD_TEXT("\n"), end - p);
+		tsd_strlcpy(p, TSD_TEXT("\n"), end - p);
 		while (*p != L'\0') { p++; }
-		tsd_strncpy(p, pi->items[i].item.str, end - p);
+		tsd_strlcpy(p, pi->items[i].item.str, end - p);
 		while (*p != L'\0') { p++; }
-		tsd_strncpy(p, TSD_TEXT("\n"), end - p);
+		tsd_strlcpy(p, TSD_TEXT("\n"), end - p);
 		while (*p != L'\0') { p++; }
 	}
 	return 1;

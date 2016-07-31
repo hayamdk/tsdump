@@ -37,7 +37,7 @@ static const TSDCHAR *set_logfile(const TSDCHAR* param)
 {
 	output_log = 1;
 	set_log_fname = 1;
-	tsd_strncpy(log_fname, param, MAX_PATH_LEN-1);
+	tsd_strlcpy(log_fname, param, MAX_PATH_LEN-1);
 	return NULL;
 }
 

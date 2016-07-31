@@ -77,7 +77,7 @@ int create_proginfo_file(TSDCHAR *fname, const TSDCHAR *fname_ts, const proginfo
 		return 0;
 	}
 
-	tsd_strncpy(fname, fname_ts, MAX_PATH_LEN - 1);
+	tsd_strlcpy(fname, fname_ts, MAX_PATH_LEN - 1);
 	path_removeext(fname);
 	path_addext(fname, TSD_TEXT(".txt"));
 
@@ -125,7 +125,7 @@ static void create_new_proginfo_file(const TSDCHAR *fname_ts, const TSDCHAR *fna
 	}
 
 	if (fname_pi_init) {
-		tsd_strncpy(fname, fname_ts, MAX_PATH_LEN - 1);
+		tsd_strlcpy(fname, fname_ts, MAX_PATH_LEN - 1);
 		path_removeext(fname);
 		tsd_strlcat(fname, MAX_PATH_LEN, TSD_TEXT("_init.txt"));
 #ifdef TSD_PLATFORM_MSVC
@@ -287,7 +287,7 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 #else
 	fos->fd = fd;
 #endif
-	tsd_strncpy(fos->fn, fname, MAX_PATH_LEN-1);
+	tsd_strlcpy(fos->fn, fname, MAX_PATH_LEN-1);
 
 	fos->initial_pi = *pi;
 	fos->is_pi = create_proginfo_file(fos->fn_pi, fname, pi);

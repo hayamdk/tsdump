@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "utils/tsdstr.h"
 
@@ -17,13 +18,22 @@
 #include <string.h>
 #endif
 
-const TSDCHAR* tsd_strncpy(TSDCHAR *dst, const TSDCHAR *src, size_t n)
+/* strncpyと異なりコピー先の文字列は必ず終端される。
+領域が重なっていてもかまわない。戻り値は終端文字を除くコピーした要素数。 */
+size_t tsd_strlcpy(TSDCHAR *dst, const TSDCHAR *src, size_t n)
 {
-#ifdef TSD_PLATFORM_MSVC
-	return wcsncpy(dst, src, n);
-#else
-	return strncpy(dst, src, n);
-#endif
+	size_t len = tsd_strlen(src);
+	if (len > n) {
+		len = n;
+	}
+	if (src <= &dst[len] && dst <= &src[len]) {
+		/* 領域が重複している */
+		memmove(dst, src, sizeof(TSDCHAR)*len);
+	} else {
+		memcpy(dst, src, sizeof(TSDCHAR)*len);
+	}
+	dst[len] = TSD_NULLCHAR;
+	return len;
 }
 
 const TSDCHAR* tsd_strcpy(TSDCHAR *dst, const TSDCHAR *src)
@@ -121,8 +131,7 @@ const TSDCHAR* tsd_strlcat(TSDCHAR *dst, size_t dst_buflen, const TSDCHAR *src)
 	if (dstlen + srclen < dst_buflen) {
 		tsd_strcpy(&dst[dstlen], src);
 	} else if(dstlen + 1 < dst_buflen) {
-		tsd_strncpy(&dst[dstlen], src, dst_buflen - dstlen - 1 );
-		dst[dst_buflen - 1] = TSD_NULLCHAR;
+		tsd_strlcpy(&dst[dstlen], src, dst_buflen - dstlen - 1 );
 	}
 	return dst;
 }

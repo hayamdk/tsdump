@@ -416,7 +416,7 @@ static void register_hooks()
 static const TSDCHAR *set_infile(const TSDCHAR* param)
 {
 	flg_set_infile = 1;
-	tsd_strncpy(infile_name, param, MAX_PATH_LEN);
+	tsd_strlcpy(infile_name, param, MAX_PATH_LEN - 1);
 	return NULL;
 }
 

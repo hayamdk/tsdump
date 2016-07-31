@@ -68,8 +68,8 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 		}
 	}
 
-	tsd_strncpy(pname_n, pname, 256 - 1);
-	tsd_strncpy(chname_n, chname, 256 - 1);
+	tsd_strlcpy(pname_n, pname, 256 - 1);
+	tsd_strlcpy(chname_n, chname, 256 - 1);
 
 	normalize_fname(pname_n, 256-1);
 	normalize_fname(chname_n, 256-1);
@@ -123,8 +123,7 @@ static const TSDCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *
 
 static const TSDCHAR* set_dir(const TSDCHAR *param)
 {
-	tsd_strncpy(param_base_dir, param, MAX_PATH_LEN);
-	//PathAddBackslash(param_base_dir);
+	tsd_strlcpy(param_base_dir, param, MAX_PATH_LEN - 1);
 	return NULL;
 }
 

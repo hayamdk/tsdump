@@ -622,7 +622,7 @@ static int load_dll_modules()
 				fclose(fp);
 				return 0;
 			}
-			tsd_strncpy(modname, modfile, MAX_PATH_LEN - 1);
+			tsd_strlcpy(modname, modfile, MAX_PATH_LEN - 1);
 			*(path_getext(modname)) = '\0';
 			mod = dlsym(handle, path_getfile(modname));
 #endif
