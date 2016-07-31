@@ -878,9 +878,9 @@ static void register_hooks()
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--sv"), TSD_TEXT("サービス番号(複数指定可能)"), 1, set_sv },
 	{ TSD_TEXT("--nowait"), TSD_TEXT("バッファフル時にあふれたデータは捨てる"), 0, set_nowait },
-	{ TSD_TEXT("--bufsize"), TSD_TEXT("バッファサイズを指定(MiB)"), 0, set_bufsize },
-	{ TSD_TEXT("--pginterval"), TSD_TEXT("番組情報チェックのインターバル(ms)"), 0, set_pginterval },
-	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 0, set_pgmargin },
+	{ TSD_TEXT("--bufsize"), TSD_TEXT("バッファサイズを指定(MiB)"), 1, set_bufsize },
+	{ TSD_TEXT("--pginterval"), TSD_TEXT("番組情報チェックのインターバル(ms)"), 1, set_pginterval },
+	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 1, set_pgmargin },
 	{ NULL },
 };
 
