@@ -789,7 +789,7 @@ static const TSDCHAR* set_bufsize(const TSDCHAR *param)
 	if (bs <= 0) {
 		return TSD_TEXT("不正なバッファサイズが指定されました");
 	}
-	BUFSIZE = bs;
+	BUFSIZE = bs * 1024 * 1024;
 	return NULL;
 }
 
