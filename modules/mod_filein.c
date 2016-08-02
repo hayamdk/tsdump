@@ -21,9 +21,12 @@
 #include "core/module_hooks.h"
 #include "utils/tsdstr.h"
 #include "utils/path.h"
+#include "utils/ts_parser.h"
+#include "core/default_decoder.h"
 
 static int flg_set_infile = 0;
 static int flg_set_mbps = 0;
+static int flg_set_unlim = 0;
 static int reg_hooks;
 static TSDCHAR infile_name[MAX_PATH_LEN];
 static double mbps;
@@ -33,9 +36,6 @@ static double mbps;
 typedef struct {
 	int bytes;
 	int eof;
-	int64_t last_timestamp;
-	int64_t timestamp;
-	int timestamp_ns;
 	uint8_t buf[BLOCK_SIZE];
 	uint8_t tmp_buf[BLOCK_SIZE];
 #ifdef TSD_PLATFORM_MSVC
@@ -45,6 +45,14 @@ typedef struct {
 #else
 	int fd;
 #endif
+	int64_t timestamp_orig;
+	int64_t timestamp;
+	int64_t total_bytes;
+	int PCR_set_orig;
+	PSI_parse_t pid_PAT;
+	PSI_parse_t pid_PMT;
+	proginfo_t proginfo;
+	ts_alignment_filter_t filter;
 } filein_stat_t;
 
 static inline int64_t gettime()
@@ -75,21 +83,83 @@ static int hook_postconfig()
 	return 1;
 }
 
-void forward_timpstamp(filein_stat_t *stat, const uint8_t *buf, int size)
+static void pat_handler(void *param, const int n, const int i, const PAT_item_t *PAT_item)
 {
-	UNREF_ARG(buf);
-	double tick_ns = (double)size / mbps / 1024 / 1024 * 8 * 1000 * 1000 * 1000;
-	int64_t tick_ms = (int64_t)(tick_ns / 1000 / 1000);
-	int tick_ns_i = (int)(tick_ns - tick_ms);
-	if (tick_ns_i < 0) {
-		tick_ns_i = 0;
+	UNREF_ARG(n);
+	UNREF_ARG(i);
+	filein_stat_t *stat = (filein_stat_t*)param;
+	if (stat->proginfo.status & PGINFO_GET_PAT) {
+		return;
 	}
-	stat->timestamp_ns += tick_ns_i;
-	if (stat->timestamp_ns >= 1000 * 1000) {
-		stat->timestamp_ns -= 1000 * 1000;
-		stat->timestamp++;
+	if (PAT_item->program_number != 0) {
+		stat->pid_PMT.pid = PAT_item->pid;
+		stat->pid_PMT.stat = PAYLOAD_STAT_INIT;
+		store_PAT(&stat->proginfo, PAT_item);
 	}
-	stat->timestamp += tick_ms;
+}
+
+static proginfo_t *pcr_handler(void *param, const unsigned int pcr_pid)
+{
+	filein_stat_t *stat = (filein_stat_t*)param;
+	if (!(stat->proginfo.status & PGINFO_GET_PMT)) {
+		return NULL;
+	}
+	if (stat->proginfo.PCR_pid != pcr_pid) {
+		return NULL;
+	}
+	return &stat->proginfo;
+}
+
+void set_timpstamp_bytes(filein_stat_t *stat, int size)
+{
+	stat->total_bytes += size;
+	int64_t timestamp_offset = (int64_t)( (double)stat->total_bytes / mbps / 1024 / 1024 * 8 * 1000 );
+	stat->timestamp = stat->timestamp_orig + timestamp_offset;
+}
+
+static void set_timestamp_pcr(filein_stat_t *stat, const uint8_t *buf, const int size)
+{
+	uint8_t *buf_filtered;
+	int size_filtered;
+	ts_header_t tsh;
+	int i, set=0;
+	int64_t timestamp_offset = 0;
+
+	ts_alignment_filter(&stat->filter, &buf_filtered, &size_filtered, buf, size);
+	for (i = 0; i < size_filtered; i += 188) {
+		if (!parse_ts_header(&buf_filtered[i], &tsh)) {
+			/* 無効なパケットはスルー */
+			continue;
+		}
+		if (tsh.transport_scrambling_control) {
+			/* 暗号化されたパケットはスルー */
+			continue;
+		}
+		if (!(stat->proginfo.status & PGINFO_GET_PAT)) {
+			parse_PAT(&stat->pid_PAT, &buf_filtered[i], &tsh, stat, pat_handler);
+		} else {
+			parse_PMT(&buf_filtered[i], &tsh, &stat->pid_PMT, &stat->proginfo);
+			parse_PCR(&buf_filtered[i], &tsh, stat, pcr_handler);
+			if (stat->proginfo.status & PGINFO_VALID_PCR && stat->proginfo.status & PGINFO_PCR_UPDATED) {
+				timestamp_offset = stat->proginfo.PCR_base * 1000 / PCR_BASE_HZ;
+				if (!stat->PCR_set_orig) {
+					stat->PCR_set_orig = 1;
+					stat->timestamp_orig = gettime() - timestamp_offset;
+				} else if (stat->proginfo.PCR_wraparounded) {
+					stat->timestamp_orig += PCR_BASE_MAX * 1000 / PCR_BASE_MAX;
+				}
+				set = 1;
+				stat->proginfo.status &= ~PGINFO_PCR_UPDATED;
+			}
+		}
+	}
+	if (!stat->PCR_set_orig) {
+		stat->timestamp = gettime();
+		return;
+	}
+	if (set) {
+		stat->timestamp = stat->timestamp_orig + timestamp_offset;
+	}
 }
 
 int wait_timestamp(filein_stat_t *stat, int timeout_ms)
@@ -98,10 +168,13 @@ int wait_timestamp(filein_stat_t *stat, int timeout_ms)
 	int64_t offset;
 	int remain = 0;
 
-	if (tn < stat->last_timestamp || tn > stat->last_timestamp + 5*1000) {
-		/* 時間が巻き戻った、あるいは前回より5秒以上たっていたら不正なタイムスタンプとしてリセットする */
+	/* 現在のタイムスタンプと5秒以上離れていたら不正なタイムスタンプとしてリセット */
+	if (tn < stat->timestamp - 5 * 1000 || tn > stat->timestamp + 5 * 1000) {
+		offset = tn - stat->timestamp;
 		stat->timestamp = tn;
+		stat->timestamp_orig += offset;
 	}
+
 	offset = stat->timestamp - tn;
 	if (offset > timeout_ms) {
 		remain = (int)(offset - timeout_ms);
@@ -116,7 +189,6 @@ int wait_timestamp(filein_stat_t *stat, int timeout_ms)
 #endif
 	}
 
-	stat->last_timestamp = tn;
 	return remain;
 }
 
@@ -288,7 +360,7 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 			goto RET_ZERO;
 		}
 
-		if (flg_set_mbps) {
+		if (flg_set_mbps || !flg_set_unlim) {
 			if (wait_timestamp(stat, 0) > 0) {
 				goto RET_ZERO;
 			}
@@ -309,8 +381,12 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 			stat->bytes = 0;
 		}
 
-		forward_timpstamp(stat, *buf, *size);
-
+		if (flg_set_mbps) {
+			set_timpstamp_bytes(stat, *size);
+		} else if(!flg_set_unlim) {
+			set_timestamp_pcr(stat, *buf, *size);
+		} 
+		
 		return;
 	}
 
@@ -330,7 +406,7 @@ static int hook_stream_generator_wait(void *param, int timeout_ms)
 #endif
 		return 0;
 	} else {
-		if (flg_set_mbps) {
+		if (flg_set_mbps || !flg_set_unlim) {
 			timeout_ms = wait_timestamp(stat, timeout_ms);
 			if(timeout_ms <= 0) {
 				return 1;
@@ -367,8 +443,8 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	stat = (filein_stat_t*)malloc(sizeof(filein_stat_t));
 	stat->bytes = 0;
 	stat->eof = 0;
-	stat->timestamp = gettime();
-	stat->timestamp_ns = 0;
+	stat->total_bytes = 0;
+	stat->timestamp = stat->timestamp_orig = gettime();
 #ifdef TSD_PLATFORM_MSVC
 	stat->read_busy = 0;
 	memset(&stat->ol, 0, sizeof(OVERLAPPED));
@@ -382,6 +458,14 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	stat->fd = fd;
 #endif
 	*param = stat;
+
+	if (!flg_set_mbps && !flg_set_unlim) {
+		init_proginfo(&stat->proginfo);
+		create_ts_alignment_filter(&stat->filter);
+		stat->pid_PAT.pid= 0;
+		stat->pid_PAT.stat = PAYLOAD_STAT_INIT;
+		stat->PCR_set_orig = 0;
+	}
 	return 1;
 }
 
@@ -422,6 +506,9 @@ static const TSDCHAR *set_infile(const TSDCHAR* param)
 
 static const TSDCHAR *set_mbps(const TSDCHAR* param)
 {
+	if (flg_set_unlim) {
+		return TSD_TEXT("ファイルのビットレートが既に無制限に指定されています");
+	}
 	flg_set_mbps = 1;
 	mbps = tsd_atof(param);
 	if (mbps <= 0) {
@@ -430,9 +517,20 @@ static const TSDCHAR *set_mbps(const TSDCHAR* param)
 	return NULL;
 }
 
+static const TSDCHAR *set_unlim(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	if (flg_set_mbps) {
+		return TSD_TEXT("ファイルのビットレートが既に指定されています");
+	}
+	flg_set_unlim = 1;
+	return NULL;
+}
+
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--filein"), TSD_TEXT("入力ファイル"), 1, set_infile },
 	{ TSD_TEXT("--filembps"), TSD_TEXT("ファイル読み込みのビットレート(Mbps)を指定"), 1, set_mbps },
+	{ TSD_TEXT("--unlimited-filebps"), TSD_TEXT("無制限のビットレートでファイルを読み込む"), 0, set_unlim },
 	{ NULL },
 };
 
