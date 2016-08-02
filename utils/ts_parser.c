@@ -901,7 +901,7 @@ void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
 
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler)
 {
-	int get = 0, wraparounded;
+	int wraparounded;
 	const uint8_t *p;
 	uint64_t PCR_base = 0;
 	int64_t offset;
@@ -924,11 +924,8 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, servi
 	}
 
 	if (tsh->pid == current_proginfo->PCR_pid) {
-		if (!get) {
-			PCR_base = get_bits64(p, 8, 33);
-			PCR_ext = get_bits(p, 47, 9);
-			get = 1;
-		}
+		PCR_base = get_bits64(p, 8, 33);
+		PCR_ext = get_bits(p, 47, 9);
 		offset = (int64_t)PCR_base - (int64_t)current_proginfo->PCR_base;
 		wraparounded = 0;
 		if (offset < 0) {
