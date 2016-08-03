@@ -3,6 +3,8 @@ int init_modules(int argc, const TSDCHAR* argv[]);
 int load_modules();
 void free_modules();
 
+void set_stream_stats_mbps(const double mbps);
+
 void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start);
 void do_pgoutput(void **modulestats, unsigned char *buf, size_t size);
 int do_pgoutput_check(void **modulestats);
@@ -19,14 +21,14 @@ void do_close_stream();
 void do_tick(int64_t);
 int do_stream_generator_open(void **param, ch_info_t *chinfo);
 void do_stream_generator(void *param, unsigned char **buf, int *size);
-int do_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale);
-int do_stream_generator_siglevel(void *param, double *siglevel, signal_value_scale_t *scale);
+void do_stream_generator_cnr(void *param);
+void do_stream_generator_siglevel(void *param);
 void do_stream_generator_close(void *param);
 void do_stream_decoder(void *param, unsigned char **dst_buf, int *dst_size, const unsigned char *src_buf, int src_size);
 int do_stream_decoder_open(void **param, int *);
 int do_stream_generator_wait(void *param, int timeout_ms);
 int is_implemented_stream_decoder_stats();
-void do_stream_decoder_stats(void *param, decoder_stats_t *stats);
+void do_stream_decoder_stats(void *param);
 void do_stream_decoder_close(void *param);
 void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg);
 const TSDCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info);

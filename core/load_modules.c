@@ -80,6 +80,8 @@ static int n_modules = 0;
 static cmd_load_t modulecmds[MAX_MODULECMDS];
 static int n_modulecmds = 0;
 
+static stream_stats_t stream_stats;
+
 void register_hook_pgoutput_create(hook_pgoutput_create_t handler)
 {
 	module_hooks_current->hook_pgoutput_create = handler;
@@ -191,6 +193,16 @@ int register_hook_path_resolver(hook_path_resolver_t handler)
 		return 0;
 	}
 	return 1;
+}
+
+void get_stream_stats(const stream_stats_t **s)
+{
+	*s = &stream_stats;
+}
+
+void set_stream_stats_mbps(const double mbps)
+{
+	stream_stats.mbps = mbps;
 }
 
 void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
@@ -380,24 +392,28 @@ int do_stream_generator_wait(void *param, int timeout_ms)
 	return -1;
 }
 
-int do_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
+void do_stream_generator_cnr(void *param)
 {
 	if (hooks_stream_generator) {
 		if (hooks_stream_generator->cnr_handler) {
-			return hooks_stream_generator->cnr_handler(param, cnr, scale);
+			hooks_stream_generator->cnr_handler(param, &stream_stats.s_signal.cnr, &stream_stats.s_signal.cnr_scale);
+		} else {
+			stream_stats.s_signal.cnr = 0.0;
+			stream_stats.s_signal.cnr_scale = TSDUMP_SCALE_NONE;
 		}
 	}
-	return 0;
 }
 
-int do_stream_generator_siglevel(void *param, double *siglevel, signal_value_scale_t *scale)
+void do_stream_generator_siglevel(void *param)
 {
 	if (hooks_stream_generator) {
 		if (hooks_stream_generator->siglevel_handler) {
-			return hooks_stream_generator->siglevel_handler(param, siglevel, scale);
+			hooks_stream_generator->siglevel_handler(param, &stream_stats.s_signal.level, &stream_stats.s_signal.level_scale);
+		} else {
+			stream_stats.s_signal.level = 0.0;
+			stream_stats.s_signal.level_scale = TSDUMP_SCALE_NONE;
 		}
 	}
-	return 0;
 }
 
 void do_stream_generator_close(void *param)
@@ -434,15 +450,15 @@ int is_implemented_stream_decoder_stats()
 	return 0;
 }
 
-void do_stream_decoder_stats(void *param, decoder_stats_t *stats)
+void do_stream_decoder_stats(void *param)
 {
 	if ( is_implemented_stream_decoder_stats() ) {
-		hooks_stream_decoder->stats_handler(param, stats);
+		hooks_stream_decoder->stats_handler(param, &stream_stats.s_decoder);
 	} else {
-		stats->n_dropped = ts_n_drops;
-		stats->n_input = ts_n_total;
-		stats->n_scrambled = ts_n_scrambled;
-		stats->n_output = ts_n_total;
+		stream_stats.s_decoder.n_dropped = ts_n_drops;
+		stream_stats.s_decoder.n_input = ts_n_total;
+		stream_stats.s_decoder.n_scrambled = ts_n_scrambled;
+		stream_stats.s_decoder.n_output = ts_n_total;
 	}
 }
 

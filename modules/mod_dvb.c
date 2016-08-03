@@ -378,47 +378,47 @@ static double decode_toshiba_cnr_s(uint16_t s)
 		88.977*p*p - 89.565*p + 58.857;
 }
 
-static int get_cnr_pt(int fd, double *cnr, signal_value_scale_t *scale)
+static void get_cnr_pt(int fd, double *cnr, signal_value_scale_t *scale)
 {
 	uint16_t s = 0;
 	if( ioctl(fd, FE_READ_SNR, &s) != 0 ) {
 		output_message(MSG_SYSERROR, "ioctl(FE_READ_SNR, adapter%d)", dvb_dev);
-		return 0;
+		*scale = TSDUMP_SCALE_NONE;
+	} else {
+		/* 最新(2016年時点)のPT1/2ドライバ(drivers/media/pci/pt1/va1j5jf8007[ts].c)によれば
+		   すでにdBに換算した値が返されている。ただし8ビットの固定小数点になっていると思われるので256で割る。 */
+		*cnr = (double)s / 256.0;
+		*scale = TSDUMP_SCALE_DECIBEL;
 	}
-	/* 最新(2016年時点)のPT1/2ドライバ(drivers/media/pci/pt1/va1j5jf8007[ts].c)によれば
-	   すでにdBに換算した値が返されている。ただし8ビットの固定小数点になっていると思われるので256で割る。 */
-	*cnr = (double)s / 256.0;
-	*scale = TSDUMP_VALUE_DECIBEL;
-	return 1;
 }
 
-static int get_cnr_friio_w(int fd, double *cnr, signal_value_scale_t *scale)
+static void get_cnr_friio_w(int fd, double *cnr, signal_value_scale_t *scale)
 {
 	uint16_t s = 0;
-	/* friioはSNRをFE_READ_SIGNAL_STRENGTHで返している */
+	/* friioはCNRをFE_READ_SIGNAL_STRENGTHで返している */
 	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) != 0 ) {
 		output_message(MSG_SYSERROR, "ioctl(FE_READ_SIGNAL_STRENGTH, adapter%d)", dvb_dev);
-		return 0;
+		*scale = TSDUMP_SCALE_NONE;
+	} else {
+		*cnr = decode_toshiba_cnr_t(s);
+		*scale = TSDUMP_SCALE_DECIBEL;
 	}
-	*cnr = decode_toshiba_cnr_t(s);
-	*scale = TSDUMP_VALUE_DECIBEL;
-	return 1;
 }
 
-static int get_siglevel_tbs6814(int fd, double *cnr, signal_value_scale_t *scale)
+static void get_siglevel_tbs6814(int fd, double *cnr, signal_value_scale_t *scale)
 {
 	uint16_t s = 0;
 	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) != 0 ) {
 		output_message(MSG_SYSERROR, "ioctl(FE_READ_SIGNAL_STRENGTH, adapter%d)", dvb_dev);
-		return 0;
+		*scale = TSDUMP_SCALE_NONE;
+	} else {
+		/* 不明だが、数字を見る限りでは信号レベルがパーセントで返されているっぽい？ */
+		*cnr = (double)s / 100;
+		*scale = TSDUMP_SCALE_RELATIVE;
 	}
-	/* 不明だが、数字を見る限りでは信号レベルがパーセントで返されているっぽい？ */
-	*cnr = (double)s / 100;
-	*scale = TSDUMP_VALUE_RELATIVE;
-	return 1;
 }
 
-static int get_cnr_siglevel(int fd, double *cnr, uint32_t cmd, const char *cmdname, signal_value_scale_t *sig_scale, int ignore_err)
+static void get_cnr_siglevel(int fd, double *cnr, uint32_t cmd, const char *cmdname, signal_value_scale_t *sig_scale, int ignore_err)
 {
 	int64_t sval;
 	int scale;
@@ -434,115 +434,119 @@ static int get_cnr_siglevel(int fd, double *cnr, uint32_t cmd, const char *cmdna
 		scale = props.props[0].u.st.stat[0].scale;
 		if(scale == FE_SCALE_DECIBEL) {
 			*cnr = (double)sval / 1000;
-			*sig_scale = TSDUMP_VALUE_DECIBEL;
+			*sig_scale = TSDUMP_SCALE_DECIBEL;
 		} else if(scale == FE_SCALE_RELATIVE) {
 			*cnr = (double)sval / 65535;
 			*sig_scale = FE_SCALE_RELATIVE;
 		} else if(scale == FE_SCALE_COUNTER) {
 			*cnr = (double)sval;
-			*sig_scale = TSDUMP_VALUE_NONE;
+			*sig_scale = TSDUMP_SCALE_COUNTER;
 		} else {
-			return 0;
+			*sig_scale = TSDUMP_SCALE_NONE;
 		}
-		return 1;
+	} else {
+		if(!ignore_err) {
+			output_message(MSG_SYSERROR, "ioctl(FE_GET_PROPERTY->%s, adapter%d)",
+				cmdname, dvb_dev);
+		}
+		*sig_scale = TSDUMP_SCALE_NONE;
 	}
-	if(!ignore_err) {
-		output_message(MSG_SYSERROR, "ioctl(FE_GET_PROPERTY->%s, adapter%d)",
-			cmdname, dvb_dev);
-	}
-	return 0;
 }
 
-static int get_cnr(int fd, double *cnr, signal_value_scale_t *scale, int ignore_err)
+static void get_cnr(int fd, double *cnr, signal_value_scale_t *scale, int ignore_err)
 {
-	return get_cnr_siglevel(fd, cnr, DTV_STAT_CNR, "DTV_STAT_CNR", scale, ignore_err);
+	get_cnr_siglevel(fd, cnr, DTV_STAT_CNR, "DTV_STAT_CNR", scale, ignore_err);
 }
 
-static int get_siglevel(int fd, double *cnr, signal_value_scale_t *scale, int ignore_err)
+static void get_siglevel(int fd, double *cnr, signal_value_scale_t *scale, int ignore_err)
 {
-	return get_cnr_siglevel(fd, cnr, DTV_STAT_SIGNAL_STRENGTH, "DTV_STAT_SIGNAL_STRENGTH", scale, ignore_err);
+	get_cnr_siglevel(fd, cnr, DTV_STAT_SIGNAL_STRENGTH, "DTV_STAT_SIGNAL_STRENGTH", scale, ignore_err);
 }
 
-int get_cnr_oldapi(int fd, double *cnr, signal_value_scale_t *scale)
+static void get_cnr_oldapi(int fd, double *cnr, signal_value_scale_t *scale)
 {
 	int16_t s = 0;
 	if( ioctl(fd, FE_READ_SNR, &s) == 0 ) {
 		/* 単位やデコード方法が未知なのでひとまず相対値として返す */
 		*cnr = (double)s / (1<<16);
-		*scale = FE_SCALE_RELATIVE;
-		return 1;
+		*scale = TSDUMP_SCALE_RELATIVE;
+	} else {
+		*scale = TSDUMP_SCALE_NONE;
 	}
-	return 0;
 }
 
-int get_siglevel_oldapi(int fd, double *siglevel, signal_value_scale_t *scale)
+static void get_siglevel_oldapi(int fd, double *siglevel, signal_value_scale_t *scale)
 {
 	uint16_t s = 0;
 	if( ioctl(fd, FE_READ_SIGNAL_STRENGTH, &s) == 0 ) {
 		/* 単位やデコード方法が未知なのでひとまず相対値として返す */
 		*siglevel = (double)s / (1<<16);
-		*scale = FE_SCALE_RELATIVE;
-		return 1;
+		*scale = TSDUMP_SCALE_RELATIVE;
+	} else {
+		*scale = TSDUMP_SCALE_NONE;
 	}
-	return 0;
 }
 
-int get_cnr_default(int fd, double *cnr, signal_value_scale_t *scale)
+static void get_cnr_default(int fd, double *cnr, signal_value_scale_t *scale)
 {
-	if(get_cnr(fd, cnr, scale, 1)) {
-		return 1;
+	get_cnr(fd, cnr, scale, 1);
+	if(*scale != TSDUMP_SCALE_NONE) {
+		return;
 	}
-	if(get_cnr_oldapi(fd, cnr, scale)) {
-		return 1;
-	}
-	return 0;
+	get_cnr_oldapi(fd, cnr, scale);
 }
 
-int get_siglevel_default(int fd, double *siglevel, signal_value_scale_t *scale)
+static void get_siglevel_default(int fd, double *siglevel, signal_value_scale_t *scale)
 {
-	if(get_siglevel(fd, siglevel, scale, 1)) {
-		return 1;
+	get_siglevel(fd, siglevel, scale, 1);
+	if(*scale != TSDUMP_SCALE_NONE) {
+		return;
 	}
-	if(get_siglevel_oldapi(fd, siglevel, scale)) {
-		return 1;
-	}
-	return 0;
+	get_siglevel_oldapi(fd, siglevel, scale);
 }
 
-static int hook_stream_generator_siglevel(void *param, double *siglevel, signal_value_scale_t *scale)
+static void hook_stream_generator_siglevel(void *param, double *siglevel, signal_value_scale_t *scale)
 {
 	dvb_stat_t *pstat = (dvb_stat_t*)param;
 	
 	switch(pstat->model) {
 		case DVB_TUNER_PT:
-			return 0; /* 非対応 */
+			*scale = TSDUMP_SCALE_NONE; /* 非対応 */
+			return;
 		case DVB_TUNER_PT3:
-			return get_siglevel(pstat->fd_fe, siglevel, scale, 0);
+			get_siglevel(pstat->fd_fe, siglevel, scale, 0);
+			return;
 		case DVB_TUNER_FRIIO_W:
-			return 0; /* 非対応 */
+			*scale = TSDUMP_SCALE_NONE; /* 非対応 */
+			return;
 		case DVB_TUNER_TBS6814:
-			return get_siglevel_tbs6814(pstat->fd_fe, siglevel, scale);
+			get_siglevel_tbs6814(pstat->fd_fe, siglevel, scale);
+			return;
 		default: /* do nothing */ break;
 	}
-	return get_siglevel_default(pstat->fd_fe, siglevel, scale);
+	get_siglevel_default(pstat->fd_fe, siglevel, scale);
 }
 
-static int hook_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
+static void hook_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
 {
 	dvb_stat_t *pstat = (dvb_stat_t*)param;
 
 	switch(pstat->model) {
 		case DVB_TUNER_PT:
-			return get_cnr_pt(pstat->fd_fe, cnr, scale);
+			get_cnr_pt(pstat->fd_fe, cnr, scale);
+			return;
 		case DVB_TUNER_PT3:
-			return get_cnr(pstat->fd_fe, cnr, scale, 0);
+			get_cnr(pstat->fd_fe, cnr, scale, 0);
+			return;
 		case DVB_TUNER_FRIIO_W:
-			return get_cnr_friio_w(pstat->fd_fe, cnr, scale);
+			get_cnr_friio_w(pstat->fd_fe, cnr, scale);
+			return;
 		case DVB_TUNER_TBS6814:
-			return 0; /* 非対応 */
+			*scale = TSDUMP_SCALE_NONE; /* 非対応 */
+			return;
 		default: /* do nothing */ break;
 	}
-	return get_cnr_default(pstat->fd_fe, cnr, scale);
+	get_cnr_default(pstat->fd_fe, cnr, scale);
 }
 
 static void hook_stream_generator_close(void *param)

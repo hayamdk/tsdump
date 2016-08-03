@@ -229,7 +229,7 @@ void clear_line()
 
 #endif
 
-void print_stat(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
+void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
 	int n, i, j, backward_size, console_width, width;
@@ -313,6 +313,49 @@ void print_stat(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 		need_clear_line = 1;
 	}
 #endif
+}
+
+static void print_stat(ts_output_stat_t *tos, int n_tos, const ch_info_t *ch_info)
+{
+	const stream_stats_t *stats;
+	TSDCHAR title[256];
+	TSDCHAR siglevel_str[16], cnr_str[16];
+	TSDCHAR sig_separator[2] = { TSD_NULLCHAR };
+
+	get_stream_stats(&stats);
+
+	if (stats->s_signal.level_scale == TSDUMP_SCALE_DECIBEL) {
+		tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), stats->s_signal.level);
+	} else if (stats->s_signal.level_scale == TSDUMP_SCALE_RELATIVE) {
+		tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1f%%"), stats->s_signal.level*100);
+	} else if (stats->s_signal.level_scale == TSDUMP_SCALE_COUNTER) {
+		tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%d"), (int)stats->s_signal.level);
+	} else {
+		siglevel_str[0] = TSD_NULLCHAR;
+	}
+
+	if (stats->s_signal.cnr_scale == TSDUMP_SCALE_DECIBEL) {
+		tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), stats->s_signal.cnr);
+	} else if (stats->s_signal.cnr_scale == TSDUMP_SCALE_RELATIVE) {
+		tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1f%%"), stats->s_signal.cnr*100);
+	} else if (stats->s_signal.cnr_scale == TSDUMP_SCALE_COUNTER) {
+		tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%d"), (int)stats->s_signal.cnr);
+	} else {
+		cnr_str[0] = TSD_NULLCHAR;
+	}
+
+	if (siglevel_str[0] != TSD_NULLCHAR && cnr_str[0] != TSD_NULLCHAR) {
+		tsd_strcpy(sig_separator, TSD_TEXT(","));
+	}
+
+	tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%"PRId64" %.1fGB"),
+		ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, cnr_str, stats->mbps,
+		stats->s_decoder.n_dropped, stats->s_decoder.n_scrambled,
+		(double)stats->s_decoder.n_input / 1024 / 1024 / 1024);
+#ifdef TSD_PLATFORM_MSVC
+	SetConsoleTitle(title);
+#endif
+	print_buf(tos, n_tos, title);
 }
 
 void init_service_list(ts_service_list_t *service_list)
@@ -412,9 +455,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	ts_output_stat_t *tos = NULL;
 	int n_tos = 0;
-
-	TSDCHAR title[256];
-	decoder_stats_t stats;
 
 	lasttime = nowtime = gettime();
 
@@ -569,50 +609,15 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		//tc_start("proginfo");
 		/* 定期的に番組情報をチェック */
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
-			double siglevel, cnr;
-			int is_siglevel, is_cnr;
-			signal_value_scale_t scale_siglevel, scale_cnr;
-			TSDCHAR siglevel_str[16] = { TSD_NULLCHAR }, cnr_str[16] = { TSD_NULLCHAR };
-			TSDCHAR sig_separator[2] = { TSD_NULLCHAR };
 
 			tdiff = (double)(nowtime - lasttime) / 1000;
 			Mbps = (double)subtotal * 8 / 1024 / 1024 / tdiff;
 
-			do_stream_decoder_stats(decoder_stat, &stats);
+			do_stream_decoder_stats(decoder_stat);
+			do_stream_generator_siglevel(generator_stat);
+			do_stream_generator_cnr(generator_stat);
+			set_stream_stats_mbps(Mbps);
 
-			is_siglevel = do_stream_generator_siglevel(generator_stat, &siglevel, &scale_siglevel);
-			is_cnr = do_stream_generator_cnr(generator_stat, &cnr, &scale_cnr);
-
-			if (is_siglevel) {
-				if (scale_siglevel == TSDUMP_VALUE_DECIBEL) {
-					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1fdBm"), siglevel);
-				} else if (scale_siglevel == TSDUMP_VALUE_RELATIVE) {
-					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%.1f%%"), siglevel*100);
-				} else {
-					tsd_snprintf(siglevel_str, sizeof(siglevel_str) - 1, TSD_TEXT("%d"), (int)siglevel);
-				}
-			}
-			if (is_cnr) {
-				if (scale_cnr == TSDUMP_VALUE_DECIBEL) {
-					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1fdB"), cnr);
-				} else if (scale_cnr == TSDUMP_VALUE_RELATIVE) {
-					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%.1f%%"), cnr*100);
-				} else {
-					tsd_snprintf(cnr_str, sizeof(cnr_str) - 1, TSD_TEXT("%d"), (int)cnr);
-				}
-			}
-			if (is_siglevel && is_siglevel) {
-				tsd_strcpy(sig_separator, TSD_TEXT(","));
-			}
-			
-			tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%"PRId64" %.1fGB"),
-				ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, cnr_str, Mbps,
-				stats.n_dropped, stats.n_scrambled,
-				(double)total / 1024 / 1024 / 1024);
-#ifdef TSD_PLATFORM_MSVC
-			SetConsoleTitle(title);
-#endif
-			
 			lasttime = nowtime;
 			subtotal = 0;
 
@@ -624,7 +629,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			//tc_start("printbuf");
-			print_stat(tos, n_tos, title);
+			print_stat(tos, n_tos, ch_info);
 			//tc_end();
 
 			/* 溢れたバイト数を表示 */
@@ -653,7 +658,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		while (tos[i].pos_filled - tos[i].pos_write > 0 && !err) {
 			ts_output(&tos[i], gettime(), 1);
 			err = ts_wait_pgoutput(&tos[i]);
-			print_stat(&tos[i], n_tos-i, TSD_TEXT(""));
+			print_buf(&tos[i], n_tos-i, TSD_TEXT(""));
 		}
 		close_tos(&tos[i]);
 	}

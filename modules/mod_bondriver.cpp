@@ -166,12 +166,11 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	return 1;
 }
 
-static int hook_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
+static void hook_stream_generator_cnr(void *param, double *cnr, signal_value_scale_t *scale)
 {
 	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
 	*cnr = pstat->pBon2->GetSignalLevel();
-	*scale = TSDUMP_VALUE_DECIBEL;
-	return 1;
+	*scale = TSDUMP_SCALE_DECIBEL;
 }
 
 static void hook_stream_generator_close(void *param)
