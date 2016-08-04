@@ -757,7 +757,7 @@ END:
 	free_modules();
 
 	if( ret ) {
-		output_message(MSG_NOTIFY, TSD_TEXT("\n何かキーを押すと終了します"));
+		output_message(MSG_NOTIFY, TSD_TEXT("\nエンターキーを押すと終了します"));
 		getchar();
 	}
 
