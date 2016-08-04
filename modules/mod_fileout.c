@@ -28,6 +28,8 @@
 #include "utils/tsdstr.h"
 #include "utils/path.h"
 
+static int flg_set_no_fileout = 0;
+
 typedef struct {
 	TSDCHAR fn[MAX_PATH_LEN];
 	int is_pi;
@@ -374,16 +376,30 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 
 static void register_hooks()
 {
-	register_hook_pgoutput_create(hook_pgoutput_create);
-	register_hook_pgoutput(hook_pgoutput);
-	register_hook_pgoutput_check(hook_pgoutput_check);
-	register_hook_pgoutput_wait(hook_pgoutput_wait);
-	register_hook_pgoutput_close(hook_pgoutput_close);
+	if (!flg_set_no_fileout) {
+		register_hook_pgoutput_create(hook_pgoutput_create);
+		register_hook_pgoutput(hook_pgoutput);
+		register_hook_pgoutput_check(hook_pgoutput_check);
+		register_hook_pgoutput_wait(hook_pgoutput_wait);
+		register_hook_pgoutput_close(hook_pgoutput_close);
+	}
 }
+
+static const TSDCHAR *set_no_fileout(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	flg_set_no_fileout = 1;
+	return NULL;
+}
+
+static cmd_def_t cmds[] = {
+	{ TSD_TEXT("--no-fileout"), TSD_TEXT("ファイルを出力しない"), 0, set_no_fileout },
+	{ NULL },
+};
 
 TSD_MODULE_DEF(
 	mod_fileout,
 	register_hooks,
-	NULL,
+	cmds,
 	NULL
 );
