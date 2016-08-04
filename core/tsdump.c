@@ -442,6 +442,13 @@ static void tot_handler(void *param, const time_mjd_t *TOT_time)
 	}
 }
 
+void request_shutdown(int mode)
+{
+	UNREF_ARG(mode);
+	output_message(MSG_NOTIFY, TSD_TEXT("\nモジュールからの終了リクエスト"));
+	termflag = 1;
+}
+
 void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_t *ch_info)
 {
 	uint8_t *recvbuf, *decbuf;

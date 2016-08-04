@@ -27,6 +27,7 @@
 static int flg_set_infile = 0;
 static int flg_set_mbps = 0;
 static int flg_set_unlim = 0;
+static int flg_set_eof = 0;
 static int reg_hooks;
 static TSDCHAR infile_name[MAX_PATH_LEN];
 static double mbps;
@@ -351,6 +352,10 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 	read_from_file(stat);
 	check_read(stat, 0);
 
+	if (stat->eof && flg_set_eof) {
+		request_shutdown(0);
+	}
+
 #ifdef TSD_PLATFORM_MSVC
 	if (!stat->read_busy) {
 #else
@@ -527,10 +532,18 @@ static const TSDCHAR *set_unlim(const TSDCHAR* param)
 	return NULL;
 }
 
+static const TSDCHAR *set_eof(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	flg_set_eof = 1;
+	return NULL;
+}
+
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--filein"), TSD_TEXT("入力ファイル"), 1, set_infile },
 	{ TSD_TEXT("--filembps"), TSD_TEXT("ファイル読み込みのビットレート(Mbps)を指定"), 1, set_mbps },
 	{ TSD_TEXT("--unlimited-filebps"), TSD_TEXT("無制限のビットレートでファイルを読み込む"), 0, set_unlim },
+	{ TSD_TEXT("--eof"), TSD_TEXT("ファイルのEOFで終了する"), 0, set_eof },
 	{ NULL },
 };
 

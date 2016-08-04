@@ -183,6 +183,7 @@ typedef struct {
 
 TSD_API_DEF(void, _output_message, (const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...));
 TSD_API_DEF(void, get_stream_stats, (const stream_stats_t **s));
+TSD_API_DEF(void, request_shutdown, (int));
 
 TSD_API_DEF(void, register_hook_pgoutput_create, (hook_pgoutput_create_t));
 TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t));
