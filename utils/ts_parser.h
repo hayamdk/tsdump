@@ -67,8 +67,9 @@ static const uint32_t crc32tab[256] = {
 
 static inline uint32_t crc32(unsigned char *buf, int len)
 {
+	int i;
 	uint32_t crc = 0xffffffff;
-	for (int i = 0; i<len; i++){
+	for (i = 0; i<len; i++){
 		crc = (crc << 8)
 			^ crc32tab[((crc >> 24) ^ buf[i]) & 0xff];
 	}
