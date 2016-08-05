@@ -181,9 +181,9 @@ int cmp_genre(const Cd_t *genre1, const Cd_t *genre2)
 	}
 	for (i = 0; i < genre1->n_items; i++) {
 		if( genre1->items[i].content_nibble_level_1 != genre2->items[i].content_nibble_level_1 ||
-				genre1->items[i].content_nibble_level_2 != genre1->items[i].content_nibble_level_2 ||
-				genre1->items[i].user_nibble_1 != genre1->items[i].user_nibble_1 ||
-				genre1->items[i].user_nibble_2 != genre1->items[i].user_nibble_2 ) {
+				genre1->items[i].content_nibble_level_2 != genre2->items[i].content_nibble_level_2 ||
+				genre1->items[i].user_nibble_1 != genre2->items[i].user_nibble_1 ||
+				genre1->items[i].user_nibble_2 != genre2->items[i].user_nibble_2 ) {
 			return 1;
 		}
 	}
