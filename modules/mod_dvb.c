@@ -56,6 +56,38 @@ static int dvb_tsid = 0;
 static char channel_str[32];
 static char type_str[32];
 
+const int bs_tsid_table[][4] =
+{
+	/*BS01*/ { 16400, 16401, },
+	/*BS03*/ { 16432, 16433, },
+	/*BS05*/ { 17488, 17489, },
+	/*BS07*/ { 17520, 18033, 18034 },
+	/*BS09*/ { 16528, 16529, 16530 },
+	/*BS11*/ { 18096, 18097, 18098 },
+	/*BS13*/ { 16592, 16593 },
+	/*BS15*/ { 16625, 16626 },
+	/*BS17*/ { 17168, 17169 },
+	/*BS19*/ { 18224, 18225, 18226 },
+	/*BS21*/ { 18256, 18257, 18258 },
+	/*BS23*/ { 18288, 18289, 18290 }
+};
+
+const int cs_tsid_table[] = 
+{
+	/*ND02*/ 24608,
+	/*ND04*/ 28736,
+	/*ND06*/ 28768,
+	/*ND08*/ 24704,
+	/*ND10*/ 24736,
+	/*ND12*/ 28864,
+	/*ND14*/ 28896,
+	/*ND16*/ 28928,
+	/*ND18*/ 28960,
+	/*ND20*/ 28992,
+	/*ND22*/ 29024,
+	/*ND24*/ 29056
+};
+
 static int resolve_channel()
 {
 	switch(dvb_type) {
@@ -65,24 +97,33 @@ static int resolve_channel()
 			strcpy(type_str, "ISDB-T");
 			break;
 		case TYPE_ISDB_S_BS:
-			if(dvb_ch % 2 != 1) {
-				output_message(MSG_ERROR, "不正なBSチャンネルです(奇数のみ有効)");
+			if(dvb_ch % 2 != 1 || dvb_ch > 23 || dvb_ch <= 0) {
+				output_message(MSG_ERROR, "不正なBSチャンネルです(23以下の奇数のみ有効)");
 				return 0;
 			}
 			if(dvb_tsnum < 0) {
 				dvb_tsnum = 0;
 			}
 			dvb_freq = (dvb_ch - 1) / 2 * 38360 + 1049480;
-			dvb_tsid = dvb_ch * 0x10 + 0x4000 + dvb_tsnum;
+			if(dvb_tsnum >= 4) {
+				dvb_tsid = dvb_tsnum;
+			} else {
+				dvb_tsid = bs_tsid_table[dvb_ch/2][dvb_tsnum];
+				if(dvb_tsid == 0) {
+					dvb_tsnum = 0;
+					dvb_tsid = bs_tsid_table[dvb_ch/2][dvb_tsnum];
+				}
+			}
 			sprintf(channel_str, "%02d_ts%02d", dvb_ch, dvb_tsnum);
 			strcpy(type_str, "ISDB-S(BS)");
 			break;
 		case TYPE_ISDB_S_CS:
-			if(dvb_ch % 2 != 0) {
-				output_message(MSG_ERROR, "不正なCSチャンネルです(偶数のみ有効)");
+			if(dvb_ch % 2 != 0 || dvb_ch > 24 || dvb_ch <= 0) {
+				output_message(MSG_ERROR, "不正なCSチャンネルです(24以下の偶数のみ有効)");
 				return 0;
 			}
 			dvb_freq = (dvb_ch-2) / 2 * 40000 + 1613000;
+			dvb_tsid = cs_tsid_table[dvb_ch/2-1];
 			sprintf(channel_str, "ND%02d", dvb_ch);
 			strcpy(type_str, "ISDB-S(CS110)");
 			break;
@@ -277,7 +318,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	prop[0].u.data = dvb_freq;
 
 	/* 地上波でDTV_STREAM_IDを指定するとエラーになるチューナーがある（friio白） */
-	if(dvb_type == TYPE_ISDB_S_BS) {
+	if(dvb_type == TYPE_ISDB_S_BS || dvb_type == TYPE_ISDB_S_CS) {
 		props.num = 3;
 		prop[1].cmd = DTV_STREAM_ID;
 		prop[1].u.data = dvb_tsid;
