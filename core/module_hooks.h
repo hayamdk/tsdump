@@ -87,6 +87,7 @@ typedef struct {
 } signal_stats_t;
 
 typedef struct {
+	int64_t total_bytes;
 	decoder_stats_t s_decoder;
 	signal_stats_t s_signal;
 	double mbps;

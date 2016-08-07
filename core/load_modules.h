@@ -3,7 +3,8 @@ int init_modules(int argc, const TSDCHAR* argv[]);
 int load_modules();
 void free_modules();
 
-void set_stream_stats_mbps(const double mbps);
+void set_stream_stats_mbps(const double);
+void add_stream_stats_total_bytes(const int);
 
 void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start);
 void do_pgoutput(void **modulestats, unsigned char *buf, size_t size);

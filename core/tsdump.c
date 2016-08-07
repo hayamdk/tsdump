@@ -351,7 +351,7 @@ static void print_stat(ts_output_stat_t *tos, int n_tos, const ch_info_t *ch_inf
 	tsd_snprintf(title, 256, TSD_TEXT("%s:%s:%s|%s%s%s %.1fMbps D:%"PRId64" S:%"PRId64" %.1fGB"),
 		ch_info->tuner_name, ch_info->sp_str, ch_info->ch_str, siglevel_str, sig_separator, cnr_str, stats->mbps,
 		stats->s_decoder.n_dropped, stats->s_decoder.n_scrambled,
-		(double)stats->s_decoder.n_input / 1024 / 1024 / 1024);
+		(double)stats->total_bytes / 1024 / 1024 / 1024);
 #ifdef TSD_PLATFORM_MSVC
 	SetConsoleTitle(title);
 #endif
@@ -506,6 +506,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
 		do_stream(decbuf, n_dec, encrypted);
 
+		add_stream_stats_total_bytes(n_recv);
+
 		do_tick(nowtime);
 
 		int valid_ts_header;
@@ -517,9 +519,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			if (need_default_counter) {
 				if (!valid_ts_header) {
-					ts_statics_counter(NULL);
+					ts_packet_counter(NULL);
 				} else {
-					ts_statics_counter(&tsh);
+					ts_packet_counter(&tsh);
 				}
 			}
 

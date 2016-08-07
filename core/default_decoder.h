@@ -11,7 +11,7 @@ typedef struct
 	uint8_t *buf;
 } ts_alignment_filter_t;
 
-void ts_statics_counter(ts_header_t *tsh);
+void ts_packet_counter(ts_header_t *tsh);
 void create_ts_alignment_filter(ts_alignment_filter_t *filter);
 void delete_ts_alignment_filter(ts_alignment_filter_t *filter);
 void ts_alignment_filter(ts_alignment_filter_t *filter, uint8_t **out_buf, int *out_bytes, const uint8_t *in_buf, int in_bytes);

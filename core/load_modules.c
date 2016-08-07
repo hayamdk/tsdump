@@ -205,6 +205,17 @@ void set_stream_stats_mbps(const double mbps)
 	stream_stats.mbps = mbps;
 }
 
+void add_stream_stats_total_bytes(const int bytes)
+{
+	stream_stats.total_bytes += bytes;
+}
+
+static void init_stream_stats()
+{
+	memset(&stream_stats, 0, sizeof(stream_stats_t));
+	stream_stats.mbps = 0.0;
+}
+
 void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
 {
 	int i;
@@ -707,6 +718,8 @@ int init_modules(int argc, const TSDCHAR* argv[])
 	int i;
 	cmd_def_t *cmd;
 	tsd_api_set_t api_set;
+
+	init_stream_stats();
 
 	/* list */
 	for (i = 0; i < n_modules; i++) {

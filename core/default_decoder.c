@@ -19,7 +19,7 @@ int64_t ts_n_total = 0;
 int64_t ts_n_scrambled = 0;
 static int ts_counter[0x2000] = {0};
 
-void ts_statics_counter(ts_header_t *tsh)
+void ts_packet_counter(ts_header_t *tsh)
 {
 	ts_n_total++;
 
