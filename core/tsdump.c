@@ -1,9 +1,7 @@
 #include "core/tsdump_def.h"
 
 #ifdef TSD_PLATFORM_MSVC
-	#pragma comment(lib, "shlwapi.lib")
 	#pragma comment(lib, "Ws2_32.lib")
-
 	#include <windows.h>
 #else
 	#include <errno.h>

@@ -216,8 +216,9 @@ TSD_API_DEF(void, register_hook_tick, (hook_tick_t));
 
 #undef TSD_API_DEF
 #define TSD_API_DEF(type, name, args) name = set->name
-static void __tsd_api_init(tsd_api_set_t *set)
+static void __tsd_api_init(void *p)
 {
+	tsd_api_set_t *set = (tsd_api_set_t*)p;
 #include "core/module_hooks.h"
 }
 

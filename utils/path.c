@@ -3,6 +3,7 @@
 #include "core/tsdump_def.h"
 
 #ifdef TSD_PLATFORM_MSVC
+#pragma comment(lib, "shlwapi.lib")
 #include <Windows.h>
 #include <shlwapi.h>
 #else
