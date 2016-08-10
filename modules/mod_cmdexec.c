@@ -87,6 +87,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	const TSDCHAR *chname = TSD_TEXT("unknown"), *progname = TSD_TEXT("unkonwn");
 	int year, mon, day, hour, min, sec;
 	TSDCHAR fname_base[MAX_PATH_LEN];
+	const TSDCHAR *fname_base_r, *fname_r;
 	TSDCHAR tn_str[21], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
 	TSDCHAR mon_str0[3], day_str0[3], hour_str0[3], min_str0[3], sec_str0[3];
 	time_t t;
@@ -125,6 +126,8 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 
 	tsd_strlcpy(fname_base, fname, MAX_PATH_LEN - 1);
 	path_removeext(fname_base);
+	fname_r = path_getfile(fname);
+	fname_base_r = path_getfile(fname_base);
 
 	tsd_snprintf(tn_str, 20, TSD_TEXT("%"PRId64), timenum );
 	tsd_snprintf(year_str, 5, TSD_TEXT("%d"), year);
@@ -144,6 +147,8 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%%"), TSD_TEXT("%"));
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILE%"), fname);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILENE%"), fname_base);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FNAME%"), fname_r);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FNAMENE%"), fname_base_r);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%CH%"), chname);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PROG%"), progname);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%TN%"), tn_str);
