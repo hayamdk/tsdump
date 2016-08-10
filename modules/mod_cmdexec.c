@@ -525,14 +525,20 @@ static void close_pipe(pipestat_t *ps)
 
 static void kill_child_process(pid_t pid)
 {
-	int i, status;
+	int i, ret, status;
 	kill(pid, SIGKILL);
 	for(i=0; i<10; i++) {
-		if (waitpid(pid, &status, WNOHANG) > 0) {
-			break;
+		ret = waitpid(pid, &status, WNOHANG);
+		if (ret > 0) {
+			/*強制終了完了*/
+			return;
+		} else if (ret < 0) {
+			output_message(MSG_SYSERROR, "子プロセスを強制終了しましたがwaitpidがエラーを返しました");
+			return;
 		}
 		usleep(1000);
 	}
+	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした");
 }
 
 int my_sigtimedwait(sigset_t *set, siginfo_t *info, const struct timespec *timeout)
@@ -596,10 +602,9 @@ void insert_orphan(pid_t child_process, const char *cmd)
 	n_orphans++;
 }
 
-void collect_zombies(int64_t time_ms)
+void collect_zombies(const int64_t time_ms, const int timeout)
 {
 	int i, j, deleted;
-	const int timeout = 1000 * 60;
 	for (i = 0; i < n_orphans; i++) {
 		deleted = 0;
 #ifdef TSD_PLATFORM_MSVC
@@ -994,21 +999,24 @@ static void hook_pgoutput_postclose(void *stat)
 
 static void hook_tick(int64_t time_ms)
 {
-	/*static int last_n_orphans = 0;
-	if (last_n_orphans != n_orphans) {
-		int i;
-		printf("n_orphans: %d -> %d\n", last_n_orphans, n_orphans);
-		for (i = 0; i < n_orphans; i++) {
-			tsd_printf(TSD_TEXT("orphan %d: %s\n"), i, orphans[i].cmd);
-		}
-		last_n_orphans = n_orphans;
-	}*/
-
 	static int64_t last_time = 0;
 	if (last_time / 1000 != time_ms / 1000) {
 		/* ゾンビコレクタは1秒に1回だけ呼び出す */
-		collect_zombies(time_ms);
+		collect_zombies(time_ms, 60*1000);
 		last_time = time_ms;
+	}
+}
+
+static void hook_close_module()
+{
+	/* ゾンビプロセスをすべて回収する */
+	while (n_orphans > 0) {
+		collect_zombies(gettime(), 10 * 1000);
+#ifdef TSD_PLATFORM_MSVC
+		Sleep(10);
+#else
+		usleep(1000*10);
+#endif
 	}
 }
 
@@ -1083,6 +1091,7 @@ static void register_hooks()
 	register_hook_pgoutput_close(hook_pgoutput_close);
 	register_hook_pgoutput_postclose(hook_pgoutput_postclose);
 	register_hook_tick(hook_tick);
+	register_hook_close_module(hook_close_module);
 }
 
 static cmd_def_t cmds[] = {
