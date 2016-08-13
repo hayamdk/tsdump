@@ -609,25 +609,26 @@ void insert_orphan(pid_t child_process, const char *cmd)
 
 void collect_zombies(const int64_t time_ms, const int timeout)
 {
-	int i, j, deleted;
+	int i, j, del;
 	for (i = 0; i < n_orphans; i++) {
-		deleted = 0;
+		del = 0;
 #ifdef TSD_PLATFORM_MSVC
 		if (WaitForSingleObject(orphans[i].child_process, 0) == WAIT_OBJECT_0) {
 			DWORD ret;
 			GetExitCodeProcess(orphans[i].child_process, &ret);
+			CloseHandle(orphans[i].child_process);
 			output_message(MSG_NOTIFY, L"子プロセス終了(exitcode=%d): %s", ret, orphans[i].cmd);
-			deleted = 1;
+			del = 1;
 		}
 #else
 		int ret, status;
 		ret = waitpid(orphans[i].child_process, &status, WNOHANG);
 		if (ret > 0) {
 			output_message(MSG_NOTIFY, "子プロセス終了(exitcode=%d): %s", WEXITSTATUS(status), orphans[i].cmd);
-			deleted = 1;
+			del = 1;
 		}
 #endif
-		if (!deleted && orphans[i].lasttime + timeout < time_ms) {
+		if (!del && orphans[i].lasttime + timeout < time_ms) {
 			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒応答しないため強制終了します: %s"), timeout/1000, orphans[i].cmd);
 #ifdef TSD_PLATFORM_MSVC
 			TerminateProcess(orphans[i].child_process, 1);
@@ -635,10 +636,10 @@ void collect_zombies(const int64_t time_ms, const int timeout)
 #else
 			kill_child_process(orphans[i].child_process);
 #endif
-			deleted = 1;
+			del = 1;
 		}
 
-		if (deleted) {
+		if (del) {
 			for (j = i + 1; j < n_orphans; j++) {
 				orphans[j - 1] = orphans[j];
 			}
