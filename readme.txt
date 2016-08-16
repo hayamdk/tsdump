@@ -114,6 +114,7 @@ tsdump (略: 録画オプション、要MULTI2デコード) --pipecmd [ffmpegのパス] --pipeopt
 
 ffmpegを用いて録画と同時にエンコードして同じディレクトリに.mp4ファイルを出力する
 --no-fileoutを付ければ.mp4のみ保存する
+※Windowsのバッチファイルでは%を%%にする
 
 
 ＊＊＊＊＊＊＊＊ ドキュメント
