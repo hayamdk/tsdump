@@ -59,8 +59,8 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl)
 	termflag = 1;
 	output_message(MSG_NOTIFY, TSD_TEXT("\n終了シグナルをキャッチ"));
 	while (!termedflag) {
-		if (gettime() - t > 1000*10) {
-			/* 10秒以上経過したら諦めて出る */
+		if (gettime() - t > 1000*15) {
+			/* 15秒以上経過したら諦めて出る */
 			break;
 		}
 		Sleep(10);

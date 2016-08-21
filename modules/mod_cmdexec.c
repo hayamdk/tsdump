@@ -37,6 +37,7 @@ typedef struct {
 	int write_bytes;
 	int written_bytes;
 	const TSDCHAR *cmd;
+	int connected;
 #ifdef TSD_PLATFORM_MSVC
 	OVERLAPPED ol;
 	HANDLE write_pipe;
@@ -57,6 +58,7 @@ typedef struct {
 	TSDCHAR cmd[MAX_PATH_LEN];
 	TSDCHAR opt[2048];
 	int set_opt;
+	int connecting;
 } cmd_opt_t;
 
 typedef struct {
@@ -77,6 +79,7 @@ static orphan_process_info_t orphans[MAX_ORPHANS];
 static int n_pipecmds = 0;
 static cmd_opt_t pipecmds[MAX_PIPECMDS];
 static int pcwindow_min = 0;
+static int open_connect = 0;
 
 static int n_execcmds = 0;
 static cmd_opt_t execcmds[MAX_CMDS];
@@ -170,19 +173,15 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 
 #ifdef TSD_PLATFORM_MSVC
 
-static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fname, const proginfo_t *proginfo)
+/* 出力用パイプの作成 */
+static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 {
-	HANDLE h_pipe, h_read_temp, h_read;
-	STARTUPINFO si = {0};
-	PROCESS_INFORMATION pi = {0};
-	BOOL res;
-	DWORD err;
+	static int counter = 0;
+	HANDLE h_pipe, h_read_temp;
+	WCHAR pipe_path[1024];
+	DWORD ret;
 
-	WCHAR cmdarg[2048], pipe_path[1024];
-
-	ps->used = 0;
-
-	tsd_snprintf(pipe_path, 1024 - 1, TSD_TEXT("\\\\.\\pipe\\tsdump_pipe_%d_%"PRId64""), _getpid(), gettime());
+	tsd_snprintf(pipe_path, 1024 - 1, TSD_TEXT("\\\\.\\pipe\\tsdump_pipe_%d_%d_%"PRId64""), _getpid(), counter++, gettime());
 
 	h_pipe = CreateNamedPipe(pipe_path,
 			PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
@@ -195,7 +194,7 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *
 		);
 	if (h_pipe == INVALID_HANDLE_VALUE) {
 		output_message(MSG_SYSERROR, L"パイプの作成に失敗(CreateNamedPipe)");
-		return;
+		return 0;
 	}
 
 	h_read_temp = CreateFile(pipe_path,
@@ -204,46 +203,131 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *
 			NULL,
 			OPEN_EXISTING,
 			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
-		NULL);
+			NULL
+		);
 	if (h_read_temp == INVALID_HANDLE_VALUE) {
 		output_message(MSG_SYSERROR, L"パイプのオープンに失敗(CreateFile)");
-		return;
+		CloseHandle(h_pipe);
+		return 0;
 	}
 
 	if (!ConnectNamedPipe(h_pipe, NULL)) {
-		err = GetLastError();
-		if (err != 535) {
+		if (GetLastError() != 535) {
 			output_message(MSG_SYSERROR, L"パイプの接続に失敗(ConnectNamedPipe)");
 			CloseHandle(h_read_temp);
 			CloseHandle(h_pipe);
-			return;
+			return 0;
 		}
 	}
 
-	res = DuplicateHandle(
+	ret = DuplicateHandle(
 			GetCurrentProcess(),
 			h_read_temp,
 			GetCurrentProcess(),
-			&h_read,
+			h_read,
 			0,
 			TRUE,
 			DUPLICATE_SAME_ACCESS
 		);
-	if (!res) {
+	CloseHandle(h_read_temp);
+
+	if (!ret) {
 		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
-		CloseHandle(h_read_temp);
+		CloseHandle(*h_read);
 		CloseHandle(h_pipe);
-		return;
+		return 0;
 	}
 
+	*h_write = h_pipe;
+	return 1;
+}
+
+/* 子プロセス→子プロセスの接続用パイプの作成 */
+static int create_pipe2(HANDLE *h_read, HANDLE *h_write)
+{
+	HANDLE h_read_temp, h_write_temp;
+	DWORD ret;
+
+	if (!CreatePipe(&h_read_temp, &h_write_temp, NULL, 0)) {
+		output_message(MSG_SYSERROR, L"パイプの作成に失敗(CreatePipe)");
+		return 0;
+	}
+
+	ret = DuplicateHandle(
+			GetCurrentProcess(),
+			h_read_temp,
+			GetCurrentProcess(),
+			h_read,
+			0,
+			TRUE,
+			DUPLICATE_SAME_ACCESS
+		);
 	CloseHandle(h_read_temp);
+
+	if (!ret) {
+		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
+		CloseHandle(h_write_temp);
+		return 0;
+	}
+
+	ret = DuplicateHandle(
+			GetCurrentProcess(),
+			h_write_temp,
+			GetCurrentProcess(),
+			h_write,
+			0,
+			TRUE,
+			DUPLICATE_SAME_ACCESS
+		);
+	CloseHandle(h_write_temp);
+
+	if (!ret) {
+		output_message(MSG_SYSERROR, L"DuplicateHandle()に失敗");
+		CloseHandle(*h_read);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fname, const proginfo_t *proginfo, const HANDLE *prev, HANDLE *next)
+{
+	HANDLE h_pipe = INVALID_HANDLE_VALUE, h_read, h_write = INVALID_HANDLE_VALUE;
+	STARTUPINFO si = {0};
+	PROCESS_INFORMATION pi = {0};
+
+	WCHAR cmdarg[2048];
+
+	ps->used = 0;
+
+	if (prev) {
+		h_read = *prev;
+	} else {
+		if (!create_pipe1(&h_read, &h_pipe)) {
+			return 0;
+		}
+	}
+
+	if (next) {
+		if (!create_pipe2(next, &h_write)) {
+			CloseHandle(h_read);
+			if (!prev) {
+				CloseHandle(h_pipe);
+			}
+			return 0;
+		}
+	}
 
 	si.cb = sizeof(STARTUPINFO);
 	si.dwFlags = STARTF_USESTDHANDLES;
 	si.hStdInput = h_read;
 	/* 以下の2つに0を指定することで子プロセスのコンソールにカーソルを合わせても親プロセスのコンソールがブロックしない */
 	/* 定義済みの挙動なのかは未調査 */
-	si.hStdOutput = 0;
+	if (next) {
+		si.hStdOutput = h_write;
+	} else {
+		si.hStdOutput = 0;
+	}
 	si.hStdError = 0;
 
 	if (pcwindow_min) {
@@ -264,12 +348,22 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *
 	if (!CreateProcess(pipe_cmd->cmd, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
 		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess)");
 		CloseHandle(h_read);
-		CloseHandle(h_pipe);
-		return;
+		if (!prev) {
+			CloseHandle(h_pipe);
+		}
+		if (next) {
+			CloseHandle(h_write);
+		}
+		return 0;
 	}
 
 	ps->child_process = pi.hProcess;
 	ps->write_pipe = h_pipe;
+	if (!prev) {
+		ps->connected = 0;		
+	} else {
+		ps->connected = 1;
+	}
 	ps->used = 1;
 	ps->write_busy = 0;
 	ps->cmd = pipe_cmd->cmd;
@@ -277,8 +371,11 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *
 
 	CloseHandle(pi.hThread);
 	CloseHandle(h_read);
+	if (next) {
+		CloseHandle(h_write);
+	}
 
-	return;
+	return 1;
 }
 
 static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_t *proginfo)
@@ -380,29 +477,66 @@ static void split_args(char *argline, char *args[], int *n_args, int max_args)
 	*n_args = n;
 }
 
-static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fname, const proginfo_t *proginfo)
+static int create_pipe1(int *readfd, int *writefd)
 {
-	int ret, status;
 	int pipefds[2];
-	pid_t pid, pid_ret;
-	char argline[2048];
-	int n_args;
-	char *args[32];
-
 	if (pipe(pipefds) < 0) {
-		output_message(MSG_SYSERROR, "パイプの生成に失敗(pipe2)");
-		goto ERROR1;
+		output_message(MSG_SYSERROR, "パイプの生成に失敗(pipe)");
+		return 0;
 	}
 
 	if (fcntl(pipefds[1], F_SETFL, O_NONBLOCK) < 0) {
 		output_message(MSG_SYSERROR, "パイプをノンブロッキングに設定できませんでした(fcntl)");
-		goto ERROR2;
+		close(pipefds[0]);
+		close(pipefds[1]);
+		return 0;
 	}
 
 	if (fcntl(pipefds[1], F_SETFD, FD_CLOEXEC) < 0) {
 		/* FD_CLOEXECを指定しないと複数の子プロセスを作ったときにパイプが閉じられない */
 		output_message(MSG_SYSERROR, "パイプにFD_CLOEXECを設定できませんでした(fcntl)");
-		goto ERROR2;
+		close(pipefds[0]);
+		close(pipefds[1]);
+		return 0;
+	}
+	*readfd = pipefds[0];
+	*writefd = pipefds[1];
+	return 1;
+}
+
+static int create_pipe2(int *readfd, int *writefd)
+{
+	int pipefds[2];
+	if (pipe(pipefds) < 0) {
+		output_message(MSG_SYSERROR, "パイプの生成に失敗(pipe)");
+		return 0;
+	}
+	*readfd = pipefds[0];
+	*writefd = pipefds[1];
+	return 1;
+}
+
+static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fname, const proginfo_t *proginfo, const int *prev, int *next)
+{
+	int ret, status;
+	int readfd, writefd, conn_readfd, conn_writefd;
+	pid_t pid, pid_ret;
+	char argline[2048];
+	int n_args;
+	char *args[32];
+
+	if (prev) {
+		readfd = *prev;
+	} else {
+		if (!create_pipe1(&readfd, &writefd)) {
+			goto ERROR1;
+		}
+	}
+
+	if (next) {
+		if (!create_pipe2(&conn_readfd, &conn_writefd)) {
+			goto ERROR2;
+		}
 	}
 
 	if (pipe_cmd->set_opt) {
@@ -423,9 +557,17 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *f
 		goto ERROR2;
 	} else if ( pid == 0 ) {
 		/* child */
-		close(pipefds[1]);
-		dup2(pipefds[0], STDIN_FILENO);
-		close(pipefds[0]);
+		if (!prev) {
+			close(writefd);
+		}
+		dup2(readfd, STDIN_FILENO);
+		close(readfd);
+
+		if (next) {
+			dup2(conn_writefd, STDOUT_FILENO);
+			close(conn_writefd);
+			close(conn_readfd);
+		}
 		
 		ret = execvp(pipe_cmd->cmd, args);
 		if (ret < 0) {
@@ -437,31 +579,50 @@ static void create_pipe(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *f
 	if (pid_ret < 0) {
 		output_message(MSG_SYSERROR, "子プロセスの状態を取得できませんでした(waitpid)");
 		kill(pid, SIGKILL);
-		goto ERROR2;
+		goto ERROR3;
 	} else if (pid_ret > 0) {
 		if (WIFEXITED(status)) {
 			output_message(MSG_ERROR, "子プロセスがすぐに終了しました:exitcode=%02x(waitpid)", WEXITSTATUS(status));
 		} else {
 			output_message(MSG_ERROR, "子プロセスがすぐに終了しました(waitpid)");
 		}
-		goto ERROR2;
+		goto ERROR3;
 	}
 
-	close(pipefds[0]);
+	close(readfd);
 
-	ps->fd_pipe= pipefds[1];
+	if (prev) {
+		ps->fd_pipe = -1;
+		ps->connected = 1;
+	} else {
+		ps->fd_pipe = writefd;
+		ps->connected = 0;
+	}
+
+	if (next) {
+		*next = conn_readfd;
+		close(conn_writefd);
+	}
+
 	ps->used = 1;
 	ps->cmd = pipe_cmd->cmd;
 	ps->write_busy = 0;
 	ps->child_process = pid;
 
-	return;
+	return 1;
 
+ERROR3:
+	if (next) {
+		close(conn_readfd);
+		close(conn_writefd);
+	}
 ERROR2:
-	close(pipefds[0]);
-	close(pipefds[1]);
+	if (!prev) {
+		close(writefd);
+	}
+	close(readfd);
 ERROR1:
-	return;
+	return 0;
 }
 
 static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t *proginfo)
@@ -504,12 +665,37 @@ ERROR:
 
 static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t, const int actually_start)
 {
-	int i;
+#ifdef TSD_PLATFORM_MSVC
+	HANDLE
+#else
+	int
+#endif
+		prev, next, *p_prev = NULL;
+	int i, oc = 0;
 	UNREF_ARG(ch_info_t);
 	UNREF_ARG(actually_start);
 	module_stat_t *stat = (module_stat_t*)malloc(sizeof(module_stat_t));
 	for (i = 0; i < n_pipecmds; i++) {
-		create_pipe(&stat->pipestats[i], &pipecmds[i], fname, pi);
+		if (oc && !p_prev) {
+			/* 前のコマンドから接続があるのに前のコマンドの実行が失敗している場合実行をパス */
+			if (!pipecmds[i].connecting) {
+				oc = 0;
+			}
+			stat->pipestats[i].used = 0;
+			continue;
+		}
+		if (pipecmds[i].connecting) {
+			if (!exec_child(&stat->pipestats[i], &pipecmds[i], fname, pi, p_prev, &next)) {
+				p_prev = NULL;
+			} else {
+				prev = next;
+				p_prev = &prev;
+			}
+			oc = 1;
+		} else {
+			exec_child(&stat->pipestats[i], &pipecmds[i], fname, pi, p_prev, NULL);
+			oc = 0;
+		}
 	}
 	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
 	return stat;
@@ -882,7 +1068,7 @@ static void hook_pgoutput(void *stat, const uint8_t *buf, const size_t size)
 	int i;
 
 	for (i = 0; i < n_pipecmds; i++) {
-		if (!pstat->pipestats[i].used) {
+		if (!pstat->pipestats[i].used || pstat->pipestats[i].connected) {
 			continue;
 		}
 
@@ -905,7 +1091,7 @@ static const int hook_pgoutput_check(void *stat)
 	int i, ret = 0;
 
 	for (i = 0; i < n_pipecmds; i++) {
-		if (!pstat->pipestats[i].used) {
+		if (!pstat->pipestats[i].used || pstat->pipestats[i].connected) {
 			continue;
 		}
 		if (pstat->pipestats[i].write_busy) {
@@ -945,7 +1131,7 @@ static void hook_pgoutput_close(void *stat, const proginfo_t *pi)
 	module_stat_t *pstat = (module_stat_t*)stat;
 	int i;
 	for (i = 0; i < n_pipecmds; i++) {
-		if (pstat->pipestats[i].used) {
+		if (pstat->pipestats[i].used && !pstat->pipestats[i].connected) {
 			close_pipe(&pstat->pipestats[i]);
 		}
 	}
@@ -1008,7 +1194,7 @@ static void hook_tick(int64_t time_ms)
 	static int64_t last_time = 0;
 	if (last_time / 1000 != time_ms / 1000) {
 		/* ゾンビコレクタは1秒に1回だけ呼び出す */
-		collect_zombies(time_ms, 60*1000);
+		collect_zombies(time_ms, 60 * 1000);
 		last_time = time_ms;
 	}
 }
@@ -1026,6 +1212,15 @@ static void hook_close_module()
 	}
 }
 
+static int hook_postconfig()
+{
+	if (open_connect) {
+		output_message(MSG_ERROR, TSD_TEXT("接続先のコマンドが指定されていません"));
+		return 0;
+	}
+	return 1;
+}
+
 static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 {
 	if (n_pipecmds >= MAX_PIPECMDS) {
@@ -1034,6 +1229,7 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 	tsd_strlcpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
 	pipecmds[n_pipecmds].set_opt = 0;
 	n_pipecmds++;
+	open_connect = 0;
 	return NULL;
 }
 
@@ -1045,7 +1241,7 @@ static const TSDCHAR* set_pipe_opt(const TSDCHAR *param)
 	if (pipecmds[n_pipecmds - 1].set_opt) {
 		return TSD_TEXT("パイプ実行コマンドのオプションは既に指定されています");
 	}
-	tsd_strlcpy(pipecmds[n_pipecmds-1].opt, param, 2048 - 1);
+	tsd_strlcpy(pipecmds[n_pipecmds - 1].opt, param, 2048 - 1);
 	pipecmds[n_pipecmds - 1].set_opt = 1;
 	return NULL;
 }
@@ -1054,6 +1250,17 @@ static const TSDCHAR *set_min(const TSDCHAR* param)
 {
 	UNREF_ARG(param);
 	pcwindow_min = 1;
+	return NULL;
+}
+
+static const TSDCHAR *set_connect(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	if (n_pipecmds < 1) {
+		return TSD_TEXT("接続元のコマンドが指定されていません");
+	}
+	pipecmds[n_pipecmds - 1].connecting = 1;
+	open_connect = 1;
 	return NULL;
 }
 
@@ -1098,12 +1305,14 @@ static void register_hooks()
 	register_hook_pgoutput_postclose(hook_pgoutput_postclose);
 	register_hook_tick(hook_tick);
 	register_hook_close_module(hook_close_module);
+	register_hook_postconfig(hook_postconfig);
 }
 
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--pipecmd"), TSD_TEXT("パイプ実行コマンド (複数指定可)"), 1, set_pipe_cmd },
 	{ TSD_TEXT("--pipeopt"), TSD_TEXT("パイプ実行コマンドのオプション (複数指定可)"), 1, set_pipe_opt },
 	{ TSD_TEXT("--pwmin"), TSD_TEXT("パイプ実行コマンドのウィンドウを最小化する"), 0, set_min },
+	{ TSD_TEXT("--pipeconn"), TSD_TEXT("パイプ実行コマンドの出力を次のコマンドの入力に接続する"), 0, set_connect },
 	{ TSD_TEXT("--cmd"), TSD_TEXT("番組終了時実行コマンド (複数指定可)"), 1, set_cmd },
 	{ TSD_TEXT("--cmdopt"), TSD_TEXT("番組終了時実行コマンドのオプション (複数指定可)"), 1, set_cmd_opt },
 	{ TSD_TEXT("--cwmin"), TSD_TEXT("番組終了時実行コマンドのウィンドウを最小化する"), 0, set_cmin },
