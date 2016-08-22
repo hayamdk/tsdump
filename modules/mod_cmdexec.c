@@ -85,19 +85,47 @@ static int n_execcmds = 0;
 static cmd_opt_t execcmds[MAX_CMDS];
 static int cwindow_min = 0;
 
+static int get_primary_video_pid(const proginfo_t *proginfo)
+{
+	int i;
+	if (PGINFO_READY(proginfo->status)) {
+		for (i = 0; i < proginfo->n_service_pids; i++) {
+			if (proginfo->service_pids[i].stream_type == 0x02) {
+				return proginfo->service_pids[i].pid;
+			}
+		}
+	}
+	return -1;
+}
+
+static int get_primary_audio_pid(const proginfo_t *proginfo)
+{
+	int i;
+	if (PGINFO_READY(proginfo->status)) {
+		for (i = 0; i < proginfo->n_service_pids; i++) {
+			if (proginfo->service_pids[i].stream_type == 0x0f) {
+				return proginfo->service_pids[i].pid;
+			}
+		}
+	}
+	return -1;
+}
+
 static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, const TSDCHAR *fname, const proginfo_t *proginfo)
 {
 	const TSDCHAR *chname = TSD_TEXT("unknown"), *progname = TSD_TEXT("unkonwn");
 	int year, mon, day, hour, min, sec;
 	TSDCHAR fname_base[MAX_PATH_LEN];
 	const TSDCHAR *fname_base_r, *fname_r;
-	TSDCHAR tn_str[21], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
+	TSDCHAR tn_str[20], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
 	TSDCHAR mon_str0[3], day_str0[3], hour_str0[3], min_str0[3], sec_str0[3];
+	TSDCHAR v_pid_str[8], a_pid_str[8];
 	time_t t;
 	struct tm lt;
 	int64_t timenum;
 	tsdstr_replace_set_t sets[32];
 	int n_sets = 0;
+	int v_pid, a_pid;
 
 	if (PGINFO_READY(proginfo->status)) {
 		chname = proginfo->event_name.str;
@@ -132,6 +160,9 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	fname_r = path_getfile(fname);
 	fname_base_r = path_getfile(fname_base);
 
+	v_pid = get_primary_video_pid(proginfo);
+	a_pid = get_primary_audio_pid(proginfo);
+
 	tsd_snprintf(tn_str, 20, TSD_TEXT("%"PRId64), timenum );
 	tsd_snprintf(year_str, 5, TSD_TEXT("%d"), year);
 	tsd_snprintf(mon_str, 3, TSD_TEXT("%d"), mon);
@@ -144,6 +175,18 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	tsd_snprintf(hour_str0, 3, TSD_TEXT("%02d"), hour);
 	tsd_snprintf(min_str0, 3, TSD_TEXT("%02d"), min);
 	tsd_snprintf(sec_str0, 3, TSD_TEXT("%02d"), sec);
+
+	if (v_pid >= 0) {
+		tsd_snprintf(v_pid_str, 8, TSD_TEXT("%d"), v_pid);
+	} else {
+		v_pid_str[0] = TSD_NULLCHAR;
+	}
+
+	if (a_pid >= 0) {
+		tsd_snprintf(a_pid_str, 8, TSD_TEXT("%d"), a_pid);
+	} else {
+		a_pid_str[0] = TSD_NULLCHAR;
+	}
 
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%Q%"), TSD_TEXT("\""));
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%BS%"), TSD_TEXT("\\"));
@@ -166,6 +209,8 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%hh%"), hour_str0);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%mm%"), min_str0);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%ss%"), sec_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_V%"), v_pid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_A%"), a_pid_str);
 
 	tsd_strlcpy(arg, cmd->opt, maxlen_arg - 1);
 	tsd_replace_sets(arg, maxlen_arg - 1, sets, n_sets, 0);
