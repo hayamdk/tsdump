@@ -152,7 +152,7 @@ typedef struct {
 
 	/***** SDT *****/
 	unsigned int network_id : 16;
-	unsigned int ts_id : 13;
+	unsigned int ts_id : 16;
 
 	Sd_string_t service_provider_name;
 	Sd_string_t service_name;
