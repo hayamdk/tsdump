@@ -22,7 +22,7 @@ LDFLAGS := $(if $(shell uname -a | grep -i linux), $(LDFLAGS) -larib25, $(LDFLAG
 LDFLAGS := $(if $(shell uname -a | grep -i cygwin), $(LDFLAGS) -liconv, $(LDFLAGS))
 
 $(PROGRAM): $(OBJS)
-	$(CC) $(OBJS) $(SPECS) $(LDFLAGS) -o $(PROGRAM)
+	$(CC) $(OBJS) $(LDFLAGS) -o $(PROGRAM)
 
 #SUFFIXES: .o .c
 
