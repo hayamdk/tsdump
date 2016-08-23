@@ -6,6 +6,8 @@
 	#define tsd_fprintf(fp, ...)		fprintf(fp, __VA_ARGS__)
 #endif
 
+#define tsd_sizeof(x)					(sizeof(x)/sizeof(TSDCHAR))
+
 typedef struct {
 	const TSDCHAR *old;
 	const TSDCHAR *new;

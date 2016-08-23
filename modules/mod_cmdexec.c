@@ -119,7 +119,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	const TSDCHAR *fname_base_r, *fname_r;
 	TSDCHAR tn_str[20], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
 	TSDCHAR mon_str0[3], day_str0[3], hour_str0[3], min_str0[3], sec_str0[3];
-	TSDCHAR v_pid_str[8], a_pid_str[8];
+	TSDCHAR v_pid_str[8], a_pid_str[8], eid_str[8], tsid_str[8], nid_str[8], sid_str[8];
 	time_t t;
 	struct tm lt;
 	int64_t timenum;
@@ -138,6 +138,11 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		hour = proginfo->start.hour;
 		min = proginfo->start.min;
 		sec = proginfo->start.sec;
+
+		tsd_snprintf(eid_str, tsd_sizeof(eid_str), TSD_TEXT("%d"), proginfo->event_id);
+		tsd_snprintf(tsid_str, tsd_sizeof(tsid_str), TSD_TEXT("%d"), proginfo->ts_id);
+		tsd_snprintf(nid_str, tsd_sizeof(nid_str), TSD_TEXT("%d"), proginfo->network_id);
+		tsd_snprintf(sid_str, tsd_sizeof(sid_str), TSD_TEXT("%d"), proginfo->service_id);
 	} else {
 		timenum = timenumnow();
 
@@ -153,6 +158,11 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		hour = lt.tm_hour;
 		min = lt.tm_min;
 		sec = lt.tm_sec;
+
+		eid_str[0] = TSD_NULLCHAR;
+		tsid_str[0] = TSD_NULLCHAR;
+		nid_str[0] = TSD_NULLCHAR;
+		sid_str[0] = TSD_NULLCHAR;
 	}
 
 	tsd_strlcpy(fname_base, fname, MAX_PATH_LEN - 1);
@@ -211,6 +221,10 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%ss%"), sec_str0);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_V%"), v_pid_str);
 	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_A%"), a_pid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%EVID%"), eid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%TSID%"), tsid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%NID%"), nid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%SID%"), sid_str);
 
 	tsd_strlcpy(arg, cmd->opt, maxlen_arg - 1);
 	tsd_replace_sets(arg, maxlen_arg - 1, sets, n_sets, 0);
