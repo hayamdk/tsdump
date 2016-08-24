@@ -1006,6 +1006,7 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 			oc = 1;
 		} else {
 			exec_child(&stat->pipestats[i], &pipecmds[i], fname, pi, p_prev, NULL);
+			p_prev = NULL;
 			oc = 0;
 		}
 	}
