@@ -260,10 +260,21 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 		//tc_end();
 	}
 
+	/* ファイル出力終了タイミングをチェック */
+	for (i = 0; i < tos->n_pgos; i++) {
+		if (0 < tos->pgos[i].closetime && tos->pgos[i].closetime < nowtime) {
+			if (!tos->pgos[i].close_flag) {
+				tos->pgos[i].close_flag = 1;
+				tos->pgos[i].close_remain = tos->pos_filled - tos->pos_write;
+				//tos->pgos[i].delay_remain = 0;
+			}
+		}
+	}
+
 	if (!tos->write_busy) {
 		/* バッファ切り詰め */
 		if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
-			/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを実行 */
+			/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを試行する */
 			ts_minimize_buf(tos);
 			tos->last_bufminimize_time = nowtime;
 		} else if ( nowtime < tos->last_bufminimize_time ) {
@@ -271,13 +282,9 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 			tos->last_bufminimize_time = nowtime;
 		}
 
-		/* ファイル分割 */
+		/* ファイル出力終了 */
 		if (tos->n_pgos >= 1 && 0 < tos->pgos[0].closetime && tos->pgos[0].closetime < nowtime) {
-			if ( ! tos->pgos[0].close_flag ) {
-				tos->pgos[0].close_flag = 1;
-				tos->pgos[0].close_remain = tos->pos_filled - tos->pos_write;
-				tos->pgos[0].delay_remain = 0;
-			} else if ( tos->pgos[0].close_remain <= 0 ) {
+			if ( tos->pgos[0].close_remain <= 0 ) {
 				ts_close_oldest_pg(tos);
 			}
 		}
@@ -299,9 +306,13 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
 				if (tos->pgos[i].delay_remain < write_size) {
 					diff = write_size - tos->pgos[i].delay_remain;
 					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write+write_size-diff]), diff);
-					tos->pgos[i].delay_remain = 0; /* ここで0にしないのはバグだった？ */
+					tos->pgos[i].delay_remain = 0;
 				} else {
 					tos->pgos[i].delay_remain -= write_size;
+				}
+				/* 遅延されている、かつ既に終了のフラグが立っている場合、カウンターを更新 */
+				if (tos->pgos[i].close_flag && tos->pgos[i].close_remain > 0) {
+					tos->pgos[i].close_remain -= write_size;
 				}
 			/* 端数の書き出しが残っている場合 */
 			} else if ( tos->pgos[i].close_flag && tos->pgos[i].close_remain > 0 ) {
@@ -355,6 +366,7 @@ void ts_minimize_buf(ts_output_stat_t *tos)
 
 void ts_require_buf(ts_output_stat_t *tos, int require_size)
 {
+	int move_size;
 	output_message(MSG_WARNING, TSD_TEXT("バッファが足りません。バッファの空き容量が増えるのを待機します。"));
 	ts_wait_pgoutput(tos);
 	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
@@ -364,10 +376,10 @@ void ts_require_buf(ts_output_stat_t *tos, int require_size)
 	//printf("完了\n");
 	output_message(MSG_WARNING, TSD_TEXT("待機完了"));
 
-	int move_size = tos->pos_write;
+	move_size = tos->pos_filled - tos->pos_write;
 
-	memmove(tos->buf, &(tos->buf[tos->pos_filled - move_size]), move_size);
-	tos->pos_filled -= move_size;
+	memmove(tos->buf, &(tos->buf[tos->pos_write]), move_size);
+	tos->pos_filled -= tos->pos_write;
 	tos->pos_write = 0;
 }
 
