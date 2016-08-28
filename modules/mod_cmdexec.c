@@ -78,6 +78,7 @@ typedef struct {
 #endif
 	const TSDCHAR *cmd;
 	int64_t lasttime;
+	int killmode;
 	redirect_pathinfo_t redirects;
 } orphan_process_info_t;
 
@@ -268,7 +269,11 @@ static int create_redirect_file(TSDCHAR *path)
 #endif
 	}
 
+#ifdef TSD_PLATFORM_MSVC
 	tsd_snprintf(fname, MAX_PATH_LEN, TSD_TEXT("tmp_%"PRId64"_%d_%d"), gettime(), _getpid(), counter++);
+#else
+	tsd_snprintf(fname, MAX_PATH_LEN, TSD_TEXT("tmp_%"PRId64"_%d_%d"), gettime(), getpid(), counter++);
+#endif
 	path_join(path, output_redirect_dir, fname);
 
 #ifdef TSD_PLATFORM_MSVC
@@ -1025,9 +1030,39 @@ static void close_pipe(pipestat_t *ps)
 }
 
 
-#ifndef TSD_PLATFORM_MSVC
+#ifdef TSD_PLATFORM_MSVC
 
-static void kill_child_process(pid_t pid)
+static BOOL CALLBACK term_enum_windows(HWND hwnd, LPARAM param)
+{
+	DWORD pid;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid == (DWORD)param) {
+		PostMessage(hwnd, WM_CLOSE, 0, 0);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static void soft_kill(HANDLE h_process)
+{
+	/* Windowsには任意のプロセス間のシグナルのようなメカニズムは無いのでWM_CLOSEを送ってみる */
+	EnumWindows((WNDENUMPROC)term_enum_windows, (LPARAM)GetProcessId(h_process));
+}
+
+static void hard_kill(HANDLE h_process)
+{
+	TerminateProcess(h_process, 1);
+	CloseHandle(h_process);
+}
+
+#else
+
+static void soft_kill(pid_t pid)
+{
+	kill(pid, SIGINT);
+}
+
+static void hard_kill(pid_t pid)
 {
 	int i, ret, status;
 	kill(pid, SIGKILL);
@@ -1057,12 +1092,7 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 	if (n_orphans >= MAX_ORPHANS) {
 		pid = pid_of(&orphans[0]);
 		output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが多すぎるため最も古いものを強制終了します(pid=%d): %s"), pid, orphans[0].cmd);
-#ifdef TSD_PLATFORM_MSVC
-		TerminateProcess(orphans[0].child_process, 1);
-		CloseHandle(orphans[0].child_process);
-#else
-		kill_child_process(orphans[0].child_process);
-#endif
+		hard_kill(orphans[0].child_process);
 		rename_redirect_file(pid, &orphans[0]);
 		for (i = 1; i < n_orphans; i++) {
 			orphans[i - 1] = orphans[i];
@@ -1073,10 +1103,11 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 	orphans[n_orphans].cmd = cmd;
 	orphans[n_orphans].child_process = child_process;
 	orphans[n_orphans].lasttime = gettime();
+	orphans[n_orphans].killmode = 0;
 	n_orphans++;
 }
 
-void collect_zombies(const int64_t time_ms, const int timeout)
+void collect_zombies(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
 {
 	/* TODO: WaitMultipleObjectsあるいはwaitを用いてシステムコール呼び出しを減らす */
 	int i, j, pid, del;
@@ -1099,14 +1130,15 @@ void collect_zombies(const int64_t time_ms, const int timeout)
 			del = 1;
 		}
 #endif
-		if (!del && orphans[i].lasttime + timeout < time_ms) {
-			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒応答しないため強制終了します(pid=%d): %s"), timeout/1000, pid_of(&orphans[i]), orphans[i].cmd);
-#ifdef TSD_PLATFORM_MSVC
-			TerminateProcess(orphans[i].child_process, 1);
-			CloseHandle(orphans[i].child_process);
-#else
-			kill_child_process(orphans[i].child_process);
-#endif
+		if (!del && orphans[i].killmode == 0 && orphans[i].lasttime + timeout_soft < time_ms) {
+			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
+				timeout_soft/1000, pid_of(&orphans[i]), orphans[i].cmd);
+			soft_kill(orphans[i].child_process);
+			orphans[i].killmode = 1;
+		} else if (!del && orphans[i].lasttime + timeout_hard < time_ms) {
+			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
+				timeout_hard/1000, pid_of(&orphans[i]), orphans[i].cmd);
+			hard_kill(orphans[i].child_process);
 			del = 1;
 		}
 
@@ -1388,7 +1420,7 @@ static void hook_tick(int64_t time_ms)
 	static int64_t last_time = 0;
 	if (last_time / 1000 != time_ms / 1000) {
 		/* ゾンビコレクタは1秒に1回だけ呼び出す */
-		collect_zombies(time_ms, 60 * 1000);
+		collect_zombies(time_ms, 60*1000, 120*1000);
 		last_time = time_ms;
 	}
 }
@@ -1397,7 +1429,7 @@ static void hook_close_module()
 {
 	/* ゾンビプロセスをすべて回収する */
 	while (n_orphans > 0) {
-		collect_zombies(gettime(), 10 * 1000);
+		collect_zombies(gettime(), 5*1000, 10*1000);
 #ifdef TSD_PLATFORM_MSVC
 		Sleep(10);
 #else
