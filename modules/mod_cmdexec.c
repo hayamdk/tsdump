@@ -1049,9 +1049,20 @@ static void soft_kill(HANDLE h_process)
 	EnumWindows((WNDENUMPROC)term_enum_windows, (LPARAM)GetProcessId(h_process));
 }
 
-static void hard_kill(HANDLE h_process)
+static void hard_kill(HANDLE h_process, const WCHAR *cmd)
 {
+	int i;
+	DWORD ret;
 	TerminateProcess(h_process, 1);
+	for (i = 0; i < 10; i++) {
+		if (WaitForSingleObject(h_process, 1) == WAIT_OBJECT_0) {
+			GetExitCodeProcess(h_process, &ret);
+			CloseHandle(h_process);
+			output_message(MSG_NOTIFY, L"子プロセス終了(pid=%d, exitcode=%d): %s", GetProcessId(h_process), ret, cmd);
+			return;
+		}
+	}
+	output_message(MSG_NOTIFY, L"子プロセスの終了を確認できませんでした(pid=%d): %s", GetProcessId(h_process), cmd);
 	CloseHandle(h_process);
 }
 
@@ -1062,22 +1073,22 @@ static void soft_kill(pid_t pid)
 	kill(pid, SIGINT);
 }
 
-static void hard_kill(pid_t pid)
+static void hard_kill(pid_t pid, const char *cmd)
 {
 	int i, ret, status;
 	kill(pid, SIGKILL);
 	for(i=0; i<10; i++) {
 		ret = waitpid(pid, &status, WNOHANG);
 		if (ret > 0) {
-			/*強制終了完了*/
+			output_message(MSG_NOTIFY, "子プロセス終了(pid=%d, exitcode=%d): %s", (int)pid, WEXITSTATUS(status), cmd);
 			return;
 		} else if (ret < 0) {
-			output_message(MSG_SYSERROR, "子プロセスを強制終了しましたがwaitpidがエラーを返しました");
+			output_message(MSG_SYSERROR, "子プロセスを強制終了しましたがwaitpidがエラーを返しました(pid=%d): %s", (int)pid, cmd);
 			return;
 		}
 		usleep(1000);
 	}
-	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした");
+	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした(pid=%d): %s", (int)pid, cmd);
 }
 
 #endif
@@ -1092,7 +1103,7 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 	if (n_orphans >= MAX_ORPHANS) {
 		pid = pid_of(&orphans[0]);
 		output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが多すぎるため最も古いものを強制終了します(pid=%d): %s"), pid, orphans[0].cmd);
-		hard_kill(orphans[0].child_process);
+		hard_kill(orphans[0].child_process, orphans[0].cmd);
 		rename_redirect_file(pid, &orphans[0]);
 		for (i = 1; i < n_orphans; i++) {
 			orphans[i - 1] = orphans[i];
@@ -1131,14 +1142,14 @@ void collect_zombies(const int64_t time_ms, const int timeout_soft, const int ti
 		}
 #endif
 		if (!del && orphans[i].killmode == 0 && orphans[i].lasttime + timeout_soft < time_ms) {
-			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
+			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
 				timeout_soft/1000, pid_of(&orphans[i]), orphans[i].cmd);
 			soft_kill(orphans[i].child_process);
 			orphans[i].killmode = 1;
 		} else if (!del && orphans[i].lasttime + timeout_hard < time_ms) {
-			output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
+			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
 				timeout_hard/1000, pid_of(&orphans[i]), orphans[i].cmd);
-			hard_kill(orphans[i].child_process);
+			hard_kill(orphans[i].child_process, orphans[i].cmd);
 			del = 1;
 		}
 
