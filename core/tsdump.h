@@ -1,5 +1,5 @@
-#define VERSION_STR				TSD_TEXT("1.5.1")
-#define DATE_STR				TSD_TEXT("2016/08/24")
+#define VERSION_STR				TSD_TEXT("1.5.2")
+#define DATE_STR				TSD_TEXT("2016/08/30")
 
 #define BUFSIZE_DEFAULT			96
 #define OVERLAP_SEC_DEFAULT		15
