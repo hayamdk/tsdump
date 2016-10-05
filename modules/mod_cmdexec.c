@@ -1344,7 +1344,7 @@ static const int hook_pgoutput_wait(void *stat)
 	int i, ret = 0;
 
 	for (i = 0; i < n_pipecmds; i++) {
-		if (!pstat->pipestats[i].used) {
+		if (!pstat->pipestats[i].used || pstat->pipestats[i].connected) {
 			continue;
 		}
 		if (pstat->pipestats[i].write_busy) {
