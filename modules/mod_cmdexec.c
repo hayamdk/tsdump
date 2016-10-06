@@ -581,7 +581,6 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 	ps->used = 1;
 	ps->write_busy = 0;
 	ps->cmd = pipe_cmd->cmd;
-	memset(&ps->ol, 0, sizeof(OVERLAPPED));
 
 	CloseHandle(pi.hThread);
 	CloseHandle(h_read);
@@ -1185,6 +1184,8 @@ static void ps_write(pipestat_t *ps)
 			break;
 		}
 #ifdef TSD_PLATFORM_MSVC
+		/* 再利用の際に初期化が必要かは不明だが、念のため使用前に必ず初期化しておく */
+		memset(&ps->ol, 0, sizeof(OVERLAPPED));
 		if (!WriteFile(ps->write_pipe, &ps->buf[ps->written_bytes], remain, &written, &ps->ol)) {
 			if ((errcode=GetLastError()) == ERROR_IO_PENDING) {
 				/* do nothing */
