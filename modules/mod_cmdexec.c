@@ -1176,10 +1176,12 @@ static void ps_write(pipestat_t *ps)
 	sa.sa_handler = SIG_IGN;
 #endif
 
+	/* この関数に入るときは ps->write_busy=1 がセットされている */
+
 	while (1) {
 		remain = ps->write_bytes - ps->written_bytes;
 		if (remain <= 0) {
-			ps->write_bytes = 0;
+			ps->write_busy = 0;
 			break;
 		}
 #ifdef TSD_PLATFORM_MSVC
@@ -1210,7 +1212,7 @@ static void ps_write(pipestat_t *ps)
 
 		if (written < 0) {
 			if (errno_t == EAGAIN || errno_t == EWOULDBLOCK || errno_t == EINTR) {
-				ps->write_busy = 1;
+				/* do nothing */
 			} else {
 				output_message(MSG_SYSERROR, "書き込みエラーのためパイプを閉じます(write): pid=%d", (int)(ps->child_process));
 				goto ERROR_END;
