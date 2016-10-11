@@ -390,7 +390,7 @@ static void hook_stream_generator(void *param, uint8_t **buf, int *size)
 			set_timpstamp_bytes(stat, *size);
 		} else if(!flg_set_unlim) {
 			set_timestamp_pcr(stat, *buf, *size);
-		} 
+		}
 		
 		return;
 	}

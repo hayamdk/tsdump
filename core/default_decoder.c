@@ -71,12 +71,12 @@ void delete_ts_alignment_filter(ts_alignment_filter_t *filter)
 void ts_alignment_filter(ts_alignment_filter_t *filter, uint8_t **out_buf, int *out_bytes, const uint8_t *in_buf, int in_bytes)
 {
 	uint8_t tmp[188];
-	int bytes, skip;
+	int bytes, skip, sync, skip_tmp, sync_tmp;
 
 	bytes = filter->remain + in_bytes;
 	if (bytes > filter->buf_size) {
 		if (filter->remain > 0) {
-			memcpy(tmp, &filter->buf[filter->bytes], filter->remain);
+			memcpy(tmp, &filter->buf[filter->bytes - filter->remain], filter->remain);
 		}
 		free(filter->buf);
 		while (bytes > filter->buf_size) {
@@ -87,13 +87,23 @@ void ts_alignment_filter(ts_alignment_filter_t *filter, uint8_t **out_buf, int *
 			memcpy(filter->buf, tmp, filter->remain);
 		}
 	} else if (filter->remain > 0) {
-		memmove(filter->buf, &filter->buf[filter->bytes], filter->remain);
+		memmove(filter->buf, &filter->buf[filter->bytes - filter->remain], filter->remain);
 	}
 	memcpy(&filter->buf[filter->remain], in_buf, in_bytes);
 
+	/* Å‘å‚Å4sync‚Ü‚ÅAÅ‘åsync”‚Ìskip‚ğŒ©‚Â‚¯‚é */
+	sync = 0;
 	skip = 0;
-	while (filter->buf[skip] != 0x47 && skip < bytes && skip < 188) {
-		skip++;
+	for (skip_tmp = 0; skip_tmp < 188; skip_tmp++) {
+		for (sync_tmp = 0; sync_tmp < 4 && sync_tmp*188+skip_tmp < bytes; sync_tmp++) {
+			if (filter->buf[sync_tmp * 188 + skip_tmp] != 0x47) {
+				break;
+			}
+		}
+		if (sync < sync_tmp) {
+			sync = sync_tmp;
+			skip = skip_tmp;
+		}
 	}
 	filter->bytes = bytes;
 	filter->skip = skip;
