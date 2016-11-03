@@ -80,8 +80,7 @@ int create_proginfo_file(TSDCHAR *fname, const TSDCHAR *fname_ts, const proginfo
 	}
 
 	tsd_strlcpy(fname, fname_ts, MAX_PATH_LEN - 1);
-	path_removeext(fname);
-	path_addext(fname, TSD_TEXT(".txt"));
+	path_changeext(fname, TSD_TEXT(".txt"));
 
 #ifdef TSD_PLATFORM_MSVC
 	err = _wfopen_s(&fp, fname, L"wt, ccs=UTF-8");

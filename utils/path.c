@@ -68,11 +68,6 @@ int path_isexist(const TSDCHAR *path)
 	return TSD_PATH_OTHER;
 }
 
-int path_addext(TSDCHAR *path, const TSDCHAR *ext)
-{
-	return PathAddExtension(path, ext);
-}
-
 int path_self(TSDCHAR *path)
 {
 	return GetModuleFileName(NULL, path, MAX_PATH_LEN);
@@ -191,18 +186,6 @@ TSDCHAR* path_getext(const TSDCHAR *path)
 	return ext;
 }
 
-int path_addext(TSDCHAR *path, const TSDCHAR *ext)
-{
-	int maxlen, ret=1;
-	TSDCHAR *pext = path_getext(path);
-	maxlen = &path[MAX_PATH_LEN-1] - pext;
-	if (maxlen < strlen(pext)) {
-		ret = 0;
-	}
-	strncpy(pext, ext, maxlen);
-	return ret;
-}
-
 int path_isexist(const TSDCHAR *path)
 {
 	int ret;
@@ -236,6 +219,19 @@ int path_self(TSDCHAR *path)
 }
 
 #endif
+
+int path_changeext(TSDCHAR *path, const TSDCHAR *ext)
+{
+	size_t maxlen;
+	int ret = 1;
+	TSDCHAR *pext = path_getext(path);
+	maxlen = &path[MAX_PATH_LEN - 1] - pext;
+	if (maxlen < tsd_strlen(pext)) {
+		ret = 0;
+	}
+	tsd_strlcpy(pext, ext, maxlen);
+	return ret;
+}
 
 int path_isdir(const TSDCHAR *path)
 {

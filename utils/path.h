@@ -15,7 +15,7 @@ int path_getdir(TSDCHAR *dst, const TSDCHAR *path);
 TSDCHAR* path_getfile(const TSDCHAR *path);
 TSDCHAR* path_getext(const TSDCHAR *path);
 void path_removeext(TSDCHAR *path);
-int path_addext(TSDCHAR *path, const TSDCHAR *ext);
+int path_changeext(TSDCHAR *path, const TSDCHAR *ext);
 int path_isexist(const TSDCHAR *path);
 int path_isdir(const TSDCHAR *path);
 int path_isfile(const TSDCHAR *path);
