@@ -964,7 +964,7 @@ void store_TOT(proginfo_t *proginfo, const time_mjd_t *TOT_time)
 
 void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *TOT_payload, void *param, tot_callback_handler_t handler)
 {
-	unsigned int slen, mjd;
+	unsigned int slen;
 	uint8_t tid;
 	uint32_t bcd_jst;
 	time_mjd_t TOT_time;
@@ -984,10 +984,10 @@ void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *T
 		if (slen < 5) { return; }
 	} else { return; }
 
-	mjd = get_bits(TOT_payload->payload, 24, 16);
+	TOT_time.mjd = get_bits(TOT_payload->payload, 24, 16);
 	bcd_jst= get_bits(TOT_payload->payload, 40, 24);
 
-	mjd_to_ymd(mjd, &TOT_time.year, &TOT_time.mon, &TOT_time.day);
+	mjd_to_ymd(TOT_time.mjd, &TOT_time.year, &TOT_time.mon, &TOT_time.day);
 	TOT_time.hour = (bcd_jst >> 20 & 0x0f) * 10 + ((bcd_jst >> 16) & 0x0f);
 	TOT_time.min = (bcd_jst >> 12 & 0x0f) * 10 + ((bcd_jst >> 8) & 0x0f);
 	TOT_time.sec = (bcd_jst >> 4 & 0x0f) * 10 + (bcd_jst & 0x0f);
