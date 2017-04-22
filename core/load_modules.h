@@ -1,3 +1,38 @@
+typedef struct {
+	hook_pgoutput_create_t hook_pgoutput_create;
+	hook_pgoutput_t hook_pgoutput;
+	hook_pgoutput_check_t hook_pgoutput_check;
+	hook_pgoutput_wait_t hook_pgoutput_wait;
+	hook_pgoutput_changed_t hook_pgoutput_changed;
+	hook_pgoutput_end_t hook_pgoutput_end;
+	hook_pgoutput_close_t hook_pgoutput_close;
+	hook_pgoutput_postclose_t hook_pgoutput_postclose;
+	hook_postconfig_t hook_postconfig;
+	hook_close_module_t hook_close_module;
+	hook_open_stream_t hook_open_stream;
+	hook_encrypted_stream_t hook_encrypted_stream;
+	hook_stream_t hook_stream;
+	hook_close_stream_t hook_close_stream;
+	hook_message_t hook_message;
+	hook_tick_t hook_tick;
+	int output_block_size;
+} module_hooks_t;
+
+typedef struct {
+	module_def_t *def;
+#ifdef TSD_PLATFORM_MSVC
+	HMODULE handle;
+#else
+	void *handle;
+#endif
+	module_hooks_t hooks;
+} module_load_t;
+
+#define MAX_MODULES			32
+
+extern module_load_t modules[MAX_MODULES];
+extern int n_modules;
+
 void print_cmd_usage();
 int init_modules(int argc, const TSDCHAR* argv[]);
 int load_modules();
@@ -6,13 +41,6 @@ void free_modules();
 void set_stream_stats_mbps(const double);
 void add_stream_stats_total_bytes(const int);
 
-void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start);
-void do_pgoutput(void **modulestats, unsigned char *buf, size_t size);
-int do_pgoutput_check(void **modulestats);
-int do_pgoutput_wait(void **modulestats);
-int do_pgoutput_changed(void **modulestats, const proginfo_t *old_pi, const proginfo_t *new_pi);
-void do_pgoutput_end(void **modulestats, const proginfo_t *pi);
-void do_pgoutput_close(void **modulestats, const proginfo_t *pi);
 int do_postconfig();
 void do_close_module();
 void do_open_stream();

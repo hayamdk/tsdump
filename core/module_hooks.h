@@ -187,7 +187,7 @@ TSD_API_DEF(void, get_stream_stats, (const stream_stats_t **s));
 TSD_API_DEF(void, request_shutdown, (int));
 
 TSD_API_DEF(void, register_hook_pgoutput_create, (hook_pgoutput_create_t));
-TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t));
+TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t, int));
 TSD_API_DEF(void, register_hook_pgoutput_check, (hook_pgoutput_check_t));
 TSD_API_DEF(void, register_hook_pgoutput_wait, (hook_pgoutput_wait_t));
 TSD_API_DEF(void, register_hook_pgoutput_changed, (hook_pgoutput_changed_t));

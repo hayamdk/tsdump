@@ -23,8 +23,9 @@
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
 #include "core/tsdump.h"
-#include "core/ts_output.h"
+#include "utils/advanced_buffer.h"
 #include "core/load_modules.h"
+#include "core/ts_output.h"
 #include "utils/tsdstr.h"
 #include "utils/aribstr.h"
 #include "utils/path.h"
@@ -230,7 +231,7 @@ void clear_line()
 void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
-	int n, i, j, backward_size, console_width, width;
+	int n, i, backward_size, console_width, width;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
@@ -249,7 +250,8 @@ void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 		fprintf(stderr, "console error\r");
 	} else if (console_width == 0) {
 #endif
-		rate = 100.0 * tos->pos_filled / BUFSIZE;
+		//TODO: 変数への直アクセスじゃなくアクセス関数経由で
+		rate = 100.0 * tos->buf.buf_used / BUFSIZE;
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
 		fflush(stdout);
 #ifdef TSD_PLATFORM_MSVC
@@ -257,20 +259,28 @@ void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
 		for (i = 0; i < n_tos; i++) {
-			for (backward_size = j = 0; j < tos[i].n_th; j++) {
-				backward_size += tos[i].th[j].bytes;
+			backward_size = ab_get_history_backward_bytes(&tos->buf_history);
+			
+			//TODO: 変数への直アクセスじゃなくアクセス関数経由で
+			int pos_write = tos[i].buf.buf_used;
+			for (n = 0; n < tos[i].buf.n_downstreams; n++) {
+				if (pos_write < tos[i].buf.downstreams[n].pos) {
+					pos_write = tos[i].buf.downstreams[n].pos;
+				}
 			}
 
 			for (n = 0; n < width; n++) {
 				int pos = (int)( (double)BUFSIZE / width * (n+0.5) );
-				if (pos < tos[i].pos_write) {
+				if (pos < pos_write) {
 					*p = '-';
-				} else if (pos < tos[i].pos_filled) {
+				//TODO: 変数への直アクセスじゃなくアクセス関数経由で
+				} else if (pos < tos[i].buf.buf_used) {
 					*p = '!';
 				} else {
 					*p = '_';
 				}
-				if (pos > tos[i].pos_filled - backward_size) {
+				//TODO: 変数への直アクセスじゃなくアクセス関数経由で
+				if (pos > tos[i].buf.buf_used - backward_size) {
 					if (*p == '-') {
 						*p = '+';
 					} else if(*p == '/') {
@@ -573,14 +583,15 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			/* パケットをバッファにコピー */
-			ts_copybuf(tos, decbuf, n_dec);
-			ts_update_transfer_history(tos, nowtime, n_dec);
+			//ts_copybuf(tos, decbuf, n_dec);
+			ab_input_buf(&tos->buf, decbuf, n_dec);
+			//ts_update_transfer_history(tos, nowtime, n_dec);
 
 		} else {  /* サービスごと書き出しモード */
 			/* pos_filledをコピー */
-			for (i = 0; i < n_tos; i++) {
-				tos[i].pos_filled_old = tos[i].pos_filled;
-			}
+			//for (i = 0; i < n_tos; i++) {
+			//	tos[i].pos_filled_old = tos[i].pos_filled;
+			//}
 
 			/* パケットを処理 */
 			for (pos = 0; pos < (int)n_dec; pos += 188) {
@@ -601,15 +612,16 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			/* コピーしたバイト数の履歴を保存 */
-			for (i = 0; i < n_tos; i++) {
-				ts_update_transfer_history( &tos[i], nowtime, tos[i].pos_filled - tos[i].pos_filled_old );
-			}
+			//for (i = 0; i < n_tos; i++) {
+			//	ts_update_transfer_history( &tos[i], nowtime, tos[i].pos_filled - tos[i].pos_filled_old );
+			//}
 		}
 		//tc_end();
 
 		//tc_start("output");
 		for (i = 0; i < n_tos; i++) {
-			ts_output(&tos[i], nowtime, 0);
+			// TODO: 呼び出し粒度を適切に
+			ts_output(&tos[i], nowtime);
 		}
 		//tc_end();
 
@@ -630,7 +642,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			/* 番組情報のチェック */
 			for (i = 0; i < n_tos; i++) {
-				if (tos[i].th[1].bytes > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
+				//TODO: 変数への直アクセスやめる
+				if (tos[i].buf_history.records[0].bytes > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
 					ts_check_pi(&tos[i], nowtime, ch_info);
 				}
 			}
@@ -656,17 +669,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		total += n_dec;
 	}
 
-	int err;
 	/* 終了処理 */
 	output_message(MSG_NOTIFY, TSD_TEXT("まだ書き出していないバッファを書き出ています"));
 	for (i = 0; i < n_tos; i++) {
 		/* まだ書き出していないバッファを書き出し */
-		err = ts_wait_pgoutput(&tos[i]);
-		while (tos[i].pos_filled - tos[i].pos_write > 0 && !err) {
-			ts_output(&tos[i], gettime(), 1);
-			err = ts_wait_pgoutput(&tos[i]);
-			print_buf(&tos[i], n_tos-i, TSD_TEXT(""));
-		}
 		close_tos(&tos[i]);
 	}
 	free(tos);

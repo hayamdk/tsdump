@@ -1,31 +1,32 @@
-typedef struct
+typedef struct pgoutput_stat_struct pgoutput_stat_t;
+typedef struct ts_output_stat_struct ts_output_stat_t;
+
+typedef struct {
+	module_load_t *module;
+	void *module_status;
+	int downstream_id;
+	pgoutput_stat_t *parent;
+} output_status_per_module_t;
+
+struct pgoutput_stat_struct
 {
 	const TSDCHAR *fn;
-	int delay_remain;
 	int close_remain;
 	int close_flag;
 	int64_t closetime;
-	void **modulestats;
+	output_status_per_module_t *per_module_status;
 
 	proginfo_t final_pi;
 	int initial_pi_status;
+	int refcount;
 
-} pgoutput_stat_t;
+	struct ts_output_stat_struct *parent;
+};
 
-typedef struct
+struct ts_output_stat_struct
 {
-	int64_t time;
-	int bytes;
-} transfer_history_t;
-
-typedef struct
-{
-	uint8_t *buf;
-	int pos_filled;
-	int pos_write;
-	//int pos_pi;
-	int pos_filled_old;
-	transfer_history_t *th;
+	ab_buffer_t buf;
+	ab_history_t buf_history;
 
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
@@ -37,23 +38,21 @@ typedef struct
 
 	int n_pgos;
 	pgoutput_stat_t *pgos;
-	int write_busy;
-	int n_th;
 	int tps_index;
 	int singlemode;
 	int PAT_packet_counter;
 	int dropped_bytes;
 
-} ts_output_stat_t;
+	pgoutput_stat_t *curr_pgos;
+
+};
 
 void init_tos(ts_output_stat_t *tos);
 void close_tos(ts_output_stat_t *tos);
-void ts_copybuf(ts_output_stat_t *tos, uint8_t *buf, int n_buf);
 void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info);
 void ts_minimize_buf(ts_output_stat_t *tos);
 void ts_require_buf(ts_output_stat_t *tos, int require);
-void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime);
-void ts_output(ts_output_stat_t *tos, int64_t nowtime, int);
+void ts_output(ts_output_stat_t *tos, int64_t nowtime);
 int ts_wait_pgoutput(ts_output_stat_t *tos);
 void ts_check_pgoutput(ts_output_stat_t *tos);
 int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);
@@ -80,20 +79,6 @@ static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_service_list_
 		}
 	}
 	return found * 2 + my;
-}
-
-static inline void ts_update_transfer_history(ts_output_stat_t *tos, int64_t nowtime, int bytes)
-{
-	int i;
-	if (nowtime / CHECK_INTERVAL != tos->th[0].time / CHECK_INTERVAL)
-	{
-		for (i = tos->n_th - 1; i > 0; i--) {
-			tos->th[i] = tos->th[i - 1];
-		}
-		tos->th[0].bytes = 0;
-	}
-	tos->th[0].bytes += bytes;
-	tos->th[0].time = nowtime;
 }
 
 static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsigned int target_sid, unsigned int continuity_counter)
@@ -197,23 +182,5 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service
 		return;
 	}
 
-	/* バッファが足りるかどうかのチェック */
-	if (tos->pos_filled + 188 > BUFSIZE) {
-		if ( ! param_nowait ) {
-			ts_wait_pgoutput(tos);
-		}
-		ts_minimize_buf(tos);
-	}
-	if (tos->pos_filled + 188 > BUFSIZE) {
-		if (param_nowait) {
-			tos->dropped_bytes += 188;
-			return; /* データを捨てる */
-		} else {
-			ts_require_buf(tos, 188);
-		}
-	}
-
-	/* コピー */
-	memcpy(&(tos->buf[tos->pos_filled]), p, 188);
-	tos->pos_filled += 188;
+	ab_input_buf(&tos->buf, p, 188);
 }

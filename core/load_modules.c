@@ -20,6 +20,7 @@
 
 #define TSD_MODULES_HOOKS_API_SET
 
+#include "utils/advanced_buffer.h"
 #include "utils/tsdstr.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
@@ -30,52 +31,20 @@
 #include "modules/modules.h"
 #include "utils/path.h"
 
-#define MAX_HOOKS_NUM 256
-
-typedef struct {
-	hook_pgoutput_create_t hook_pgoutput_create;
-	hook_pgoutput_t hook_pgoutput;
-	hook_pgoutput_check_t hook_pgoutput_check;
-	hook_pgoutput_wait_t hook_pgoutput_wait;
-	hook_pgoutput_changed_t hook_pgoutput_changed;
-	hook_pgoutput_end_t hook_pgoutput_end;
-	hook_pgoutput_close_t hook_pgoutput_close;
-	hook_pgoutput_postclose_t hook_pgoutput_postclose;
-	hook_postconfig_t hook_postconfig;
-	hook_close_module_t hook_close_module;
-	hook_open_stream_t hook_open_stream;
-	hook_encrypted_stream_t hook_encrypted_stream;
-	hook_stream_t hook_stream;
-	hook_close_stream_t hook_close_stream;
-	hook_message_t hook_message;
-	hook_tick_t hook_tick;
-} module_hooks_t;
-
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
 static hooks_stream_decoder_t *hooks_stream_decoder = NULL;
 static hook_path_resolver_t hook_path_resolver = NULL;
-
-typedef struct {
-	module_def_t *def;
-#ifdef TSD_PLATFORM_MSVC
-	HMODULE handle;
-#else
-	void *handle;
-#endif
-	module_hooks_t hooks;
-} module_load_t;
 
 typedef struct {
 	module_def_t *cmd_module;
 	cmd_def_t *cmd_def;
 } cmd_load_t;
 
-#define MAX_MODULES			32
 #define MAX_MODULECMDS		128
 
-static module_load_t modules[MAX_MODULES];
+module_load_t modules[MAX_MODULES];
 static module_hooks_t *module_hooks_current;
-static int n_modules = 0;
+int n_modules = 0;
 
 static cmd_load_t modulecmds[MAX_MODULECMDS];
 static int n_modulecmds = 0;
@@ -87,9 +56,10 @@ void register_hook_pgoutput_create(hook_pgoutput_create_t handler)
 	module_hooks_current->hook_pgoutput_create = handler;
 }
 
-void register_hook_pgoutput(hook_pgoutput_t handler)
+void register_hook_pgoutput(hook_pgoutput_t handler, int block_size)
 {
 	module_hooks_current->hook_pgoutput = handler;
+	module_hooks_current->output_block_size = block_size;
 }
 
 void register_hook_pgoutput_check(hook_pgoutput_check_t handler)
@@ -214,90 +184,6 @@ static void init_stream_stats()
 {
 	memset(&stream_stats, 0, sizeof(stream_stats_t));
 	stream_stats.mbps = 0.0;
-}
-
-void **do_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
-{
-	int i;
-	void **modulestats = (void**)malloc(sizeof(void*)*n_modules);
-	for ( i = 0; i < n_modules; i++ ) {
-		if (modules[i].hooks.hook_pgoutput_create) {
-			modulestats[i] = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info, actually_start);
-		}
-	}
-	return modulestats;
-}
-
-void do_pgoutput(void **modulestats, unsigned char *buf, size_t size)
-{
-	int i;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput) {
-			modules[i].hooks.hook_pgoutput(modulestats[i], buf, size);
-		}
-	}
-}
-
-int do_pgoutput_check(void **modulestats)
-{
-	int i;
-	int write_busy = 0;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_check) {
-			write_busy |= modules[i].hooks.hook_pgoutput_check(modulestats[i]);
-		}
-	}
-	return write_busy;
-}
-
-int do_pgoutput_wait(void **modulestats)
-{
-	int i;
-	int err = 0;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_wait) {
-			err |= modules[i].hooks.hook_pgoutput_wait(modulestats[i]);
-		}
-	}
-	return err;
-}
-
-int do_pgoutput_changed(void **modulestats, const proginfo_t *old_pi, const proginfo_t *new_pi)
-{
-	int i;
-	int err = 0;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_changed) {
-			modules[i].hooks.hook_pgoutput_changed(modulestats[i], old_pi, new_pi);
-		}
-	}
-	return err;
-}
-
-void do_pgoutput_end(void **modulestats, const proginfo_t *pi)
-{
-	int i;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_end) {
-			modules[i].hooks.hook_pgoutput_end(modulestats[i], pi);
-		}
-	}
-}
-
-void do_pgoutput_close(void **modulestats, const proginfo_t *pi)
-{
-	int i;
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_close) {
-			modules[i].hooks.hook_pgoutput_close(modulestats[i], pi);
-		}
-	}
-	for (i = 0; i < n_modules; i++) {
-		if (modules[i].hooks.hook_pgoutput_postclose) {
-			modules[i].hooks.hook_pgoutput_postclose(modulestats[i]);
-		}
-	}
-	free(modulestats);
 }
 
 int do_postconfig()

@@ -2,6 +2,8 @@
 
 #ifdef TSD_PLATFORM_MSVC
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #include <stdio.h>
@@ -11,16 +13,128 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
 #include "utils/ts_parser.h"
 #include "core/tsdump.h"
-#include "core/ts_output.h"
+#include "utils/advanced_buffer.h"
 #include "core/load_modules.h"
+#include "core/ts_output.h"
 #include "utils/tsdstr.h"
 
 //#include "timecalc.h"
+
+static void module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
+{
+	UNREF_ARG(gb);
+	output_status_per_module_t *status = (output_status_per_module_t*)param;
+	if (status->module->hooks.hook_pgoutput) {
+		status->module->hooks.hook_pgoutput(status->module_status, buf, size);
+	}
+}
+
+static void module_buffer_notify_skip(ab_buffer_t *gb, void *param, int skip_bytes)
+{
+	UNREF_ARG(gb);
+	UNREF_ARG(param);
+	UNREF_ARG(skip_bytes);
+}
+
+static void module_buffer_close(ab_buffer_t *gb, void *param, const uint8_t *buf, int remain_size)
+{
+	UNREF_ARG(gb);
+	UNREF_ARG(buf);
+	UNREF_ARG(remain_size);
+	output_status_per_module_t *status = (output_status_per_module_t*)param;
+
+	assert(status->parent->refcount > 0);
+
+	if (status->module->hooks.hook_pgoutput_close) {
+		status->module->hooks.hook_pgoutput_close(status->module_status, &status->parent->final_pi);
+	}
+	if (status->module->hooks.hook_pgoutput_postclose) {
+		status->module->hooks.hook_pgoutput_postclose(status->module_status);
+	}
+	status->parent->refcount--;
+	if (status->parent->refcount <= 0) {
+		status->parent->parent->n_pgos--;
+	}
+}
+
+static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptable_bytes)
+{
+	UNREF_ARG(gb);
+	int busy = 0;
+	output_status_per_module_t *status = (output_status_per_module_t*)param;
+	if (status->module->hooks.hook_pgoutput_check) {
+		busy = status->module->hooks.hook_pgoutput_check(status->module_status);
+		*acceptable_bytes = 1024 * 1024;
+	}
+	return busy;
+}
+
+static const ab_downstream_handler_t module_buffer_handlers = {
+	module_buffer_output,
+	module_buffer_notify_skip,
+	module_buffer_close,
+	NULL,
+	module_buffer_pre_output
+};
+
+static output_status_per_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t *history, const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
+{
+	int i, stream_id;
+	output_status_per_module_t *output_status = (output_status_per_module_t*)malloc(sizeof(output_status_per_module_t)*n_modules);
+
+	for ( i = 0; i < n_modules; i++ ) {
+		if (modules[i].hooks.hook_pgoutput_create) {
+			output_status[i].module_status = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info, actually_start);
+		} else {
+			output_status[i].module_status = NULL;
+		}
+		output_status[i].module = &modules[i];
+		stream_id = ab_connect_downstream_history_backward(
+			buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, &output_status[i], history
+		);
+		assert(stream_id >= 0);
+		output_status[i].downstream_id = stream_id;
+	}
+	return output_status;
+}
+
+int do_pgoutput_changed(output_status_per_module_t *status, const proginfo_t *old_pi, const proginfo_t *new_pi)
+{
+	int i;
+	int err = 0;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_pgoutput_changed) {
+			modules[i].hooks.hook_pgoutput_changed(status[i].module_status, old_pi, new_pi);
+		}
+	}
+	return err;
+}
+
+void do_pgoutput_end(output_status_per_module_t *status, const proginfo_t *pi)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_pgoutput_end) {
+			modules[i].hooks.hook_pgoutput_end(status[i].module_status, pi);
+		}
+	}
+}
+
+void do_pgoutput_close(pgoutput_stat_t *pgos)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		pgos->per_module_status[i].parent = pgos;
+		ab_disconnect_downstream(&pgos->parent->buf, 
+			pgos->per_module_status[i].downstream_id, 0);
+	}
+}
 
 static inline int pi_endtime_unknown(const proginfo_t *pi)
 {
@@ -132,13 +246,11 @@ void init_tos(ts_output_stat_t *tos)
 	tos->pgos = (pgoutput_stat_t*)malloc(MAX_PGOVERLAP * sizeof(pgoutput_stat_t));
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
 		tos->pgos[i].fn = (TSDCHAR*)malloc(MAX_PATH_LEN*sizeof(TSDCHAR));
+		tos->pgos[i].refcount = 0;
 	}
 
-	tos->buf = (uint8_t*)malloc(BUFSIZE);
-	tos->pos_filled = 0;
-	tos->pos_filled_old = 0;
-	tos->pos_write = 0;
-	tos->write_busy = 0;
+	ab_init_buf(&tos->buf, BUFSIZE);
+	ab_set_history(&tos->buf, &tos->buf_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
 	tos->dropped_bytes = 0;
 
 	init_proginfo(&tos->last_proginfo);
@@ -146,276 +258,115 @@ void init_tos(ts_output_stat_t *tos)
 	tos->proginfo_retry_count = 0;
 	tos->pcr_retry_count = 0;
 	tos->last_bufminimize_time = gettime();
-
-	tos->n_th = OVERLAP_SEC * 1000 / CHECK_INTERVAL + 1;
-	if (tos->n_th < 2) {
-		tos->n_th = 2; /* tos->th[1]へのアクセスあるので最低でも2 */
-	}
-	tos->th = (transfer_history_t*)malloc(tos->n_th * sizeof(transfer_history_t));
-	memset(tos->th, 0, tos->n_th * sizeof(transfer_history_t));
+	tos->curr_pgos = NULL;
 
 	return;
 }
 
 void close_tos(ts_output_stat_t *tos)
 {
-	int i;
+	int i, j, busy, remain_size;
 
 	/* close all output */
-	for (i = 0; i < tos->n_pgos; i++) {
-		if (0 < tos->pgos[i].closetime) {
+	for (i = j = 0; i < tos->n_pgos; j++) {
+		assert(j < MAX_PGOVERLAP);
+		if (tos->pgos[j].refcount <= 0) {
+			continue;
+		}
+		i++;
+
+		if (0 < tos->pgos[j].closetime) {
 			/* マージン録画フェーズに移っていたら保存されているfinal_piを使う */
-			do_pgoutput_close(tos->pgos[i].modulestats, &tos->pgos[i].final_pi);
+			do_pgoutput_close(&tos->pgos[j]);
 		} else {
 			/* そうでなければ最新のproginfoを */
-			do_pgoutput_close(tos->pgos[i].modulestats, tos->proginfo);
+			do_pgoutput_close(&tos->pgos[j]);
 		}
 	}
+
+	/* 書き出し完了を待機(10秒まで) */
+	for (i = 0; i < 10; i++) {
+		busy = 0;
+		for (j = ab_first_downstream(&tos->buf);
+				j >= 0;
+				j = ab_next_downstream(&tos->buf, j)) {
+			busy |= ab_get_downstream_status(&tos->buf, j, NULL, &remain_size);
+			if (remain_size > 0) {
+				busy = 1;
+			}
+		}
+		if (!busy) {
+			break;
+		}
+
+		ab_output_buf(&tos->buf);
+#ifdef TSD_PLATFORM_MSVC
+		Sleep(100);
+#else
+		usleep(100 * 1000);
+#endif
+	}
+
+	ab_close_buf(&tos->buf);
 
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
 		free((TSDCHAR*)tos->pgos[i].fn);
 	}
 	free(tos->pgos);
 
-	free(tos->th);
-	free(tos->buf);
+	//free(tos->th);
+	//free(tos->buf);
 	//free(tos);
 }
 
-void ts_copy_backward(ts_output_stat_t *tos, int64_t nowtime)
+void ts_output(ts_output_stat_t *tos, int64_t nowtime)
 {
-	int backward_size, start_pos;
-	int i;
-
-	backward_size = 0;
-	for (i = 0; i < tos->n_th; i++) {
-		if (tos->th[i].time < nowtime - OVERLAP_SEC * 1000) {
-			break;
-		}
-		backward_size += tos->th[i].bytes;
-	}
-	//backward_size = ((backward_size - 1) / 188 + 1) * 188; /* 188byte units */
-
-	start_pos = tos->pos_filled - backward_size;
-	if (start_pos < 0) {
-		start_pos = 0;
-	}
-	if ( tos->n_pgos > 0 && start_pos > tos->pos_write ) {
-		tos->pgos[tos->n_pgos].delay_remain = start_pos - tos->pos_write;
-	} else if ( tos->pos_write > start_pos ) {
-		do_pgoutput(tos->pgos[tos->n_pgos].modulestats, &(tos->buf[start_pos]), tos->pos_write - start_pos);
-		tos->write_busy = 1;
-	}
-}
-
-int ts_wait_pgoutput(ts_output_stat_t *tos)
-{
-	int i;
-	int err = 0;
-	if (tos->write_busy) {
-		for (i = 0; i < tos->n_pgos; i++) {
-			err |= do_pgoutput_wait(tos->pgos[i].modulestats);
-		}
-		tos->write_busy = 0;
-	}
-	return err;
-}
-
-void ts_check_pgoutput(ts_output_stat_t *tos)
-{
-	int i;
-	if (tos->write_busy) {
-		tos->write_busy = 0;
-		for (i = 0; i < tos->n_pgos; i++) {
-			tos->write_busy |= do_pgoutput_check(tos->pgos[i].modulestats);
-		}
-	}
-}
-
-void ts_close_oldest_pg(ts_output_stat_t *tos)
-{
-	int i;
-	pgoutput_stat_t pgos;
-
-	/* 一番古いpgosを閉じる */
-	do_pgoutput_close(tos->pgos[0].modulestats, &tos->pgos[0].final_pi);
-
-	/* pgos[0]の中身を残しておかないといけないのは、pgos[0].fn_baseのポインタを保存するため */
-	pgos = tos->pgos[0];
-	for (i = 0; i < tos->n_pgos - 1; i++) {
-		tos->pgos[i] = tos->pgos[i + 1];
-	}
-	tos->pgos[tos->n_pgos - 1] = pgos;
-	tos->n_pgos--;
-}
-
-void ts_output(ts_output_stat_t *tos, int64_t nowtime, int force_write)
-{
-	int i, write_size, diff;
-
-	if (tos->write_busy) {
-		/* 最新の書き込み完了状態をチェック */
-		//tc_start("check");
-		ts_check_pgoutput(tos);
-		//tc_end();
-	}
+	int i, j;
 
 	/* ファイル出力終了タイミングをチェック */
-	for (i = 0; i < tos->n_pgos; i++) {
-		if (0 < tos->pgos[i].closetime && tos->pgos[i].closetime < nowtime) {
-			if (!tos->pgos[i].close_flag) {
-				tos->pgos[i].close_flag = 1;
-				tos->pgos[i].close_remain = tos->pos_filled - tos->pos_write;
-				//tos->pgos[i].delay_remain = 0;
+	for (i = j = 0; i < tos->n_pgos; j++) {
+		assert(j < MAX_PGOVERLAP);
+		if (tos->pgos[j].refcount <= 0) {
+			continue;
+		}
+		i++;
+
+		/* 出力終了をチェック */
+		if (0 < tos->pgos[j].closetime && tos->pgos[j].closetime < nowtime) {
+			if (!tos->pgos[j].close_flag) {
+				tos->pgos[j].close_flag = 1;
+				/* closeフラグを設定 */
+				do_pgoutput_close(&tos->pgos[j]);
 			}
 		}
 	}
 
-	if (!tos->write_busy) {
-		/* バッファ切り詰め */
-		if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
-			/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを試行する */
-			ts_minimize_buf(tos);
-			tos->last_bufminimize_time = nowtime;
-		} else if ( nowtime < tos->last_bufminimize_time ) {
-			/* 時刻の巻き戻りに対応 */
-			tos->last_bufminimize_time = nowtime;
-		}
-
-		/* ファイル出力終了 */
-		if (tos->n_pgos >= 1 && 0 < tos->pgos[0].closetime && tos->pgos[0].closetime < nowtime) {
-			if ( tos->pgos[0].close_remain <= 0 ) {
-				ts_close_oldest_pg(tos);
-			}
-		}
-
-		/* ファイル書き出し */
-		write_size = tos->pos_filled - tos->pos_write;
-		if ( write_size < 1024*1024 && !force_write ) { /* 書き出しが一定程度溜まっていない場合はパス */
-			//ts_update_transfer_history(tos, nowtime, 0);
-			return;
-		} else if (write_size > MAX_WRITE_SIZE) {
-			write_size = MAX_WRITE_SIZE;
-		}
-
-		/* 新たな書き込みを開始 */
-		//tc_start("write");
-		for (i = 0; i < tos->n_pgos; i++) {
-			/* 書き出しの開始が遅延させられている場合 */
-			if (tos->pgos[i].delay_remain > 0) {
-				if (tos->pgos[i].delay_remain < write_size) {
-					diff = write_size - tos->pgos[i].delay_remain;
-					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write+write_size-diff]), diff);
-					tos->pgos[i].delay_remain = 0;
-				} else {
-					tos->pgos[i].delay_remain -= write_size;
-				}
-				/* 遅延されている、かつ既に終了のフラグが立っている場合、カウンターを更新 */
-				if (tos->pgos[i].close_flag && tos->pgos[i].close_remain > 0) {
-					tos->pgos[i].close_remain -= write_size;
-				}
-			/* 端数の書き出しが残っている場合 */
-			} else if ( tos->pgos[i].close_flag && tos->pgos[i].close_remain > 0 ) {
-				if (tos->pgos[i].close_remain > write_size) {
-					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), write_size);
-					tos->pgos[i].close_remain -= write_size;
-				} else {
-					do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), tos->pgos[i].close_remain);
-					tos->pgos[i].close_remain = 0;
-				}
-			/* 通常の書き出し */
-			} else {
-				do_pgoutput(tos->pgos[i].modulestats, &(tos->buf[tos->pos_write]), write_size);
-			}
-		}
-		//tc_end();
-		tos->write_busy = 1;
-		tos->pos_write += write_size;
-	}
-}
-
-void ts_minimize_buf(ts_output_stat_t *tos)
-{
-	int i;
-	int backward_size, clear_size, move_size;
-
-	if (tos->write_busy) {
-		//printf("[DEBUG] 書き込みが完了していないのでts_minimize_buf()をパス\n");
-		return;
+	/* バッファ切り詰め */
+	if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
+		/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを試行する */
+		//ts_minimize_buf(tos);
+		ab_clear_buf(&tos->buf, 0);
+		tos->last_bufminimize_time = nowtime;
+	} else if ( nowtime < tos->last_bufminimize_time ) {
+		/* 時刻の巻き戻りに対応 */
+		tos->last_bufminimize_time = nowtime;
 	}
 
-	for (backward_size = i = 0; i < tos->n_th; i++) {
-		backward_size += tos->th[i].bytes;
-	}
-	clear_size = tos->pos_filled - backward_size;
-	if (clear_size > tos->pos_write) {
-		clear_size = tos->pos_write;
-	}
-
-	int min_clear_size = (int)((double)MIN_CLEAR_RATIO * BUFSIZE);
-	if ( clear_size < min_clear_size ) {
-		return;
-	}
-
-	move_size = tos->pos_filled - clear_size;
-	memmove(tos->buf, &(tos->buf[clear_size]), move_size);
-	tos->pos_filled -= clear_size;
-	tos->pos_write -= clear_size;
-	//printf("[DEBUG] ts_minimize_buf()を実行: clear_size=%d\n", clear_size);
-}
-
-void ts_require_buf(ts_output_stat_t *tos, int require_size)
-{
-	int move_size;
-	output_message(MSG_WARNING, TSD_TEXT("バッファが足りません。バッファの空き容量が増えるのを待機します。"));
-	ts_wait_pgoutput(tos);
-	while (BUFSIZE - tos->pos_filled + tos->pos_write < require_size) {
-		ts_output(tos, gettime(), 1);
-		ts_wait_pgoutput(tos);
-	}
-	//printf("完了\n");
-	output_message(MSG_WARNING, TSD_TEXT("待機完了"));
-
-	move_size = tos->pos_filled - tos->pos_write;
-
-	memmove(tos->buf, &(tos->buf[tos->pos_write]), move_size);
-	tos->pos_filled -= tos->pos_write;
-	tos->pos_write = 0;
-}
-
-void ts_copybuf(ts_output_stat_t *tos, uint8_t *buf, int n_buf)
-{
-	//fprintf(logfp, " filled=%d n_buf=%d\n", tos->filled, n_buf);
-
-	if (tos->pos_filled + n_buf > BUFSIZE) {
-		if ( ! param_nowait ) {
-			ts_wait_pgoutput(tos);
-		}
-		ts_minimize_buf(tos);
-	}
-	if (tos->pos_filled + n_buf > BUFSIZE) {
-		if (param_nowait) {
-			tos->dropped_bytes += n_buf;
-			return; /* データを捨てる */
-		} else {
-			ts_require_buf(tos, n_buf);
-		}
-	}
-	memcpy(&(tos->buf[tos->pos_filled]), buf, n_buf);
-	tos->pos_filled += n_buf;
+	/* ファイル書き出し */
+	ab_output_buf(&tos->buf);
 }
 
 void ts_check_extended_text(ts_output_stat_t *tos)
 {
-	pgoutput_stat_t *current_pgos;
+	//pgoutput_stat_t *current_pgos;
 	TSDCHAR et[4096];
 
-	if (tos->n_pgos <= 0) {
+	if (!tos->curr_pgos) {
 		return;
 	}
 
-	current_pgos = &tos->pgos[tos->n_pgos - 1];
-	if (!(current_pgos->initial_pi_status & PGINFO_GET_EXTEND_TEXT) &&
+	//current_pgos = &tos->pgos[tos->n_pgos - 1];
+	if (!(tos->curr_pgos->initial_pi_status & PGINFO_GET_EXTEND_TEXT) &&
 			(tos->proginfo->status & PGINFO_GET_EXTEND_TEXT)) {
 		/* 拡張形式イベント情報が途中から来た場合 */
 		get_extended_text(et, sizeof(et) / sizeof(TSDCHAR), tos->proginfo);
@@ -464,7 +415,7 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 
 void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
-	int i, actually_start = 0;
+	int i, j, actually_start = 0;
 	time_mjd_t curr_time;
 	time_offset_t offset;
 	pgoutput_stat_t *pgos;
@@ -492,27 +443,41 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		}
 
 		/* endフックを呼び出す */
-		for (i = 0; i < tos->n_pgos; i++) {
-			do_pgoutput_end(tos->pgos[i].modulestats, final_pi);
+		for (i = j = 0; i < tos->n_pgos; j++) {
+			assert(j < MAX_PGOVERLAP);
+			if (tos->pgos[j].refcount > 0) {
+				do_pgoutput_end(tos->pgos[j].per_module_status, final_pi);
+				i++;
+			}
 		}
 
-		/* pgosの追加 */
-		pgos = &(tos->pgos[tos->n_pgos]);
-		if (tos->n_pgos >= 1) {
-			actually_start = 1; /* 前の番組があるということは本当のスタート */
-			pgos[-1].closetime = nowtime + OVERLAP_SEC * 1000;
-			pgos[-1].final_pi = *final_pi;
+		/* 追加すべきpgosのスロットを探索 */
+		pgos = NULL;
+		for (i = 0; i <= tos->n_pgos; i++) {
+			if (tos->pgos[i].refcount == 0) {
+				pgos = &tos->pgos[i];
+				break;
+			}
+		}
+		assert(pgos);
+
+		/* すでに録画中の番組があるかどうか */
+		if (tos->curr_pgos) {
+			actually_start = 1;
+			tos->curr_pgos->closetime = nowtime + OVERLAP_SEC * 1000;
+			tos->curr_pgos->final_pi = *final_pi;
 		}
 
 		pgos->initial_pi_status = tos->proginfo->status;
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-		pgos->modulestats = do_pgoutput_create(pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
+		pgos->per_module_status = do_pgoutput_create(&tos->buf, &tos->buf_history, pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
 		pgos->close_flag = 0;
 		pgos->close_remain = 0;
-		pgos->delay_remain = 0;
-		ts_copy_backward(tos, nowtime);
+		pgos->refcount = n_modules;
+		pgos->parent = tos;
 
+		tos->curr_pgos = pgos;
 		tos->n_pgos++;
 	}
 }
@@ -526,7 +491,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	check_stream_timeinfo(tos);
 
 	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) && 
-			( (PGINFO_READY(tos->last_proginfo.status) && tos->n_pgos > 0) || tos->n_pgos == 0 ) ) {
+			( (PGINFO_READY(tos->last_proginfo.status) && tos->curr_pgos) || !tos->curr_pgos) ) {
 		/* 最新の番組情報が取得できていなくても15秒は判定を保留する */
 		if (tos->proginfo_retry_count < 15 * 1000 / CHECK_INTERVAL) {
 			tos->proginfo_retry_count++;
@@ -562,7 +527,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		} else if( timenum64(nowtime) / 100 > timenum64(tos->last_checkpi_time) / 100 ) {
 			/* そうでなければPCの現在時刻を比較 */
 			changed = 1;
-		} else if (tos->n_pgos == 0) {
+		} else if (!tos->curr_pgos) {
 			/* まだ出力が始まっていなかったら強制開始 */
 			changed = 1;
 		}
@@ -574,9 +539,9 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	} else if( PGINFO_READY(tos->proginfo->status) && PGINFO_READY(tos->last_proginfo.status) ) {
 		
 		if( proginfo_cmp(tos->proginfo, &tos->last_proginfo) ) {
-			if (tos->n_pgos >= 1) {
+			if (tos->curr_pgos) {
 				/* 呼び出すのは最新の番組に対してのみ */
-				do_pgoutput_changed(tos->pgos[tos->n_pgos-1].modulestats, &tos->last_proginfo, tos->proginfo);
+				do_pgoutput_changed(tos->curr_pgos->per_module_status, &tos->last_proginfo, tos->proginfo);
 			}
 
 			/* 番組の時間が途中で変更された場合 */

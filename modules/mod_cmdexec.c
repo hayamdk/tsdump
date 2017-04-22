@@ -29,6 +29,7 @@
 
 #define MAX_PIPECMDS		32
 #define MAX_CMDS			32
+#define CMDEXEC_BLOCK_SIZE	1024*1024
 
 typedef struct {
 	int use_stdout;
@@ -41,7 +42,6 @@ typedef struct {
 typedef struct {
 	int used;
 	int write_busy;
-	const uint8_t *buf;
 	int write_bytes;
 	int written_bytes;
 	const TSDCHAR *cmd;
@@ -51,9 +51,12 @@ typedef struct {
 	OVERLAPPED ol;
 	HANDLE write_pipe;
 	HANDLE child_process;
+	uint8_t buf[CMDEXEC_BLOCK_SIZE];
 #else
 	int fd_pipe;
 	pid_t child_process;
+	/* writeはその場で処理が完了するのでバッファを持っておく必要がない */
+	const uint8_t *buf;
 #endif
 } pipestat_t;
 
@@ -1312,7 +1315,11 @@ static void hook_pgoutput(void *stat, const uint8_t *buf, const size_t size)
 		}
 
 		if (!pstat->pipestats[i].write_busy) {
+#ifdef TSD_PLATFORM_MSVC
+			memcpy(pstat->pipestats[i].buf, buf, size);
+#else
 			pstat->pipestats[i].buf = buf;
+#endif
 			pstat->pipestats[i].written_bytes = 0;
 			pstat->pipestats[i].write_bytes = size;
 			pstat->pipestats[i].write_busy = 1;
@@ -1545,7 +1552,7 @@ static const TSDCHAR *set_output_redirect(const TSDCHAR* param)
 static void register_hooks()
 {
 	register_hook_pgoutput_create(hook_pgoutput_create);
-	register_hook_pgoutput(hook_pgoutput);
+	register_hook_pgoutput(hook_pgoutput, CMDEXEC_BLOCK_SIZE);
 	register_hook_pgoutput_check(hook_pgoutput_check);
 	register_hook_pgoutput_wait(hook_pgoutput_wait);
 	register_hook_pgoutput_close(hook_pgoutput_close);

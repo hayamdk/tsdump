@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "utils/arib_proginfo.h"
 #include "core/module_hooks.h"
@@ -30,6 +31,8 @@
 
 static int flg_set_no_fileout = 0;
 
+#define FILEOUT_BLOCK_SIZE	1024*1024
+
 typedef struct {
 	TSDCHAR fn[MAX_PATH_LEN];
 	int is_pi;
@@ -37,10 +40,12 @@ typedef struct {
 #ifdef TSD_PLATFORM_MSVC
 	HANDLE fh;
 	OVERLAPPED ol;
+	uint8_t writebuf[FILEOUT_BLOCK_SIZE];
 #else
 	int fd;
-#endif
+	/* writeはその場で処理が完了するのでバッファを持っておく必要がない */
 	const uint8_t *writebuf;
+#endif
 	int write_bytes;
 	int written_bytes;
 	int write_busy;
@@ -305,11 +310,16 @@ static void hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 	}
 
 	if (fos->write_busy) {
-		output_message(MSG_ERROR, TSD_TEXT("以前のファイルIOが完了しないうちに次のファイルIOを発行しました"));
+		output_message(MSG_ERROR, TSD_TEXT("ファイルIOが完了しないうちに新たなファイルIOを発行しました"));
+		assert(1);
 		return;
 	}
 
+#ifdef TSD_PLATFORM_MSVC
+	memcpy(fos->writebuf, buf, size);
+#else
 	fos->writebuf = buf;
+#endif
 	fos->write_bytes = size;
 	fos->written_bytes = 0;
 	fos->write_busy = 1;
@@ -352,8 +362,11 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 	}
 
 	if (fos->write_busy) {
-		output_message(MSG_ERROR, TSD_TEXT("IOが完了しないうちにファイルを閉じようとしました"));
-		*((char*)NULL) = 0; /* segfault */
+		output_message(MSG_WARNING, TSD_TEXT("IOが完了しないうちにファイルを閉じようとしました"));
+#ifdef TSD_PLATFORM_MSVC
+		CancelIo(fos->fh);
+		check_io_status(fos, 1);
+#endif
 	}
 #ifdef TSD_PLATFORM_MSVC
 	CloseHandle(fos->fh);
@@ -377,7 +390,7 @@ static void register_hooks()
 {
 	if (!flg_set_no_fileout) {
 		register_hook_pgoutput_create(hook_pgoutput_create);
-		register_hook_pgoutput(hook_pgoutput);
+		register_hook_pgoutput(hook_pgoutput, FILEOUT_BLOCK_SIZE);
 		register_hook_pgoutput_check(hook_pgoutput_check);
 		register_hook_pgoutput_wait(hook_pgoutput_wait);
 		register_hook_pgoutput_close(hook_pgoutput_close);
