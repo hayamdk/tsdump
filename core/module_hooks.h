@@ -5,7 +5,7 @@ typedef void (*register_hooks_t)();
 
 typedef const TSDCHAR* (*cmd_handler_t)(const TSDCHAR*);
 
-#define TSDUMP_MODULE_API_VER 5
+#define TSDUMP_MODULE_API_VER 6
 
 typedef enum {
 	TSDUMP_SCALE_NONE,
