@@ -620,7 +620,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 		//tc_start("output");
 		for (i = 0; i < n_tos; i++) {
-			// TODO: ŒÄ‚Ño‚µ—±“x‚ð“KØ‚É
 			ts_output(&tos[i], nowtime);
 		}
 		//tc_end();

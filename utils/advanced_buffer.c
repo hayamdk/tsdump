@@ -69,7 +69,7 @@ void ab_init_buf(ab_buffer_t *gb, int buf_size)
 	}
 }
 
-int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param, int backward_size)
+int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, int backward_size)
 {
 	int insert, diff, remain;
 
@@ -88,6 +88,7 @@ int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_
 	gb->downstreams[insert].busy = 0;
 	gb->downstreams[insert].close_flg = 0;
 	gb->downstreams[insert].in_use = 1;
+	gb->downstreams[insert].realtime = realtime;
 
 	diff = -backward_size;
 	if (alignment_size > 0) {
@@ -98,6 +99,9 @@ int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_
 		}
 	}
 	gb->downstreams[insert].pos = gb->buf_used + diff;
+	if (gb->downstreams[insert].pos < 0) {
+		gb->downstreams[insert].pos = 0;
+	}
 
 	if (alignment_size > 0 && max_size > 0) {
 		if (max_size < alignment_size) {
@@ -113,16 +117,16 @@ int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_
 	return insert;
 }
 
-int ab_connect_downstream_history_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param, ab_history_t *history)
+int ab_connect_downstream_history_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, ab_history_t *history)
 {
-	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, param,
+	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, realtime, param,
 		ab_get_history_backward_bytes(history)
 	);
 }
 
-int ab_connect_downstream(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param)
+int ab_connect_downstream(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param)
 {
-	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, param, 0);
+	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, realtime, param, 0);
 }
 
 void ab_clear_buf(ab_buffer_t *gb, int require_size)
@@ -203,6 +207,11 @@ void ab_output_buf(ab_buffer_t *gb)
 		}
 		i++;
 
+		write_size = gb->buf_used - ds->pos;
+		if ( !ds->realtime && ds->max_size > 0 && write_size < ds->max_size / 2 ) {
+			continue;
+		}
+
 		if (ds->handler.start_hook) {
 			ds->handler.start_hook(gb, ds->param);
 		}
@@ -218,7 +227,6 @@ void ab_output_buf(ab_buffer_t *gb)
 			max_write_size = ds->max_size;
 		}
 
-		write_size = gb->buf_used - ds->pos;
 		if (max_write_size/*is aligned*/ > 0 && write_size > max_write_size) {
 			write_size = max_write_size;
 		} else if(ds->alignment_size > 0) {
@@ -392,10 +400,10 @@ int ab_set_history(ab_buffer_t *gb, ab_history_t *history, int resolution_ms, in
 	history->buf_remain_bytes = 0;
 	history->backward_bytes = 0;
 
-	if (ab_connect_downstream(gb, &history_handler1, 0, 0, history) < 0) {
+	if (ab_connect_downstream(gb, &history_handler1, 0, 0, 1, history) < 0) {
 		return 1;
 	}
-	if ((history->stream_id = ab_connect_downstream(gb, &history_handler2, 0, 0, history)) < 0) {
+	if ((history->stream_id = ab_connect_downstream(gb, &history_handler2, 0, 0, 1, history)) < 0) {
 		return 1;
 	}
 	return 0;

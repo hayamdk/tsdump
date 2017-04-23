@@ -66,11 +66,11 @@ static void module_buffer_close(ab_buffer_t *gb, void *param, const uint8_t *buf
 static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptable_bytes)
 {
 	UNREF_ARG(gb);
+	UNREF_ARG(acceptable_bytes);
 	int busy = 0;
 	output_status_per_module_t *status = (output_status_per_module_t*)param;
 	if (status->module->hooks.hook_pgoutput_check) {
 		busy = status->module->hooks.hook_pgoutput_check(status->module_status);
-		*acceptable_bytes = 1024 * 1024;
 	}
 	return busy;
 }
@@ -96,7 +96,7 @@ static output_status_per_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_histo
 		}
 		output_status[i].module = &modules[i];
 		stream_id = ab_connect_downstream_history_backward(
-			buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, &output_status[i], history
+			buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, 0, &output_status[i], history
 		);
 		assert(stream_id >= 0);
 		output_status[i].downstream_id = stream_id;

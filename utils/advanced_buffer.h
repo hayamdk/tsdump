@@ -17,6 +17,7 @@ struct ab_downstream_t {
 	unsigned int busy : 1;
 	unsigned int close_flg : 1;
 	unsigned int in_use : 1;
+	unsigned int realtime : 1;
 	int pos;
 	int remain_to_close;
 	int alignment_size;
@@ -53,9 +54,9 @@ int ab_next_downstream(ab_buffer_t *gb, int id);
 int ab_first_downstream(ab_buffer_t *gb);
 
 void ab_init_buf(ab_buffer_t *gb, int buf_size);
-int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param, int backward_size);
-int ab_connect_downstream_history_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param, ab_history_t *history);
-int ab_connect_downstream(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, void *param);
+int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, int backward_size);
+int ab_connect_downstream_history_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, ab_history_t *history);
+int ab_connect_downstream(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param);
 void ab_clear_buf(ab_buffer_t *gb, int require_size);
 void ab_input_buf(ab_buffer_t *gb, const uint8_t *buf, int size);
 void ab_output_buf(ab_buffer_t *gb);
