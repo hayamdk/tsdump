@@ -25,8 +25,8 @@ struct pgoutput_stat_struct
 
 struct ts_output_stat_struct
 {
-	ab_buffer_t buf;
-	ab_history_t buf_history;
+	ab_buffer_t *ab;
+	ab_history_t *ab_history;
 
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
@@ -182,5 +182,5 @@ static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service
 		return;
 	}
 
-	ab_input_buf(&tos->buf, p, 188);
+	ab_input_buf(tos->ab, p, 188);
 }

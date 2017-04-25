@@ -12,194 +12,248 @@
 
 #include "advanced_buffer.h"
 
+struct ab_downstream_struct {
+	ab_downstream_handler_t handler;
+	void *param;
+	unsigned int busy : 1;
+	unsigned int close_flg : 1;
+	unsigned int in_use : 1;
+	unsigned int realtime : 1;
+	int pos;
+	int remain_to_close;
+	int alignment_size;
+	int max_size;
+};
+
+struct ab_buffer_struct {
+	ab_downstream_t downstreams[AB_MAX_DOWNSTREAMS];
+	uint64_t input_total;
+	int n_downstreams;
+	int buf_used;
+	int buf_size;
+	uint8_t *buf;
+};
+
+typedef struct {
+	int64_t timenum;
+	int bytes;
+} ab_history_record_t;
+
+struct ab_history_struct {
+	unsigned int refcount : 2;
+	ab_buffer_t *buffer;
+	ab_history_record_t *records;
+	int resolution;
+	int num;
+	int used;
+	int backward_ms;
+	int buf_remain_bytes;
+	int backward_bytes;
+	int stream_id;
+};
+
 #define	UNREF_ARG(x) ((void)(x))
 
 #define alignment_floor(x, alignment_size) ( (alignment_size) > 1 ? (x) / (alignment_size) * (alignment_size) : (x) )
 #define alignment_ceil(x, alignment_size)  ( (alignment_size) > 1 ? ((x)+(alignment_size)-1) / (alignment_size) * (alignment_size) : (x) )
 
-int ab_next_downstream(ab_buffer_t *gb, int id)
+int ab_next_downstream(ab_buffer_t *ab, int id)
 {
 	int i;
-	for (i = id + 1; i < GB_MAX_DOWNSTREAMS; i++) {
-		if (gb->downstreams[i].in_use) {
+	for (i = id + 1; i < AB_MAX_DOWNSTREAMS; i++) {
+		if (ab->downstreams[i].in_use) {
 			return i;
 		}
 	}
 	return -1;
 }
 
-int ab_first_downstream(ab_buffer_t *gb)
+int ab_first_downstream(ab_buffer_t *ab)
 {
-	return ab_next_downstream(gb, -1);
+	return ab_next_downstream(ab, -1);
 }
 
-static void ab_check_close(ab_buffer_t *gb)
+static void ab_check_close(ab_buffer_t *ab)
 {
 	int i, j;
 	ab_downstream_t *ds;
 
-	for (i = j = 0; i < gb->n_downstreams; j++) {
-		assert(j < GB_MAX_DOWNSTREAMS);
-		ds = &gb->downstreams[j];
+	for (i = j = 0; i < ab->n_downstreams; j++) {
+		assert(j < AB_MAX_DOWNSTREAMS);
+		ds = &ab->downstreams[j];
 		if (!ds->in_use) {
 			/* do nothing */
 		} else if (!ds->busy && ds->close_flg && ds->remain_to_close <= 0) {
 			/* close */
 			if (ds->handler.close) {
-				ds->handler.close(gb, ds->param, NULL, 0);
+				ds->handler.close(ab, ds->param, NULL, 0);
 			}
 			ds->in_use = 0;
-			gb->n_downstreams--;
+			ab->n_downstreams--;
 		} else {
 			i++;
 		}
 	}
 }
 
-void ab_init_buf(ab_buffer_t *gb, int buf_size)
+void ab_init(ab_buffer_t *ab, int buf_size)
 {
 	int i;
-	gb->buf = malloc(buf_size);
-	gb->buf_size = buf_size;
-	gb->buf_used = 0;
-	gb->n_downstreams = 0;
-	gb->input_total = 0;
-	for (i = 0; i < GB_MAX_DOWNSTREAMS; i++) {
-		gb->downstreams[i].in_use = 0;
+	ab->buf = (uint8_t*)malloc(buf_size);
+	ab->buf_size = buf_size;
+	ab->buf_used = 0;
+	ab->n_downstreams = 0;
+	ab->input_total = 0;
+	for (i = 0; i < AB_MAX_DOWNSTREAMS; i++) {
+		ab->downstreams[i].in_use = 0;
 	}
 }
 
-int ab_connect_downstream_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, int backward_size)
+ab_buffer_t* ab_create(int buf_size)
+{
+	ab_buffer_t *ab = (ab_buffer_t*)malloc(sizeof(ab_buffer_t));
+	ab_init(ab, buf_size);
+	return ab;
+}
+
+void ab_delete(ab_buffer_t *ab)
+{
+	ab_close_buf(ab);
+	free(ab->buf);
+	free(ab);
+}
+
+int ab_connect_downstream_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, int backward_size)
 {
 	int insert, diff, remain;
 
-	if (gb->n_downstreams >= GB_MAX_DOWNSTREAMS) {
+	if (ab->n_downstreams >= AB_MAX_DOWNSTREAMS) {
 		return -1;
 	}
 
-	for (insert = 0; insert < GB_MAX_DOWNSTREAMS; insert++) {
-		if (!gb->downstreams[insert].in_use) { break; }
+	for (insert = 0; insert < AB_MAX_DOWNSTREAMS; insert++) {
+		if (!ab->downstreams[insert].in_use) { break; }
 	}
-	assert(insert < GB_MAX_DOWNSTREAMS);
+	assert(insert < AB_MAX_DOWNSTREAMS);
 
-	gb->downstreams[insert].handler = *handler;
-	gb->downstreams[insert].param = param;
-	gb->downstreams[insert].alignment_size = alignment_size;
-	gb->downstreams[insert].busy = 0;
-	gb->downstreams[insert].close_flg = 0;
-	gb->downstreams[insert].in_use = 1;
-	gb->downstreams[insert].realtime = realtime;
+	ab->downstreams[insert].handler = *handler;
+	ab->downstreams[insert].param = param;
+	ab->downstreams[insert].alignment_size = alignment_size;
+	ab->downstreams[insert].busy = 0;
+	ab->downstreams[insert].close_flg = 0;
+	ab->downstreams[insert].in_use = 1;
+	ab->downstreams[insert].realtime = realtime;
 
 	diff = -backward_size;
 	if (alignment_size > 0) {
-		assert(gb->input_total + diff >= 0);
-		remain = (int)((gb->input_total + diff) % alignment_size);
+		assert(ab->input_total + diff >= 0);
+		remain = (int)((ab->input_total + diff) % alignment_size);
 		if (remain > 0) {
 			diff += alignment_size - remain;
 		}
 	}
-	gb->downstreams[insert].pos = gb->buf_used + diff;
-	if (gb->downstreams[insert].pos < 0) {
-		gb->downstreams[insert].pos = 0;
+	ab->downstreams[insert].pos = ab->buf_used + diff;
+	if (ab->downstreams[insert].pos < 0) {
+		ab->downstreams[insert].pos = 0;
 	}
 
 	if (alignment_size > 0 && max_size > 0) {
 		if (max_size < alignment_size) {
-			gb->downstreams[insert].max_size = alignment_size;
+			ab->downstreams[insert].max_size = alignment_size;
 		} else {
-			gb->downstreams[insert].max_size = alignment_floor(max_size, alignment_size);
+			ab->downstreams[insert].max_size = alignment_floor(max_size, alignment_size);
 		}
 	} else {
-		gb->downstreams[insert].max_size = max_size;
+		ab->downstreams[insert].max_size = max_size;
 	}
 
-	gb->n_downstreams++;
+	ab->n_downstreams++;
 	return insert;
 }
 
-int ab_connect_downstream_history_backward(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, ab_history_t *history)
+int ab_connect_downstream_history_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, ab_history_t *history)
 {
-	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, realtime, param,
+	return ab_connect_downstream_backward(ab, handler, alignment_size, max_size, realtime, param,
 		ab_get_history_backward_bytes(history)
 	);
 }
 
-int ab_connect_downstream(ab_buffer_t *gb, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param)
+int ab_connect_downstream(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param)
 {
-	return ab_connect_downstream_backward(gb, handler, alignment_size, max_size, realtime, param, 0);
+	return ab_connect_downstream_backward(ab, handler, alignment_size, max_size, realtime, param, 0);
 }
 
-void ab_clear_buf(ab_buffer_t *gb, int require_size)
+void ab_clear_buf(ab_buffer_t *ab, int require_size)
 {
-	assert(0 <= require_size && require_size <= gb->buf_used);
+	assert(0 <= require_size && require_size <= ab->buf_used);
 
 	int i, j;
 	int clear_size, move_size, skip_size;
 
-	clear_size = gb->buf_used;
-	for (i = j = 0; i < gb->n_downstreams; j++) {
-		assert(j < GB_MAX_DOWNSTREAMS);
-		if (!gb->downstreams[j].in_use) {
+	clear_size = ab->buf_used;
+	for (i = j = 0; i < ab->n_downstreams; j++) {
+		assert(j < AB_MAX_DOWNSTREAMS);
+		if (!ab->downstreams[j].in_use) {
 			continue;
 		}
-		if (gb->downstreams[j].pos < clear_size) {
-			clear_size = gb->downstreams[j].pos;
+		if (ab->downstreams[j].pos < clear_size) {
+			clear_size = ab->downstreams[j].pos;
 		}
 		i++;
 	}
 
-	assert(0 <= clear_size && clear_size <= gb->buf_used);
-	if (gb->buf_used + require_size - clear_size > gb->buf_size) {
-		clear_size = gb->buf_used + require_size - gb->buf_size;
+	assert(0 <= clear_size && clear_size <= ab->buf_used);
+	if (ab->buf_used + require_size - clear_size > ab->buf_size) {
+		clear_size = ab->buf_used + require_size - ab->buf_size;
 	}
-	move_size = gb->buf_used - clear_size;
-	assert(0 <= move_size && move_size <= gb->buf_used);
+	move_size = ab->buf_used - clear_size;
+	assert(0 <= move_size && move_size <= ab->buf_used);
 
 	if (move_size > 0 && clear_size > 0) {
-		memmove(gb->buf, &gb->buf[clear_size], move_size);
+		memmove(ab->buf, &ab->buf[clear_size], move_size);
 	}
-	gb->buf_used -= clear_size;
+	ab->buf_used -= clear_size;
 
-	for (i = j = 0; i < gb->n_downstreams; j++) {
-		assert(j < GB_MAX_DOWNSTREAMS);
-		if (!gb->downstreams[j].in_use) {
+	for (i = j = 0; i < ab->n_downstreams; j++) {
+		assert(j < AB_MAX_DOWNSTREAMS);
+		if (!ab->downstreams[j].in_use) {
 			continue;
 		}
 		i++;
 
-		skip_size = clear_size - gb->downstreams[j].pos;
+		skip_size = clear_size - ab->downstreams[j].pos;
 		if (skip_size < 0) {
 			skip_size = 0;
 		}
-		skip_size = alignment_ceil(skip_size, gb->downstreams[j].alignment_size);
+		skip_size = alignment_ceil(skip_size, ab->downstreams[j].alignment_size);
 
-		gb->downstreams[j].pos -= clear_size - skip_size;
-		assert(gb->downstreams[j].pos >= 0);
+		ab->downstreams[j].pos -= clear_size - skip_size;
+		assert(ab->downstreams[j].pos >= 0);
 
-		if (skip_size > 0 && gb->downstreams[j].handler.notify_skip) {
-			gb->downstreams[j].handler.notify_skip(gb, gb->downstreams[j].param, skip_size);
+		if (skip_size > 0 && ab->downstreams[j].handler.notify_skip) {
+			ab->downstreams[j].handler.notify_skip(ab, ab->downstreams[j].param, skip_size);
 		}
 	}
 }
 
-void ab_input_buf(ab_buffer_t *gb, const uint8_t *buf, int size/*, int timenum*/)
+void ab_input_buf(ab_buffer_t *ab, const uint8_t *buf, int size/*, int timenum*/)
 {
-	if (gb->buf_used + size > gb->buf_size) {
-		ab_clear_buf(gb, size);
+	if (ab->buf_used + size > ab->buf_size) {
+		ab_clear_buf(ab, size);
 	}
-	memcpy(&gb->buf[gb->buf_used], buf, size);
-	gb->buf_used += size;
-	gb->input_total += size;
+	memcpy(&ab->buf[ab->buf_used], buf, size);
+	ab->buf_used += size;
+	ab->input_total += size;
 }
 
-void ab_output_buf(ab_buffer_t *gb)
+void ab_output_buf(ab_buffer_t *ab)
 {
 	int i, j, max_write_size, write_size;
 	ab_downstream_t *ds;
 
-	for (i = j = 0; i < gb->n_downstreams; j++) {
-		assert(j < GB_MAX_DOWNSTREAMS);
-		ds = &gb->downstreams[j];
+	for (i = j = 0; i < ab->n_downstreams; j++) {
+		assert(j < AB_MAX_DOWNSTREAMS);
+		ds = &ab->downstreams[j];
 		max_write_size = 0;
 
 		if (!ds->in_use) {
@@ -207,16 +261,16 @@ void ab_output_buf(ab_buffer_t *gb)
 		}
 		i++;
 
-		write_size = gb->buf_used - ds->pos;
+		write_size = ab->buf_used - ds->pos;
 		if ( !ds->realtime && ds->max_size > 0 && write_size < ds->max_size / 2 ) {
 			continue;
 		}
 
 		if (ds->handler.start_hook) {
-			ds->handler.start_hook(gb, ds->param);
+			ds->handler.start_hook(ab, ds->param);
 		}
 		if (ds->busy && ds->handler.pre_output) {
-			ds->busy = ds->handler.pre_output(gb, ds->param, &max_write_size);
+			ds->busy = ds->handler.pre_output(ab, ds->param, &max_write_size);
 			max_write_size = alignment_floor(max_write_size, ds->alignment_size);
 		}
 		if (ds->busy) {
@@ -239,7 +293,7 @@ void ab_output_buf(ab_buffer_t *gb)
 
 		if (write_size > 0) {
 			if (ds->handler.output) {
-				ds->handler.output(gb, ds->param, &gb->buf[ds->pos], write_size);
+				ds->handler.output(ab, ds->param, &ab->buf[ds->pos], write_size);
 			}
 			if (ds->handler.pre_output) {
 				ds->busy = 1;
@@ -251,62 +305,60 @@ void ab_output_buf(ab_buffer_t *gb)
 		}
 	}
 
-	ab_check_close(gb);
+	ab_check_close(ab);
 }
 
-void ab_close_buf(ab_buffer_t *gb)
+void ab_close_buf(ab_buffer_t *ab)
 {
 	int i, j, write_size;
 	ab_downstream_t *ds;
 
-	for (i = j = 0; i < gb->n_downstreams; j++) {
-		assert(j < GB_MAX_DOWNSTREAMS);
-		ds = &gb->downstreams[j];
+	for (i = j = 0; i < ab->n_downstreams; j++) {
+		assert(j < AB_MAX_DOWNSTREAMS);
+		ds = &ab->downstreams[j];
 		if (!ds->in_use) {
 			continue;
 		}
 		i++;
-		write_size = gb->buf_used - ds->pos;
+		write_size = ab->buf_used - ds->pos;
 		if (ds->handler.close) {
-			ds->handler.close(gb, ds->param, &gb->buf[ds->pos], write_size);
+			ds->handler.close(ab, ds->param, &ab->buf[ds->pos], write_size);
 		}
+		ds->in_use = 0;
 	}
 }
 
-void ab_get_status(ab_buffer_t *gb, int *buf_size, int *buf_used)
+void ab_get_status(ab_buffer_t *ab, int *buf_used)
 {
-	if (buf_size) {
-		*buf_size = gb->buf_size;
-	}
 	if (buf_used) {
-		*buf_used = gb->buf_used;
+		*buf_used = ab->buf_used;
 	}
 }
 
-int ab_get_downstream_status(ab_buffer_t *gb, int id, int *buf_pos, int *remain_size)
+int ab_get_downstream_status(ab_buffer_t *ab, int id, int *buf_pos, int *remain_size)
 {
-	assert(id < GB_MAX_DOWNSTREAMS && gb->downstreams[id].in_use);
+	assert(id < AB_MAX_DOWNSTREAMS && ab->downstreams[id].in_use);
 	if (buf_pos) {
-		*buf_pos = gb->downstreams[id].pos;
+		*buf_pos = ab->downstreams[id].pos;
 	}
 	if (remain_size) {
 		*remain_size = alignment_floor(
-			gb->buf_used - gb->downstreams[id].pos, gb->downstreams[id].alignment_size
+			ab->buf_used - ab->downstreams[id].pos, ab->downstreams[id].alignment_size
 		);
 	}
-	return gb->downstreams[id].busy;
+	return ab->downstreams[id].busy;
 }
 
-void ab_disconnect_downstream(ab_buffer_t *gb, int id, int immediate)
+void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate)
 {
-	ab_downstream_t *ds = &gb->downstreams[id];
+	ab_downstream_t *ds = &ab->downstreams[id];
 	assert(ds->in_use);
 	if (immediate) {
 		ds->close_flg = 1;
 		ds->remain_to_close = 0;
 	} else {
 		ds->close_flg = 1;
-		ds->remain_to_close = alignment_floor(gb->buf_used - ds->pos, ds->alignment_size);
+		ds->remain_to_close = alignment_floor(ab->buf_used - ds->pos, ds->alignment_size);
 	}
 }
 
@@ -329,9 +381,9 @@ static int64_t gettime()
 	return result;
 }
 
-static void history_handler_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
+static void history_handler_output(ab_buffer_t *ab, void *param, const uint8_t *buf, int size)
 {
-	UNREF_ARG(gb);
+	UNREF_ARG(ab);
 	UNREF_ARG(buf);
 	ab_history_t *history = (ab_history_t*)param;
 	int movesize, i;
@@ -360,19 +412,32 @@ static void history_handler_output(ab_buffer_t *gb, void *param, const uint8_t *
 	history->backward_bytes += size;
 }
 
-static void history_handler_start_hook(ab_buffer_t *gb, void *param)
+static void history_handler_close(ab_buffer_t *ab, void *param, const uint8_t *buf, int size)
 {
-	UNREF_ARG(gb);
+	UNREF_ARG(ab);
+	UNREF_ARG(buf);
+	UNREF_ARG(size);
+	ab_history_t *history = (ab_history_t*)param;
+	history->refcount--;
+	if (history->refcount == 0) {
+		free(history->records);
+		free(history);
+	}
+}
+
+static void history_handler_start(ab_buffer_t *ab, void *param)
+{
+	UNREF_ARG(ab);
 	int buf_used, buf_pos;
 	ab_history_t *history = (ab_history_t*)param;
-	ab_get_status(history->buffer, NULL, &buf_used);
+	ab_get_status(history->buffer, &buf_used);
 	ab_get_downstream_status(history->buffer, history->stream_id, &buf_pos, NULL);
 	history->buf_remain_bytes = buf_used - buf_pos;
 }
 
-static int history_handler_pre_output(ab_buffer_t *gb, void *param, int *outbytes)
+static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbytes)
 {
-	UNREF_ARG(gb);
+	UNREF_ARG(ab);
 	ab_history_t *history = (ab_history_t*)param;
 	if (history->buf_remain_bytes > history->backward_bytes) {
 		*outbytes = history->buf_remain_bytes - history->backward_bytes;
@@ -381,17 +446,24 @@ static int history_handler_pre_output(ab_buffer_t *gb, void *param, int *outbyte
 	return 1;
 }
 
-int ab_set_history(ab_buffer_t *gb, ab_history_t *history, int resolution_ms, int backward_ms)
+int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms, int backward_ms)
 {
-	const ab_downstream_handler_t history_handler1 = { history_handler_output };
-	const ab_downstream_handler_t history_handler2 = { NULL, NULL, NULL, history_handler_start_hook, history_handler_pre_output };
+	int id;
+	ab_history_t *history;
+	const ab_downstream_handler_t history_handler1 = { history_handler_output, NULL, history_handler_close, NULL, NULL };
+	const ab_downstream_handler_t history_handler2 = { NULL, NULL, history_handler_close, history_handler_start, history_handler_pre_output };
 	int num = (backward_ms + resolution_ms - 1) / resolution_ms;
+
+	history = (ab_history_t*)malloc(sizeof(ab_history_t));
 
 	if (num <= 0) {
 		return 1;
 	}
+	if ((id = ab_connect_downstream(ab, &history_handler1, 0, 0, 1, history)) < 0) {
+		return 1;
+	}
 
-	history->buffer = gb;
+	history->buffer = ab;
 	history->resolution = resolution_ms;
 	history->num = num;
 	history->used = 0;
@@ -399,12 +471,16 @@ int ab_set_history(ab_buffer_t *gb, ab_history_t *history, int resolution_ms, in
 	history->backward_ms = backward_ms;
 	history->buf_remain_bytes = 0;
 	history->backward_bytes = 0;
+	history->refcount = 1;
 
-	if (ab_connect_downstream(gb, &history_handler1, 0, 0, 1, history) < 0) {
+	if ((history->stream_id = ab_connect_downstream(ab, &history_handler2, 0, 0, 1, history)) < 0) {
+		ab_disconnect_downstream(ab, id, 1);
 		return 1;
 	}
-	if ((history->stream_id = ab_connect_downstream(gb, &history_handler2, 0, 0, 1, history)) < 0) {
-		return 1;
+	history->refcount = 2;
+
+	if (history_in) {
+		*history_in = history;
 	}
 	return 0;
 }
@@ -412,4 +488,13 @@ int ab_set_history(ab_buffer_t *gb, ab_history_t *history, int resolution_ms, in
 int ab_get_history_backward_bytes(ab_history_t *history)
 {
 	return history->backward_bytes;
+}
+
+int ab_get_history_bytes(ab_history_t *history, int n)
+{
+	if (history->used == 0 && n == 0) {
+		return 0;
+	}
+	assert(n < history->used);
+	return history->records[n].bytes;
 }

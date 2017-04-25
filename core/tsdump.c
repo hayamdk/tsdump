@@ -231,27 +231,28 @@ void clear_line()
 void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
-	int n, i, backward_size, console_width, width;
+	int n, i, backward_size, console_width, width, pos_write, pos;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
 	COORD new_pos;
 	time_mjd_t time_jst;
 #endif
+	int buf_used;
 	double rate;
 
 	if(!tos) {
 		return;
 	}
 
+	ab_get_status(tos->ab, &buf_used);
 #ifdef TSD_PLATFORM_MSVC
 	console_width = save_line(&new_pos);
 	if (console_width < 0) {
 		fprintf(stderr, "console error\r");
 	} else if (console_width == 0) {
 #endif
-		//TODO: 変数への直アクセスじゃなくアクセス関数経由で
-		rate = 100.0 * tos->buf.buf_used / BUFSIZE;
+		rate = 100.0 * buf_used / BUFSIZE;
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
 		fflush(stdout);
 #ifdef TSD_PLATFORM_MSVC
@@ -259,28 +260,26 @@ void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
 		for (i = 0; i < n_tos; i++) {
-			backward_size = ab_get_history_backward_bytes(&tos->buf_history);
-			
-			//TODO: 変数への直アクセスじゃなくアクセス関数経由で
-			int pos_write = tos[i].buf.buf_used;
-			for (n = 0; n < tos[i].buf.n_downstreams; n++) {
-				if (pos_write < tos[i].buf.downstreams[n].pos) {
-					pos_write = tos[i].buf.downstreams[n].pos;
+			backward_size = ab_get_history_backward_bytes(tos->ab_history);
+
+			pos_write = buf_used;
+			for (n = ab_first_downstream(tos->ab); n >= 0; n = ab_next_downstream(tos->ab, n)) {
+				ab_get_downstream_status(tos->ab, n, &pos, NULL);
+				if (pos_write < pos) {
+					pos_write = pos;
 				}
 			}
 
 			for (n = 0; n < width; n++) {
-				int pos = (int)( (double)BUFSIZE / width * (n+0.5) );
+				pos = (int)( (double)BUFSIZE / width * (n+0.5) );
 				if (pos < pos_write) {
 					*p = '-';
-				//TODO: 変数への直アクセスじゃなくアクセス関数経由で
-				} else if (pos < tos[i].buf.buf_used) {
+				} else if (pos < buf_used) {
 					*p = '!';
 				} else {
 					*p = '_';
 				}
-				//TODO: 変数への直アクセスじゃなくアクセス関数経由で
-				if (pos > tos[i].buf.buf_used - backward_size) {
+				if (pos > buf_used - backward_size) {
 					if (*p == '-') {
 						*p = '+';
 					} else if(*p == '/') {
@@ -584,7 +583,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			/* パケットをバッファにコピー */
 			//ts_copybuf(tos, decbuf, n_dec);
-			ab_input_buf(&tos->buf, decbuf, n_dec);
+			ab_input_buf(tos->ab, decbuf, n_dec);
 			//ts_update_transfer_history(tos, nowtime, n_dec);
 
 		} else {  /* サービスごと書き出しモード */
@@ -641,8 +640,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			/* 番組情報のチェック */
 			for (i = 0; i < n_tos; i++) {
-				//TODO: 変数への直アクセスやめる
-				if (tos[i].buf_history.records[0].bytes > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
+				if (ab_get_history_bytes(tos[i].ab_history, 0) > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
 					ts_check_pi(&tos[i], nowtime, ch_info);
 				}
 			}

@@ -131,7 +131,7 @@ void do_pgoutput_close(pgoutput_stat_t *pgos)
 	int i;
 	for (i = 0; i < n_modules; i++) {
 		pgos->per_module_status[i].parent = pgos;
-		ab_disconnect_downstream(&pgos->parent->buf, 
+		ab_disconnect_downstream(pgos->parent->ab, 
 			pgos->per_module_status[i].downstream_id, 0);
 	}
 }
@@ -249,8 +249,8 @@ void init_tos(ts_output_stat_t *tos)
 		tos->pgos[i].refcount = 0;
 	}
 
-	ab_init_buf(&tos->buf, BUFSIZE);
-	ab_set_history(&tos->buf, &tos->buf_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
+	tos->ab = ab_create(BUFSIZE);
+	ab_set_history(tos->ab, &tos->ab_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
 	tos->dropped_bytes = 0;
 
 	init_proginfo(&tos->last_proginfo);
@@ -287,10 +287,10 @@ void close_tos(ts_output_stat_t *tos)
 	/* 書き出し完了を待機(10秒まで) */
 	for (i = 0; i < 10; i++) {
 		busy = 0;
-		for (j = ab_first_downstream(&tos->buf);
+		for (j = ab_first_downstream(tos->ab);
 				j >= 0;
-				j = ab_next_downstream(&tos->buf, j)) {
-			busy |= ab_get_downstream_status(&tos->buf, j, NULL, &remain_size);
+				j = ab_next_downstream(tos->ab, j)) {
+			busy |= ab_get_downstream_status(tos->ab, j, NULL, &remain_size);
 			if (remain_size > 0) {
 				busy = 1;
 			}
@@ -299,7 +299,7 @@ void close_tos(ts_output_stat_t *tos)
 			break;
 		}
 
-		ab_output_buf(&tos->buf);
+		ab_output_buf(tos->ab);
 #ifdef TSD_PLATFORM_MSVC
 		Sleep(100);
 #else
@@ -307,7 +307,7 @@ void close_tos(ts_output_stat_t *tos)
 #endif
 	}
 
-	ab_close_buf(&tos->buf);
+	ab_close_buf(tos->ab);
 
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
 		free((TSDCHAR*)tos->pgos[i].fn);
@@ -345,7 +345,7 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime)
 	if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
 		/* (OVERLAP_SEC/4)秒以上経っていたらバッファ切り詰めを試行する */
 		//ts_minimize_buf(tos);
-		ab_clear_buf(&tos->buf, 0);
+		ab_clear_buf(tos->ab, 0);
 		tos->last_bufminimize_time = nowtime;
 	} else if ( nowtime < tos->last_bufminimize_time ) {
 		/* 時刻の巻き戻りに対応 */
@@ -353,7 +353,7 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime)
 	}
 
 	/* ファイル書き出し */
-	ab_output_buf(&tos->buf);
+	ab_output_buf(tos->ab);
 }
 
 void ts_check_extended_text(ts_output_stat_t *tos)
@@ -470,7 +470,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 		pgos->initial_pi_status = tos->proginfo->status;
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-		pgos->per_module_status = do_pgoutput_create(&tos->buf, &tos->buf_history, pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
+		pgos->per_module_status = do_pgoutput_create(tos->ab, tos->ab_history, pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
 		pgos->close_flag = 0;
 		pgos->close_remain = 0;
