@@ -40,7 +40,7 @@ typedef struct {
 } ab_history_record_t;
 
 struct ab_history_struct {
-	unsigned int refcount : 2;
+	unsigned int close_flg : 1;
 	ab_buffer_t *buffer;
 	ab_history_record_t *records;
 	int resolution;
@@ -262,7 +262,7 @@ void ab_output_buf(ab_buffer_t *ab)
 		i++;
 
 		write_size = ab->buf_used - ds->pos;
-		if ( !ds->realtime && ds->max_size > 0 && write_size < ds->max_size / 2 ) {
+		if ( !ds->realtime && !ds->close_flg && ds->max_size > 0 && write_size < ds->max_size / 2 ) {
 			continue;
 		}
 
@@ -418,8 +418,11 @@ static void history_handler_close(ab_buffer_t *ab, void *param, const uint8_t *b
 	UNREF_ARG(buf);
 	UNREF_ARG(size);
 	ab_history_t *history = (ab_history_t*)param;
-	history->refcount--;
-	if (history->refcount == 0) {
+	if (!history->close_flg) {
+		/* first: set close_flg */
+		history->close_flg = 1;
+	} else {
+		/* second: actually close */
 		free(history->records);
 		free(history);
 	}
@@ -439,6 +442,9 @@ static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbyte
 {
 	UNREF_ARG(ab);
 	ab_history_t *history = (ab_history_t*)param;
+	if (history->close_flg) {
+		return 0;
+	}
 	if (history->buf_remain_bytes > history->backward_bytes) {
 		*outbytes = history->buf_remain_bytes - history->backward_bytes;
 		return 0;
@@ -471,13 +477,13 @@ int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms
 	history->backward_ms = backward_ms;
 	history->buf_remain_bytes = 0;
 	history->backward_bytes = 0;
-	history->refcount = 1;
+	history->close_flg = 1;
 
 	if ((history->stream_id = ab_connect_downstream(ab, &history_handler2, 0, 0, 1, history)) < 0) {
 		ab_disconnect_downstream(ab, id, 1);
 		return 1;
 	}
-	history->refcount = 2;
+	history->close_flg = 0;
 
 	if (history_in) {
 		*history_in = history;

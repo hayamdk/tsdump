@@ -265,6 +265,7 @@ void init_tos(ts_output_stat_t *tos)
 
 void close_tos(ts_output_stat_t *tos)
 {
+	int64_t end;
 	int i, j, busy, remain_size;
 
 	/* close all output */
@@ -283,17 +284,20 @@ void close_tos(ts_output_stat_t *tos)
 			do_pgoutput_close(&tos->pgos[j]);
 		}
 	}
-
-	/* 書き出し完了を待機(10秒まで) */
-	for (i = 0; i < 10; i++) {
+	
+	/* 書き出し完了を待機(5秒まで) */
+	for (	i = ab_first_downstream(tos->ab);
+			i >= 0;
+			i = ab_next_downstream(tos->ab, i) ) {
+		ab_disconnect_downstream(tos->ab, i, 0);
+	}
+	for (end = gettime() + 5*1000; gettime() < end;) {
 		busy = 0;
-		for (j = ab_first_downstream(tos->ab);
-				j >= 0;
-				j = ab_next_downstream(tos->ab, j)) {
-			busy |= ab_get_downstream_status(tos->ab, j, NULL, &remain_size);
-			if (remain_size > 0) {
-				busy = 1;
-			}
+		for (	i = ab_first_downstream(tos->ab);
+				i >= 0 && !busy;
+				i = ab_next_downstream(tos->ab, i) ) {
+			busy |= ab_get_downstream_status(tos->ab, i, NULL, &remain_size);
+			busy |= (remain_size > 0);
 		}
 		if (!busy) {
 			break;
