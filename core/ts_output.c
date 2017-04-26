@@ -29,9 +29,9 @@
 static void module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
 {
 	UNREF_ARG(gb);
-	output_status_per_module_t *status = (output_status_per_module_t*)param;
-	if (status->module->hooks.hook_pgoutput) {
-		status->module->hooks.hook_pgoutput(status->module_status, buf, size);
+	output_status_t *status = (output_status_t*)param;
+	if (status->parent->module->hooks.hook_pgoutput) {
+		status->parent->module->hooks.hook_pgoutput(status->param, buf, size);
 	}
 }
 
@@ -47,19 +47,27 @@ static void module_buffer_close(ab_buffer_t *gb, void *param, const uint8_t *buf
 	UNREF_ARG(gb);
 	UNREF_ARG(buf);
 	UNREF_ARG(remain_size);
-	output_status_per_module_t *status = (output_status_per_module_t*)param;
+	output_status_t *status = (output_status_t*)param;
+	output_status_t *to_free;
 
 	assert(status->parent->refcount > 0);
 
-	if (status->module->hooks.hook_pgoutput_close) {
-		status->module->hooks.hook_pgoutput_close(status->module_status, &status->parent->final_pi);
-	}
-	if (status->module->hooks.hook_pgoutput_postclose) {
-		status->module->hooks.hook_pgoutput_postclose(status->module_status);
+	if (status->parent->module->hooks.hook_pgoutput_close) {
+		status->parent->module->hooks.hook_pgoutput_close(status->param, &status->parent->parent->final_pi);
 	}
 	status->parent->refcount--;
+
 	if (status->parent->refcount <= 0) {
-		status->parent->parent->n_pgos--;
+		if (status->parent->module->hooks.hook_pgoutput_postclose) {
+			status->parent->module->hooks.hook_pgoutput_postclose(status->parent->param);
+		}
+		status->parent->parent->refcount--;
+		to_free = status->parent->client_array; /* save before expire */
+		if (status->parent->parent->refcount <= 0) {
+			status->parent->parent->parent->n_pgos--;
+			free(status->parent->parent->client_array); /* expire */
+		}
+		free(to_free);
 	}
 }
 
@@ -68,9 +76,9 @@ static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptabl
 	UNREF_ARG(gb);
 	UNREF_ARG(acceptable_bytes);
 	int busy = 0;
-	output_status_per_module_t *status = (output_status_per_module_t*)param;
-	if (status->module->hooks.hook_pgoutput_check) {
-		busy = status->module->hooks.hook_pgoutput_check(status->module_status);
+	output_status_t *status = (output_status_t*)param;
+	if (status->parent->module->hooks.hook_pgoutput_check) {
+		busy = status->parent->module->hooks.hook_pgoutput_check(status->param);
 	}
 	return busy;
 }
@@ -83,56 +91,95 @@ static const ab_downstream_handler_t module_buffer_handlers = {
 	module_buffer_pre_output
 };
 
-static output_status_per_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t *history, const TSDCHAR *fname, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
+static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t *history, output_status_prog_t *pgos, const proginfo_t *pi, ch_info_t *ch_info, const int actually_start)
 {
-	int i, stream_id;
-	output_status_per_module_t *output_status = (output_status_per_module_t*)malloc(sizeof(output_status_per_module_t)*n_modules);
+	int i, j, n;
+	output_status_module_t *module_status_array = (output_status_module_t*)malloc(sizeof(output_status_module_t)*n_modules);
+	output_status_t *output_status_array;
 
 	for ( i = 0; i < n_modules; i++ ) {
-		if (modules[i].hooks.hook_pgoutput_create) {
-			output_status[i].module_status = modules[i].hooks.hook_pgoutput_create(fname, pi, ch_info, actually_start);
+		n = 0;
+		if (modules[i].hooks.hook_pgoutput_precreate) {
+			module_status_array[i].param = modules[i].hooks.hook_pgoutput_precreate(pgos->fn, pi, ch_info, actually_start, &n);
 		} else {
-			output_status[i].module_status = NULL;
+			module_status_array[i].param = NULL;
 		}
-		output_status[i].module = &modules[i];
-		stream_id = ab_connect_downstream_history_backward(
-			buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, 0, &output_status[i], history
-		);
-		assert(stream_id >= 0);
-		output_status[i].downstream_id = stream_id;
+
+		module_status_array[i].refcount = 0;
+		if (n > 0) {
+			output_status_array = (output_status_t*)malloc(sizeof(output_status_t) * n);
+		} else {
+			output_status_array = NULL;
+		}
+		for (j = 0; j < n; j++) {
+			output_status_array[j].parent = &module_status_array[i];
+			output_status_array[j].param = NULL;
+			output_status_array[j].downstream_id = ab_connect_downstream_history_backward(
+					buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, 0, &output_status_array[j], history
+				);
+			if (output_status_array[j].downstream_id < 0) {
+				output_message(MSG_ERROR, TSD_TEXT("バッファに対して下流ストリームを追加できませんでした: モジュール:%s"), modules[i].def->modname);
+				continue;
+			}
+
+			if (modules[i].hooks.hook_pgoutput_create) {
+				output_status_array[j].param = modules[i].hooks.hook_pgoutput_create(module_status_array[i].param);
+			}
+			module_status_array[i].refcount++;
+		}
+		module_status_array[i].n_clients = module_status_array[i].refcount;
+		module_status_array[i].module = &modules[i];
+		module_status_array[i].parent = pgos;
+		module_status_array[i].client_array = output_status_array;
 	}
-	return output_status;
+	return module_status_array;
 }
 
-int do_pgoutput_changed(output_status_per_module_t *status, const proginfo_t *old_pi, const proginfo_t *new_pi)
+int do_pgoutput_changed(output_status_module_t *status, const proginfo_t *old_pi, const proginfo_t *new_pi)
 {
 	int i;
 	int err = 0;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_pgoutput_changed) {
-			modules[i].hooks.hook_pgoutput_changed(status[i].module_status, old_pi, new_pi);
+			modules[i].hooks.hook_pgoutput_changed(status[i].param, old_pi, new_pi);
 		}
 	}
 	return err;
 }
 
-void do_pgoutput_end(output_status_per_module_t *status, const proginfo_t *pi)
+void do_pgoutput_end(output_status_module_t *status, const proginfo_t *pi)
 {
 	int i;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_pgoutput_end) {
-			modules[i].hooks.hook_pgoutput_end(status[i].module_status, pi);
+			modules[i].hooks.hook_pgoutput_end(status[i].param, pi);
 		}
 	}
 }
 
-void do_pgoutput_close(pgoutput_stat_t *pgos)
+void do_pgoutput_close(output_status_prog_t *pgos)
 {
-	int i;
+	int i, j;
 	for (i = 0; i < n_modules; i++) {
-		pgos->per_module_status[i].parent = pgos;
-		ab_disconnect_downstream(pgos->parent->ab, 
-			pgos->per_module_status[i].downstream_id, 0);
+		if (pgos->client_array[i].n_clients > 0) {
+			/* 出力を行っているモジュールはストリームのcloseフックを経由してモジュールのフックを呼び出す */
+			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
+				if (pgos->client_array[i].client_array[j].downstream_id >= 0) {
+					ab_disconnect_downstream(pgos->parent->ab, 
+						pgos->client_array[i].client_array[j].downstream_id, 0);
+				}
+			}
+		} else {
+			/* 出力を行っていないモジュールは即フックを呼び出す */
+			if (modules[i].hooks.hook_pgoutput_postclose) {
+				modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param);
+			}
+			pgos->refcount--;
+			if (pgos->refcount <= 0) {
+				pgos->parent->n_pgos--;
+				free(pgos->client_array);
+			}
+		}
 	}
 }
 
@@ -190,15 +237,15 @@ void printpi(const proginfo_t *pi)
 	}
 }
 
-int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info)
+int create_tos_per_service(output_status_stream_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info)
 {
 	int i, j, k;
 	int n_tos;
-	ts_output_stat_t *tos;
+	output_status_stream_t *tos;
 
 	if (ch_info->mode_all_services) {
 		n_tos = service_list->n_services;
-		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
+		tos = (output_status_stream_t*)malloc(n_tos*sizeof(output_status_stream_t));
 		for (i = 0; i < n_tos; i++) {
 			init_tos(&tos[i]);
 			tos[i].tps_index = i;
@@ -214,7 +261,7 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_l
 				}
 			}
 		}
-		tos = (ts_output_stat_t*)malloc(n_tos*sizeof(ts_output_stat_t));
+		tos = (output_status_stream_t*)malloc(n_tos*sizeof(output_status_stream_t));
 		k = 0;
 		for (i = 0; i < ch_info->n_services; i++) {
 			for (j = 0; j < service_list->n_services; j++) {
@@ -238,12 +285,12 @@ int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_l
 	return n_tos;
 }
 
-void init_tos(ts_output_stat_t *tos)
+void init_tos(output_status_stream_t *tos)
 {
 	int i;
 
 	tos->n_pgos = 0;
-	tos->pgos = (pgoutput_stat_t*)malloc(MAX_PGOVERLAP * sizeof(pgoutput_stat_t));
+	tos->pgos = (output_status_prog_t*)malloc(MAX_PGOVERLAP * sizeof(output_status_prog_t));
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
 		tos->pgos[i].fn = (TSDCHAR*)malloc(MAX_PATH_LEN*sizeof(TSDCHAR));
 		tos->pgos[i].refcount = 0;
@@ -263,7 +310,7 @@ void init_tos(ts_output_stat_t *tos)
 	return;
 }
 
-void close_tos(ts_output_stat_t *tos)
+void close_tos(output_status_stream_t *tos)
 {
 	int64_t end;
 	int i, j, busy, remain_size;
@@ -323,7 +370,7 @@ void close_tos(ts_output_stat_t *tos)
 	//free(tos);
 }
 
-void ts_output(ts_output_stat_t *tos, int64_t nowtime)
+void ts_output(output_status_stream_t *tos, int64_t nowtime)
 {
 	int i, j;
 
@@ -360,9 +407,9 @@ void ts_output(ts_output_stat_t *tos, int64_t nowtime)
 	ab_output_buf(tos->ab);
 }
 
-void ts_check_extended_text(ts_output_stat_t *tos)
+void ts_check_extended_text(output_status_stream_t *tos)
 {
-	//pgoutput_stat_t *current_pgos;
+	//output_status_prog_t *current_pgos;
 	TSDCHAR et[4096];
 
 	if (!tos->curr_pgos) {
@@ -382,7 +429,7 @@ void ts_check_extended_text(ts_output_stat_t *tos)
 	}
 }
 
-void check_stream_timeinfo(ts_output_stat_t *tos)
+void check_stream_timeinfo(output_status_stream_t *tos)
 {
 	uint64_t diff_prc;
 
@@ -417,12 +464,12 @@ void check_stream_timeinfo(ts_output_stat_t *tos)
 	tos->proginfo->status &= ~PGINFO_PCR_UPDATED;
 }
 
-void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
+void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int i, j, actually_start = 0;
 	time_mjd_t curr_time;
 	time_offset_t offset;
-	pgoutput_stat_t *pgos;
+	output_status_prog_t *pgos;
 	proginfo_t *final_pi, tmp_pi;
 
 	/* print */
@@ -450,7 +497,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		for (i = j = 0; i < tos->n_pgos; j++) {
 			assert(j < MAX_PGOVERLAP);
 			if (tos->pgos[j].refcount > 0) {
-				do_pgoutput_end(tos->pgos[j].per_module_status, final_pi);
+				do_pgoutput_end(tos->pgos[j].client_array, final_pi);
 				i++;
 			}
 		}
@@ -474,7 +521,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 
 		pgos->initial_pi_status = tos->proginfo->status;
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
-		pgos->per_module_status = do_pgoutput_create(tos->ab, tos->ab_history, pgos->fn, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
+		pgos->client_array = do_pgoutput_create(tos->ab, tos->ab_history, pgos, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
 		pgos->close_flag = 0;
 		pgos->close_remain = 0;
@@ -486,7 +533,7 @@ void ts_prog_changed(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 	}
 }
 
-void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
+void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0, time_changed = 0;
 	time_mjd_t endtime, last_endtime, time1, time2;
@@ -545,7 +592,7 @@ void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info)
 		if( proginfo_cmp(tos->proginfo, &tos->last_proginfo) ) {
 			if (tos->curr_pgos) {
 				/* 呼び出すのは最新の番組に対してのみ */
-				do_pgoutput_changed(tos->curr_pgos->per_module_status, &tos->last_proginfo, tos->proginfo);
+				do_pgoutput_changed(tos->curr_pgos->client_array, &tos->last_proginfo, tos->proginfo);
 			}
 
 			/* 番組の時間が途中で変更された場合 */

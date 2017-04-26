@@ -1,12 +1,13 @@
 typedef struct {
+	hook_pgoutput_precreate_t hook_pgoutput_precreate;
+	hook_pgoutput_changed_t hook_pgoutput_changed;
+	hook_pgoutput_end_t hook_pgoutput_end;
+	hook_pgoutput_postclose_t hook_pgoutput_postclose;
 	hook_pgoutput_create_t hook_pgoutput_create;
 	hook_pgoutput_t hook_pgoutput;
 	hook_pgoutput_check_t hook_pgoutput_check;
 	hook_pgoutput_wait_t hook_pgoutput_wait;
-	hook_pgoutput_changed_t hook_pgoutput_changed;
-	hook_pgoutput_end_t hook_pgoutput_end;
 	hook_pgoutput_close_t hook_pgoutput_close;
-	hook_pgoutput_postclose_t hook_pgoutput_postclose;
 	hook_postconfig_t hook_postconfig;
 	hook_close_module_t hook_close_module;
 	hook_open_stream_t hook_open_stream;

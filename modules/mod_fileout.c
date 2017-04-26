@@ -257,7 +257,7 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 
 #endif
 
-static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info, const int actually_start)
+static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info, const int actually_start, int *n_output)
 {
 	UNREF_ARG(ch_info);
 	UNREF_ARG(actually_start);
@@ -299,7 +299,13 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 	fos->is_pi = create_proginfo_file(fos->fn_pi, fname, pi);
 
 	output_message(MSG_NOTIFY, TSD_TEXT("[˜^‰æŠJŽn]: %s"), fos->fn);
+	*n_output = 1;
 	return fos;
+}
+
+static void *hook_pgoutput_create(void *param)
+{
+	return param;
 }
 
 static void hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
@@ -389,6 +395,7 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 static void register_hooks()
 {
 	if (!flg_set_no_fileout) {
+		register_hook_pgoutput_precreate(hook_pgoutput_precreate);
 		register_hook_pgoutput_create(hook_pgoutput_create);
 		register_hook_pgoutput(hook_pgoutput, FILEOUT_BLOCK_SIZE);
 		register_hook_pgoutput_check(hook_pgoutput_check);

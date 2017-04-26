@@ -51,6 +51,26 @@ static int n_modulecmds = 0;
 
 static stream_stats_t stream_stats;
 
+void register_hook_pgoutput_precreate(hook_pgoutput_precreate_t handler)
+{
+	module_hooks_current->hook_pgoutput_precreate = handler;
+}
+
+void register_hook_pgoutput_changed(hook_pgoutput_changed_t handler)
+{
+	module_hooks_current->hook_pgoutput_changed = handler;
+}
+
+void register_hook_pgoutput_end(hook_pgoutput_end_t handler)
+{
+	module_hooks_current->hook_pgoutput_end = handler;
+}
+
+void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler)
+{
+	module_hooks_current->hook_pgoutput_postclose = handler;
+}
+
 void register_hook_pgoutput_create(hook_pgoutput_create_t handler)
 {
 	module_hooks_current->hook_pgoutput_create = handler;
@@ -72,24 +92,9 @@ void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler)
 	module_hooks_current->hook_pgoutput_wait = handler;
 }
 
-void register_hook_pgoutput_changed(hook_pgoutput_changed_t handler)
-{
-	module_hooks_current->hook_pgoutput_changed = handler;
-}
-
-void register_hook_pgoutput_end(hook_pgoutput_end_t handler)
-{
-	module_hooks_current->hook_pgoutput_end = handler;
-}
-
 void register_hook_pgoutput_close(hook_pgoutput_close_t handler)
 {
 	module_hooks_current->hook_pgoutput_close = handler;
-}
-
-void register_hook_pgoutput_postclose(hook_pgoutput_postclose_t handler)
-{
-	module_hooks_current->hook_pgoutput_postclose = handler;
 }
 
 void register_hook_postconfig(hook_postconfig_t handler)

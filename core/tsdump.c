@@ -228,7 +228,7 @@ void clear_line()
 
 #endif
 
-void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
+void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
 	int n, i, backward_size, console_width, width, pos_write, pos;
@@ -322,7 +322,7 @@ void print_buf(ts_output_stat_t *tos, int n_tos, const TSDCHAR *stat)
 #endif
 }
 
-static void print_stat(ts_output_stat_t *tos, int n_tos, const ch_info_t *ch_info)
+static void print_stat(output_status_stream_t *tos, int n_tos, const ch_info_t *ch_info)
 {
 	const stream_stats_t *stats;
 	TSDCHAR title[256];
@@ -467,7 +467,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int64_t nowtime, lasttime;
 
-	ts_output_stat_t *tos = NULL;
+	output_status_stream_t *tos = NULL;
 	int n_tos = 0;
 
 	lasttime = nowtime = gettime();
@@ -576,7 +576,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			/* tos‚ð¶¬ */
 			if ( ! tos ) {
 				n_tos = param_n_services = 1;
-				tos = (ts_output_stat_t*)malloc(1 * sizeof(ts_output_stat_t));
+				tos = (output_status_stream_t*)malloc(1 * sizeof(output_status_stream_t));
 				init_tos(tos);
 				tos->proginfo = &service_list.proginfos[0];
 			}

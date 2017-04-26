@@ -982,7 +982,7 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 
 #endif
 
-static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t, const int actually_start)
+static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t, const int actually_start, int *n_output)
 {
 #ifdef TSD_PLATFORM_MSVC
 	HANDLE
@@ -1018,7 +1018,13 @@ static void *hook_pgoutput_create(const TSDCHAR *fname, const proginfo_t *pi, co
 		}
 	}
 	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
+	*n_output = 1;
 	return stat;
+}
+
+static void *hook_pgoutput_create(void *param)
+{
+	return param;
 }
 
 static void close_pipe(pipestat_t *ps)
@@ -1551,12 +1557,13 @@ static const TSDCHAR *set_output_redirect(const TSDCHAR* param)
 
 static void register_hooks()
 {
+	register_hook_pgoutput_precreate(hook_pgoutput_precreate);
+	register_hook_pgoutput_postclose(hook_pgoutput_postclose);
 	register_hook_pgoutput_create(hook_pgoutput_create);
 	register_hook_pgoutput(hook_pgoutput, CMDEXEC_BLOCK_SIZE);
 	register_hook_pgoutput_check(hook_pgoutput_check);
 	register_hook_pgoutput_wait(hook_pgoutput_wait);
 	register_hook_pgoutput_close(hook_pgoutput_close);
-	register_hook_pgoutput_postclose(hook_pgoutput_postclose);
 	register_hook_tick(hook_tick);
 	register_hook_close_module(hook_close_module);
 	register_hook_postconfig(hook_postconfig);

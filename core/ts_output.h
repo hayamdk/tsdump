@@ -1,30 +1,37 @@
-typedef struct pgoutput_stat_struct pgoutput_stat_t;
-typedef struct ts_output_stat_struct ts_output_stat_t;
+typedef struct output_status_struct				output_status_t;
+typedef struct output_status_module_struct		output_status_module_t;
+typedef struct output_status_prog_struct		output_status_prog_t;
+typedef struct output_status_stream_struct		output_status_stream_t;
 
-typedef struct {
-	module_load_t *module;
-	void *module_status;
+struct output_status_struct {
 	int downstream_id;
-	pgoutput_stat_t *parent;
-} output_status_per_module_t;
+	void *param;
+	output_status_module_t *parent;
+};
 
-struct pgoutput_stat_struct
-{
+struct output_status_module_struct {
+	module_load_t *module;
+	void *param;
+	output_status_t *client_array;
+	output_status_prog_t *parent;
+	int refcount;
+	int n_clients;
+};
+
+struct output_status_prog_struct {
 	const TSDCHAR *fn;
 	int close_remain;
 	int close_flag;
 	int64_t closetime;
-	output_status_per_module_t *per_module_status;
-
 	proginfo_t final_pi;
 	int initial_pi_status;
-	int refcount;
 
-	struct ts_output_stat_struct *parent;
+	output_status_module_t *client_array;
+	output_status_stream_t *parent;
+	int refcount;
 };
 
-struct ts_output_stat_struct
-{
+struct output_status_stream_struct {
 	ab_buffer_t *ab;
 	ab_history_t *ab_history;
 
@@ -37,27 +44,27 @@ struct ts_output_stat_struct
 	int64_t last_bufminimize_time;
 
 	int n_pgos;
-	pgoutput_stat_t *pgos;
+	output_status_prog_t *pgos;
 	int tps_index;
 	int singlemode;
 	int PAT_packet_counter;
 	int dropped_bytes;
 
-	pgoutput_stat_t *curr_pgos;
+	output_status_prog_t *curr_pgos;
 
 };
 
-void init_tos(ts_output_stat_t *tos);
-void close_tos(ts_output_stat_t *tos);
-void ts_check_pi(ts_output_stat_t *tos, int64_t nowtime, ch_info_t *ch_info);
-void ts_minimize_buf(ts_output_stat_t *tos);
-void ts_require_buf(ts_output_stat_t *tos, int require);
-void ts_output(ts_output_stat_t *tos, int64_t nowtime);
-int ts_wait_pgoutput(ts_output_stat_t *tos);
-void ts_check_pgoutput(ts_output_stat_t *tos);
-int create_tos_per_service(ts_output_stat_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);
+void init_tos(output_status_stream_t *tos);
+void close_tos(output_status_stream_t *tos);
+void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info);
+void ts_minimize_buf(output_status_stream_t *tos);
+void ts_require_buf(output_status_stream_t *tos, int require);
+void ts_output(output_status_stream_t *tos, int64_t nowtime);
+int ts_wait_pgoutput(output_status_stream_t *tos);
+void ts_check_pgoutput(output_status_stream_t *tos);
+int create_tos_per_service(output_status_stream_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);
 
-static int ts_is_mypid(unsigned int pid, ts_output_stat_t *tos, ts_service_list_t *service_list)
+static int ts_is_mypid(unsigned int pid, output_status_stream_t *tos, ts_service_list_t *service_list)
 {
 	int i, j, found = 0, my = 0;
 	for (i = 0; i < service_list->n_services; i++) {
@@ -148,7 +155,7 @@ static inline int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old
 	return 1;
 }
 
-static inline void copy_current_service_packet(ts_output_stat_t *tos, ts_service_list_t *service_list, const uint8_t *packet)
+static inline void copy_current_service_packet(output_status_stream_t *tos, ts_service_list_t *service_list, const uint8_t *packet)
 {
 	unsigned int pid;
 	int ismypid;

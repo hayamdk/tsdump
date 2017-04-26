@@ -41,14 +41,15 @@ typedef struct{
 	const TSDCHAR *ch_str;
 } ch_info_t;
 
-typedef void* (*hook_pgoutput_create_t)(const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int);
+typedef void* (*hook_pgoutput_precreate_t)(const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int, int*);
+typedef void(*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_t*);
+typedef void(*hook_pgoutput_end_t)(void*, const proginfo_t*);
+typedef void(*hook_pgoutput_postclose_t)(void*);
+typedef void* (*hook_pgoutput_create_t)(void*);
 typedef void (*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int (*hook_pgoutput_check_t)(void*);
 typedef const int (*hook_pgoutput_wait_t)(void*);
-typedef void (*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_t*);
-typedef void (*hook_pgoutput_end_t)(void*, const proginfo_t*);
 typedef void (*hook_pgoutput_close_t)(void*, const proginfo_t*);
-typedef void (*hook_pgoutput_postclose_t)(void*);
 typedef int (*hook_postconfig_t)();
 typedef void (*hook_close_module_t)();
 typedef void (*hook_open_stream_t)();
@@ -186,14 +187,15 @@ TSD_API_DEF(void, _output_message, (const char *fname, message_type_t msgtype, c
 TSD_API_DEF(void, get_stream_stats, (const stream_stats_t **s));
 TSD_API_DEF(void, request_shutdown, (int));
 
+TSD_API_DEF(void, register_hook_pgoutput_precreate, (hook_pgoutput_precreate_t));
+TSD_API_DEF(void, register_hook_pgoutput_changed, (hook_pgoutput_changed_t));
+TSD_API_DEF(void, register_hook_pgoutput_end, (hook_pgoutput_end_t));
+TSD_API_DEF(void, register_hook_pgoutput_postclose, (hook_pgoutput_postclose_t));
 TSD_API_DEF(void, register_hook_pgoutput_create, (hook_pgoutput_create_t));
 TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t, int));
 TSD_API_DEF(void, register_hook_pgoutput_check, (hook_pgoutput_check_t));
 TSD_API_DEF(void, register_hook_pgoutput_wait, (hook_pgoutput_wait_t));
-TSD_API_DEF(void, register_hook_pgoutput_changed, (hook_pgoutput_changed_t));
-TSD_API_DEF(void, register_hook_pgoutput_end, (hook_pgoutput_end_t));
 TSD_API_DEF(void, register_hook_pgoutput_close, (hook_pgoutput_close_t));
-TSD_API_DEF(void, register_hook_pgoutput_postclose, (hook_pgoutput_postclose_t));
 TSD_API_DEF(void, register_hook_postconfig, (hook_postconfig_t));
 TSD_API_DEF(void, register_hook_close_module, (hook_close_module_t));
 TSD_API_DEF(void, register_hook_open_stream, (hook_open_stream_t));
