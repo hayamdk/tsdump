@@ -4,6 +4,7 @@ typedef struct output_status_prog_struct		output_status_prog_t;
 typedef struct output_status_stream_struct		output_status_stream_t;
 
 struct output_status_struct {
+	unsigned int closed : 1;
 	int downstream_id;
 	void *param;
 	output_status_module_t *parent;
@@ -19,9 +20,9 @@ struct output_status_module_struct {
 };
 
 struct output_status_prog_struct {
+	unsigned int close_flag : 1;
 	const TSDCHAR *fn;
 	int close_remain;
-	int close_flag;
 	int64_t closetime;
 	proginfo_t final_pi;
 	int initial_pi_status;

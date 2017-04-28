@@ -26,6 +26,16 @@
 
 //#include "timecalc.h"
 
+void do_pgoutput_postclose(output_status_prog_t *pgos)
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_pgoutput_postclose) {
+			modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param);
+		}
+	}
+}
+
 static void module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
 {
 	UNREF_ARG(gb);
@@ -56,14 +66,13 @@ static void module_buffer_close(ab_buffer_t *gb, void *param, const uint8_t *buf
 		status->parent->module->hooks.hook_pgoutput_close(status->param, &status->parent->parent->final_pi);
 	}
 	status->parent->refcount--;
+	status->closed = 1;
 
 	if (status->parent->refcount <= 0) {
-		if (status->parent->module->hooks.hook_pgoutput_postclose) {
-			status->parent->module->hooks.hook_pgoutput_postclose(status->parent->param);
-		}
 		status->parent->parent->refcount--;
 		to_free = status->parent->client_array; /* save before expire */
 		if (status->parent->parent->refcount <= 0) {
+			do_pgoutput_postclose(status->parent->parent);
 			status->parent->parent->parent->n_pgos--;
 			free(status->parent->parent->client_array); /* expire */
 		}
@@ -77,6 +86,10 @@ static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptabl
 	UNREF_ARG(acceptable_bytes);
 	int busy = 0;
 	output_status_t *status = (output_status_t*)param;
+
+	if (status->closed) {
+		return 0;
+	}
 	if (status->parent->module->hooks.hook_pgoutput_check) {
 		busy = status->parent->module->hooks.hook_pgoutput_check(status->param);
 	}
@@ -112,6 +125,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			output_status_array = NULL;
 		}
 		for (j = 0; j < n; j++) {
+			output_status_array[j].closed = 0;
 			output_status_array[j].parent = &module_status_array[i];
 			output_status_array[j].param = NULL;
 			output_status_array[j].downstream_id = ab_connect_downstream_history_backward(
@@ -171,13 +185,29 @@ void do_pgoutput_close(output_status_prog_t *pgos)
 			}
 		} else {
 			/* 出力を行っていないモジュールは即フックを呼び出す */
-			if (modules[i].hooks.hook_pgoutput_postclose) {
-				modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param);
-			}
 			pgos->refcount--;
 			if (pgos->refcount <= 0) {
 				pgos->parent->n_pgos--;
+				do_pgoutput_postclose(pgos);
 				free(pgos->client_array);
+			}
+		}
+	}
+}
+
+void do_pgoutput_hard_close(output_status_prog_t *pgos)
+{
+	int i, j;
+	for (i = 0; i < n_modules; i++) {
+		if (pgos->client_array[i].n_clients > 0) {
+			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
+				if (pgos->client_array[i].client_array[j].downstream_id < 0 ||
+						pgos->client_array[i].client_array[j].closed) {
+					continue;
+				}
+				ab_disconnect_downstream(pgos->parent->ab,
+					pgos->client_array[i].client_array[j].downstream_id, 1);
+				pgos->client_array[i].client_array[j].closed = 1;
 			}
 		}
 	}
@@ -386,8 +416,9 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 		if (0 < tos->pgos[j].closetime && tos->pgos[j].closetime < nowtime) {
 			if (!tos->pgos[j].close_flag) {
 				tos->pgos[j].close_flag = 1;
-				/* closeフラグを設定 */
 				do_pgoutput_close(&tos->pgos[j]);
+			} else if (tos->pgos[j].closetime + (MAX_OUTPUT_DELAY_SEC) * 1000 < nowtime) {
+				do_pgoutput_hard_close(&tos->pgos[j]);
 			}
 		}
 	}

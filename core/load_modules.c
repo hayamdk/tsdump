@@ -102,6 +102,11 @@ void register_hook_postconfig(hook_postconfig_t handler)
 	module_hooks_current->hook_postconfig = handler;
 }
 
+void register_hook_preclose_module(hook_preclose_module_t handler)
+{
+	module_hooks_current->hook_preclose_module = handler;
+}
+
 void register_hook_close_module(hook_close_module_t handler)
 {
 	module_hooks_current->hook_close_module = handler;

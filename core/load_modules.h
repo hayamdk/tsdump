@@ -9,6 +9,7 @@ typedef struct {
 	hook_pgoutput_wait_t hook_pgoutput_wait;
 	hook_pgoutput_close_t hook_pgoutput_close;
 	hook_postconfig_t hook_postconfig;
+	hook_preclose_module_t hook_preclose_module;
 	hook_close_module_t hook_close_module;
 	hook_open_stream_t hook_open_stream;
 	hook_encrypted_stream_t hook_encrypted_stream;
