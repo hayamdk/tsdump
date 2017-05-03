@@ -43,6 +43,7 @@ typedef struct {
 	uint8_t writebuf[FILEOUT_BLOCK_SIZE];
 #else
 	int fd;
+	/* TODO: 下の仮定を満たすためにadvanced_buffer_tのリファクタリング */
 	/* writeはその場で処理が完了するのでバッファを持っておく必要がない */
 	const uint8_t *writebuf;
 #endif
@@ -259,6 +260,17 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 
 static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info, const int actually_start, int *n_output)
 {
+	UNREF_ARG(fname);
+	UNREF_ARG(pi);
+	UNREF_ARG(ch_info);
+	UNREF_ARG(actually_start);
+	*n_output = 1;
+	return NULL;
+}
+
+static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info, const int actually_start)
+{
+	UNREF_ARG(param);
 	UNREF_ARG(ch_info);
 	UNREF_ARG(actually_start);
 
@@ -299,13 +311,7 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	fos->is_pi = create_proginfo_file(fos->fn_pi, fname, pi);
 
 	output_message(MSG_NOTIFY, TSD_TEXT("[録画開始]: %s"), fos->fn);
-	*n_output = 1;
 	return fos;
-}
-
-static void *hook_pgoutput_create(void *param)
-{
-	return param;
 }
 
 static void hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)

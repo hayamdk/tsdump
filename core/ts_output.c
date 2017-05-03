@@ -31,7 +31,7 @@ void do_pgoutput_postclose(output_status_prog_t *pgos)
 	int i;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_pgoutput_postclose) {
-			modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param);
+			modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param, &pgos->final_pi);
 		}
 	}
 }
@@ -52,32 +52,79 @@ static void module_buffer_notify_skip(ab_buffer_t *gb, void *param, int skip_byt
 	UNREF_ARG(skip_bytes);
 }
 
+static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
+{
+	output_status_module_t *mod_status;
+	output_status_t *status, *to_free;
+
+	int i, j, ret, remain_ms;
+
+	assert(pgos->close_flag1);
+	if (pgos->refcount <= 0) {
+		return;
+	}
+
+	for (i = 0; i < n_modules; i++) {
+		mod_status = &pgos->client_array[i];
+		if (mod_status->refcount <= 0) {
+			continue;
+		}
+		for (j = 0; j < mod_status->n_clients; j++) {
+			status = &mod_status->client_array[j];
+			if (status->closed) {
+				continue;
+			}
+			if (status->close_waiting) {
+				if (mod_status->module->hooks.hook_pgoutput_forceclose) {
+					remain_ms = (int)(status->closetime + MAX_CLOSE_DELAY_SEC * 1000 - gettime());
+					if (remain_ms > 0) {
+						ret = mod_status->module->hooks.hook_pgoutput_forceclose(
+							status->param, 0, remain_ms);
+						if (ret) {
+							status->closed = 1;
+							status->parent->refcount--;
+						}
+					} else {
+						/* forcibly close!!! */
+						mod_status->module->hooks.hook_pgoutput_forceclose(status->param, 1, 0);
+					}
+				} else {
+					status->closed = 1;
+					status->parent->refcount--;
+				}
+			}
+		}
+
+		if (mod_status->refcount <= 0) {
+			pgos->refcount--;
+			to_free = mod_status->client_array; /* save before expire */
+			if (pgos->refcount <= 0) {
+				do_pgoutput_postclose(pgos);
+				pgos->parent->n_pgos--;
+				free(pgos->client_array); /* expire */
+			}
+			free(to_free);
+		}
+	}
+}
+
 static void module_buffer_close(ab_buffer_t *gb, void *param, const uint8_t *buf, int remain_size)
 {
 	UNREF_ARG(gb);
 	UNREF_ARG(buf);
 	UNREF_ARG(remain_size);
 	output_status_t *status = (output_status_t*)param;
-	output_status_t *to_free;
 
 	assert(status->parent->refcount > 0);
+	assert(status->parent->parent->refcount > 0);
+	assert(status->close_waiting == 0);
+	assert(status->closed == 0);
 
 	if (status->parent->module->hooks.hook_pgoutput_close) {
 		status->parent->module->hooks.hook_pgoutput_close(status->param, &status->parent->parent->final_pi);
 	}
-	status->parent->refcount--;
-	status->closed = 1;
-
-	if (status->parent->refcount <= 0) {
-		status->parent->parent->refcount--;
-		to_free = status->parent->client_array; /* save before expire */
-		if (status->parent->parent->refcount <= 0) {
-			do_pgoutput_postclose(status->parent->parent);
-			status->parent->parent->parent->n_pgos--;
-			free(status->parent->parent->client_array); /* expire */
-		}
-		free(to_free);
-	}
+	status->close_waiting = 1;
+	status->closetime = gettime();
 }
 
 static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptable_bytes)
@@ -125,6 +172,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			output_status_array = NULL;
 		}
 		for (j = 0; j < n; j++) {
+			output_status_array[j].close_waiting = 0;
 			output_status_array[j].closed = 0;
 			output_status_array[j].parent = &module_status_array[i];
 			output_status_array[j].param = NULL;
@@ -137,7 +185,8 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			}
 
 			if (modules[i].hooks.hook_pgoutput_create) {
-				output_status_array[j].param = modules[i].hooks.hook_pgoutput_create(module_status_array[i].param);
+				output_status_array[j].param = modules[i].hooks.hook_pgoutput_create(
+					module_status_array[i].param, pgos->fn, pi, ch_info, actually_start);
 			}
 			module_status_array[i].refcount++;
 		}
@@ -171,7 +220,7 @@ void do_pgoutput_end(output_status_module_t *status, const proginfo_t *pi)
 	}
 }
 
-void do_pgoutput_close(output_status_prog_t *pgos)
+void do_pgoutput_close1(output_status_prog_t *pgos)
 {
 	int i, j;
 	for (i = 0; i < n_modules; i++) {
@@ -184,7 +233,9 @@ void do_pgoutput_close(output_status_prog_t *pgos)
 				}
 			}
 		} else {
-			/* 出力を行っていないモジュールは即フックを呼び出す */
+			/* 出力を行っていないモジュールはその場で終了扱い */
+			assert(pgos->client_array[i].refcount == 0);
+			assert(pgos->client_array[i].client_array == NULL);
 			pgos->refcount--;
 			if (pgos->refcount <= 0) {
 				pgos->parent->n_pgos--;
@@ -195,7 +246,7 @@ void do_pgoutput_close(output_status_prog_t *pgos)
 	}
 }
 
-void do_pgoutput_hard_close(output_status_prog_t *pgos)
+void do_pgoutput_close2(output_status_prog_t *pgos)
 {
 	int i, j;
 	for (i = 0; i < n_modules; i++) {
@@ -342,8 +393,11 @@ void init_tos(output_status_stream_t *tos)
 
 void close_tos(output_status_stream_t *tos)
 {
-	int64_t end;
-	int i, j, busy, remain_size;
+	int64_t nowtime = gettime(), end;
+	int i, j;
+
+	MAX_OUTPUT_DELAY_SEC = 5;
+	MAX_CLOSE_DELAY_SEC = 5;
 
 	/* close all output */
 	for (i = j = 0; i < tos->n_pgos; j++) {
@@ -353,38 +407,19 @@ void close_tos(output_status_stream_t *tos)
 		}
 		i++;
 
-		if (0 < tos->pgos[j].closetime) {
-			/* マージン録画フェーズに移っていたら保存されているfinal_piを使う */
-			do_pgoutput_close(&tos->pgos[j]);
-		} else {
-			/* そうでなければ最新のproginfoを */
-			do_pgoutput_close(&tos->pgos[j]);
+		if (tos->pgos[j].closetime < 0) {
+			tos->pgos[j].final_pi = *tos->proginfo;
 		}
+		tos->pgos[j].closetime = nowtime;
 	}
 	
 	/* 書き出し完了を待機(5秒まで) */
-	for (	i = ab_first_downstream(tos->ab);
-			i >= 0;
-			i = ab_next_downstream(tos->ab, i) ) {
-		ab_disconnect_downstream(tos->ab, i, 0);
-	}
-	for (end = gettime() + 5*1000; gettime() < end;) {
-		busy = 0;
-		for (	i = ab_first_downstream(tos->ab);
-				i >= 0 && !busy;
-				i = ab_next_downstream(tos->ab, i) ) {
-			busy |= ab_get_downstream_status(tos->ab, i, NULL, &remain_size);
-			busy |= (remain_size > 0);
-		}
-		if (!busy) {
-			break;
-		}
-
-		ab_output_buf(tos->ab);
+	for (end = gettime() + 5*1000; (nowtime=gettime()) < end;) {
+		ts_output(tos, nowtime);
 #ifdef TSD_PLATFORM_MSVC
 		Sleep(100);
 #else
-		usleep(100 * 1000);
+		usleep(100*1000);
 #endif
 	}
 
@@ -414,12 +449,16 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 
 		/* 出力終了をチェック */
 		if (0 < tos->pgos[j].closetime && tos->pgos[j].closetime < nowtime) {
-			if (!tos->pgos[j].close_flag) {
-				tos->pgos[j].close_flag = 1;
-				do_pgoutput_close(&tos->pgos[j]);
-			} else if (tos->pgos[j].closetime + (MAX_OUTPUT_DELAY_SEC) * 1000 < nowtime) {
-				do_pgoutput_hard_close(&tos->pgos[j]);
+			if (!tos->pgos[j].close_flag1) {
+				tos->pgos[j].close_flag1 = 1;
+				do_pgoutput_close1(&tos->pgos[j]);
+			} else if(tos->pgos[j].closetime + (MAX_OUTPUT_DELAY_SEC) * 1000 < nowtime) {
+				if (!tos->pgos[j].close_flag2) {
+					tos->pgos[j].close_flag2 = 1;
+					do_pgoutput_close2(&tos->pgos[j]);
+				}
 			}
+			do_pgoutput_check_close_completed(&tos->pgos[j]);
 		}
 	}
 
@@ -554,7 +593,8 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
 		pgos->client_array = do_pgoutput_create(tos->ab, tos->ab_history, pgos, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
-		pgos->close_flag = 0;
+		pgos->close_flag1 = 0;
+		pgos->close_flag2 = 0;
 		pgos->close_remain = 0;
 		pgos->refcount = n_modules;
 		pgos->parent = tos;
