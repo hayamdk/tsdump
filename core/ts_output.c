@@ -136,7 +136,7 @@ static int module_buffer_pre_output(ab_buffer_t *gb, void *param, int *acceptabl
 	int busy = 0;
 	output_status_t *status = (output_status_t*)param;
 
-	if (status->closed) {
+	if (status->disconnect_tried) {
 		return 0;
 	}
 	if (status->parent->module->hooks.hook_pgoutput_check) {
@@ -372,7 +372,7 @@ int create_tos_per_service(output_status_stream_t **ptos, ts_service_list_t *ser
 
 void init_tos(output_status_stream_t *tos)
 {
-	int i;
+	int i, ret;
 
 	tos->n_pgos = 0;
 	tos->pgos = (output_status_prog_t*)malloc(MAX_PGOVERLAP * sizeof(output_status_prog_t));
@@ -382,7 +382,8 @@ void init_tos(output_status_stream_t *tos)
 	}
 
 	tos->ab = ab_create(BUFSIZE);
-	ab_set_history(tos->ab, &tos->ab_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
+	ret = ab_set_history(tos->ab, &tos->ab_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
+	assert(!ret);
 	tos->dropped_bytes = 0;
 
 	init_proginfo(&tos->last_proginfo);

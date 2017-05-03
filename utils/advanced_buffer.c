@@ -32,6 +32,7 @@ struct ab_buffer_struct {
 	int buf_used;
 	int buf_size;
 	uint8_t *buf;
+	ab_history_t *history;
 };
 
 typedef struct {
@@ -49,6 +50,7 @@ struct ab_history_struct {
 	int backward_ms;
 	int buf_remain_bytes;
 	int backward_bytes;
+	int stream_id0;
 	int stream_id;
 };
 
@@ -57,15 +59,27 @@ struct ab_history_struct {
 #define alignment_floor(x, alignment_size) ( (alignment_size) > 1 ? (x) / (alignment_size) * (alignment_size) : (x) )
 #define alignment_ceil(x, alignment_size)  ( (alignment_size) > 1 ? ((x)+(alignment_size)-1) / (alignment_size) * (alignment_size) : (x) )
 
-int ab_next_downstream(ab_buffer_t *ab, int id)
+static int ab_next_downstream_internal(ab_buffer_t *ab, int id, int ignore_history)
 {
 	int i;
+	const ab_downstream_t *ds;
 	for (i = id + 1; i < AB_MAX_DOWNSTREAMS; i++) {
-		if (ab->downstreams[i].in_use) {
-			return i;
+		ds = &ab->downstreams[i];
+		if (!ds->in_use) {
+			continue;
 		}
+		if (ab->history && ignore_history &&
+				(i == ab->history->stream_id0 || i == ab->history->stream_id)) {
+			continue;
+		}
+		return i;
 	}
 	return -1;
+}
+
+int ab_next_downstream(ab_buffer_t *ab, int id)
+{
+	return ab_next_downstream_internal(ab, id, 1);
 }
 
 int ab_first_downstream(ab_buffer_t *ab)
@@ -104,6 +118,7 @@ void ab_init(ab_buffer_t *ab, int buf_size)
 	ab->buf_used = 0;
 	ab->n_downstreams = 0;
 	ab->input_total = 0;
+	ab->history = NULL;
 	for (i = 0; i < AB_MAX_DOWNSTREAMS; i++) {
 		ab->downstreams[i].in_use = 0;
 	}
@@ -454,22 +469,23 @@ static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbyte
 
 int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms, int backward_ms)
 {
-	int id;
 	ab_history_t *history;
 	const ab_downstream_handler_t history_handler1 = { history_handler_output, NULL, history_handler_close, NULL, NULL };
 	const ab_downstream_handler_t history_handler2 = { NULL, NULL, history_handler_close, history_handler_start, history_handler_pre_output };
 	int num = (backward_ms + resolution_ms - 1) / resolution_ms;
 
-	history = (ab_history_t*)malloc(sizeof(ab_history_t));
-
 	if (num <= 0) {
 		return 1;
 	}
-	if ((id = ab_connect_downstream(ab, &history_handler1, 0, 0, 1, history)) < 0) {
+
+	history = (ab_history_t*)malloc(sizeof(ab_history_t));
+	if ((history->stream_id0 = ab_connect_downstream(ab, &history_handler1, 0, 0, 1, history)) < 0) {
+		free(history);
 		return 1;
 	}
 
 	history->buffer = ab;
+	ab->history = history;
 	history->resolution = resolution_ms;
 	history->num = num;
 	history->used = 0;
@@ -480,7 +496,7 @@ int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms
 	history->close_flg = 1;
 
 	if ((history->stream_id = ab_connect_downstream(ab, &history_handler2, 0, 0, 1, history)) < 0) {
-		ab_disconnect_downstream(ab, id, 1);
+		ab_disconnect_downstream(ab, history->stream_id0, 1);
 		return 1;
 	}
 	history->close_flg = 0;

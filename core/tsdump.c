@@ -273,7 +273,7 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 			pos_write = buf_used;
 			for (n = ab_first_downstream(tos->ab); n >= 0; n = ab_next_downstream(tos->ab, n)) {
 				ab_get_downstream_status(tos->ab, n, &pos, NULL);
-				if (pos_write < pos) {
+				if (pos < pos_write) {
 					pos_write = pos;
 				}
 			}
