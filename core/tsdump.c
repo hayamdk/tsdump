@@ -42,6 +42,7 @@ int MAX_OUTPUT_DELAY_SEC = 120;
 int MAX_CLOSE_DELAY_SEC = 10;
 
 static volatile int termflag = 0;
+static volatile int termwaiting = 0;
 static volatile int termedflag = 0;
 
 int param_sp_num = -1;
@@ -57,13 +58,18 @@ int need_clear_line = 0;
 
 BOOL WINAPI console_ctrl_handler(DWORD ctrl)
 {
-	int64_t t = gettime();
+	int64_t t;
 	UNREF_ARG(ctrl);
 	termflag = 1;
 	output_message(MSG_NOTIFY, TSD_TEXT("\n終了シグナルをキャッチ"));
+	while (!termwaiting) {
+		Sleep(10);
+	}
+	t = gettime();
 	while (!termedflag) {
-		if (gettime() - t > 1000*15) {
-			/* 15秒以上経過したら諦めて出る */
+		if (gettime() - t > 1000*10) {
+			/* 10秒以上経過したら諦めて出る */
+			output_message(MSG_NOTIFY, TSD_TEXT("\nモジュールのクローズに時間がかかっているため強制終了します"));
 			break;
 		}
 		Sleep(10);
@@ -481,6 +487,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	int pos;
 	int printservice = 0;
+	int busy;
 
 	ts_service_list_t service_list;
 
@@ -668,16 +675,36 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 		total += n_dec;
 	}
 
-	/* 終了処理 */
-	output_message(MSG_NOTIFY, TSD_TEXT("まだ書き出していないバッファを書き出ています"));
-	for (i = 0; i < n_tos; i++) {
-		/* まだ書き出していないバッファを書き出し */
-		close_tos(&tos[i]);
-	}
-	free(tos);
-
 	do_close_stream();
 
+	/* 終了処理 */
+	output_message(MSG_NOTIFY, TSD_TEXT("まだ書き出していないバッファを書き出ています"));
+	do_preclose_module();
+	for (i = 0; i < n_tos; i++) {
+		prepare_close_tos(&tos[i]);
+	}
+
+	busy = 1;
+	while (busy) {
+		busy = 0;
+		for (i = 0; i < n_tos; i++) {
+			ts_output(&tos[i], gettime());
+			busy |= (tos[i].n_pgos > 0);
+		}
+
+#ifdef TSD_PLATFORM_MSVC
+		Sleep(100);
+#else
+		usleep(100 * 1000);
+#endif
+	}
+
+	termwaiting = 1;
+	for (i = 0; i < n_tos; i++) {
+		close_tos(&tos[i]);
+	}
+	do_close_module();
+	free(tos);
 	//tc_report_id(123);
 }
 

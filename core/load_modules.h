@@ -51,6 +51,8 @@ void do_encrypted_stream(unsigned char *buf, size_t size);
 void do_stream(unsigned char *buf, size_t size, int encrypted);
 void do_close_stream();
 void do_tick(int64_t);
+void do_preclose_module();
+void do_close_module();
 int do_stream_generator_open(void **param, ch_info_t *chinfo);
 void do_stream_generator(void *param, unsigned char **buf, int *size);
 void do_stream_generator_cnr(void *param);

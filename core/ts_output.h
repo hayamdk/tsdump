@@ -6,6 +6,7 @@ typedef struct output_status_stream_struct		output_status_stream_t;
 struct output_status_struct {
 	unsigned int closed : 1;
 	unsigned int close_waiting : 1;
+	unsigned int disconnect_tried : 1;
 	int64_t closetime;
 	int downstream_id;
 	void *param;
@@ -60,6 +61,7 @@ struct output_status_stream_struct {
 
 void init_tos(output_status_stream_t *tos);
 void close_tos(output_status_stream_t *tos);
+void prepare_close_tos(output_status_stream_t *tos);
 void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info);
 void ts_minimize_buf(output_status_stream_t *tos);
 void ts_require_buf(output_status_stream_t *tos, int require);

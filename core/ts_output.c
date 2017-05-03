@@ -80,13 +80,15 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 					if (remain_ms > 0) {
 						ret = mod_status->module->hooks.hook_pgoutput_forceclose(
 							status->param, 0, remain_ms);
-						if (ret) {
+						if (!ret) {
 							status->closed = 1;
 							status->parent->refcount--;
 						}
 					} else {
 						/* forcibly close!!! */
 						mod_status->module->hooks.hook_pgoutput_forceclose(status->param, 1, 0);
+						status->closed = 1;
+						status->parent->refcount--;
 					}
 				} else {
 					status->closed = 1;
@@ -172,6 +174,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			output_status_array = NULL;
 		}
 		for (j = 0; j < n; j++) {
+			output_status_array[j].disconnect_tried = 0;
 			output_status_array[j].close_waiting = 0;
 			output_status_array[j].closed = 0;
 			output_status_array[j].parent = &module_status_array[i];
@@ -253,12 +256,13 @@ void do_pgoutput_close2(output_status_prog_t *pgos)
 		if (pgos->client_array[i].n_clients > 0) {
 			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
 				if (pgos->client_array[i].client_array[j].downstream_id < 0 ||
-						pgos->client_array[i].client_array[j].closed) {
+						pgos->client_array[i].client_array[j].close_waiting ||
+						pgos->client_array[i].client_array[j].disconnect_tried ) {
 					continue;
 				}
 				ab_disconnect_downstream(pgos->parent->ab,
 					pgos->client_array[i].client_array[j].downstream_id, 1);
-				pgos->client_array[i].client_array[j].closed = 1;
+				pgos->client_array[i].client_array[j].disconnect_tried = 1;
 			}
 		}
 	}
@@ -391,15 +395,15 @@ void init_tos(output_status_stream_t *tos)
 	return;
 }
 
-void close_tos(output_status_stream_t *tos)
+void prepare_close_tos(output_status_stream_t *tos)
 {
-	int64_t nowtime = gettime(), end;
+	int64_t nowtime = gettime();
 	int i, j;
 
 	MAX_OUTPUT_DELAY_SEC = 5;
 	MAX_CLOSE_DELAY_SEC = 5;
 
-	/* close all output */
+	/* flag close to all outputs */
 	for (i = j = 0; i < tos->n_pgos; j++) {
 		assert(j < MAX_PGOVERLAP);
 		if (tos->pgos[j].refcount <= 0) {
@@ -412,16 +416,11 @@ void close_tos(output_status_stream_t *tos)
 		}
 		tos->pgos[j].closetime = nowtime;
 	}
-	
-	/* ‘‚«o‚µŠ®—¹‚ğ‘Ò‹@(5•b‚Ü‚Å) */
-	for (end = gettime() + 5*1000; (nowtime=gettime()) < end;) {
-		ts_output(tos, nowtime);
-#ifdef TSD_PLATFORM_MSVC
-		Sleep(100);
-#else
-		usleep(100*1000);
-#endif
-	}
+}
+
+void close_tos(output_status_stream_t *tos)
+{
+	int i;
 
 	ab_close_buf(tos->ab);
 

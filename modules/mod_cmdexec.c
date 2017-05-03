@@ -1454,7 +1454,7 @@ static void hook_pgoutput_close(void *param, const proginfo_t *pi)
 static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 {
 	pipestat_t *pstat = (pipestat_t*)param;
-	int i;
+	int i, busy = 0;
 	my_retcode_t retcode;
 
 	if (pstat->used &&
@@ -1462,6 +1462,7 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 		pstat->used = 0;
 	}
 	if (pstat->used) {
+		busy = 1;
 		if (force_close) {
 			hard_kill(pstat->child_process, pstat->cmd);
 		} else if (remain_ms < 1*1000 && !pstat->soft_closed) {
@@ -1480,6 +1481,7 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 		if (!pstat[i].used) {
 			continue;
 		}
+		busy = 1;
 		if(force_close) {
 			hard_kill(pstat[i].child_process, pstat[i].cmd);
 		} else if(remain_ms < 1*1000 && !pstat[i].soft_closed) {
@@ -1489,7 +1491,7 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 			soft_kill(pstat[i].child_process);
 		}
 	}
-	return 0;
+	return busy;
 }
 
 static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)

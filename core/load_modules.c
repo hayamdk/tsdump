@@ -228,6 +228,16 @@ void do_close_module()
 	}
 }
 
+void do_preclose_module()
+{
+	int i;
+	for (i = 0; i < n_modules; i++) {
+		if (modules[i].hooks.hook_preclose_module) {
+			modules[i].hooks.hook_preclose_module();
+		}
+	}
+}
+
 void do_open_stream()
 {
 	int i;
