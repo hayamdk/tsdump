@@ -13,16 +13,22 @@
 #include "advanced_buffer.h"
 
 struct ab_downstream_struct {
-	ab_downstream_handler_t handler;
-	void *param;
 	unsigned int busy : 1;
 	unsigned int close_flg : 1;
 	unsigned int in_use : 1;
 	unsigned int realtime : 1;
+	unsigned int use_retval : 1;
+	unsigned int use_maxsize : 1;
+	unsigned int use_minsize : 1;
+	unsigned int use_alignment : 1;
+	ab_downstream_handler_t handler;
+	void *param;
 	int pos;
 	int remain_to_close;
+	int remain_unaligned;
 	int alignment_size;
-	int max_size;
+	int maxsize;
+	int minsize;
 };
 
 struct ab_buffer_struct {
@@ -48,7 +54,6 @@ struct ab_history_struct {
 	int num;
 	int used;
 	int backward_ms;
-	int buf_remain_bytes;
 	int backward_bytes;
 	int stream_id0;
 	int stream_id;
@@ -138,7 +143,7 @@ void ab_delete(ab_buffer_t *ab)
 	free(ab);
 }
 
-int ab_connect_downstream_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, int backward_size)
+int ab_connect_downstream_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, void *param, int backward_size)
 {
 	int insert, diff, remain;
 
@@ -157,10 +162,16 @@ int ab_connect_downstream_backward(ab_buffer_t *ab, const ab_downstream_handler_
 	ab->downstreams[insert].busy = 0;
 	ab->downstreams[insert].close_flg = 0;
 	ab->downstreams[insert].in_use = 1;
-	ab->downstreams[insert].realtime = realtime;
+	ab->downstreams[insert].use_retval= 0;
+	ab->downstreams[insert].use_maxsize = 0;
+	ab->downstreams[insert].use_minsize = 0;
+	ab->downstreams[insert].remain_unaligned = 0;
+	ab->downstreams[insert].use_alignment = 0;
+	ab->downstreams[insert].realtime = 0;
 
 	diff = -backward_size;
 	if (alignment_size > 0) {
+		ab->downstreams[insert].use_alignment = 1;
 		assert(ab->input_total + diff >= 0);
 		remain = (int)((ab->input_total + diff) % alignment_size);
 		if (remain > 0) {
@@ -172,30 +183,42 @@ int ab_connect_downstream_backward(ab_buffer_t *ab, const ab_downstream_handler_
 		ab->downstreams[insert].pos = 0;
 	}
 
-	if (alignment_size > 0 && max_size > 0) {
-		if (max_size < alignment_size) {
-			ab->downstreams[insert].max_size = alignment_size;
-		} else {
-			ab->downstreams[insert].max_size = alignment_floor(max_size, alignment_size);
-		}
-	} else {
-		ab->downstreams[insert].max_size = max_size;
-	}
-
 	ab->n_downstreams++;
 	return insert;
 }
 
-int ab_connect_downstream_history_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param, ab_history_t *history)
+void ab_set_maxsize(ab_buffer_t *ab, int id, int maxsize)
 {
-	return ab_connect_downstream_backward(ab, handler, alignment_size, max_size, realtime, param,
+	ab->downstreams[id].use_maxsize = 1;
+	ab->downstreams[id].maxsize = maxsize;
+}
+
+void ab_set_minsize(ab_buffer_t *ab, int id, int minsize)
+{
+	ab->downstreams[id].use_minsize = 1;
+	ab->downstreams[id].minsize = minsize;
+}
+
+void ab_set_realtime(ab_buffer_t *ab, int id)
+{
+	ab->downstreams[id].realtime = 1;
+}
+
+int ab_connect_downstream_history_backward(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, void *param, ab_history_t *history)
+{
+	return ab_connect_downstream_backward(ab, handler, alignment_size, param,
 		ab_get_history_backward_bytes(history)
 	);
 }
 
-int ab_connect_downstream(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, int max_size, int realtime, void *param)
+int ab_connect_downstream(ab_buffer_t *ab, const ab_downstream_handler_t *handler, int alignment_size, void *param)
 {
-	return ab_connect_downstream_backward(ab, handler, alignment_size, max_size, realtime, param, 0);
+	return ab_connect_downstream_backward(ab, handler, alignment_size, param, 0);
+}
+
+void ab_set_use_retval(ab_buffer_t *ab, int id)
+{
+	ab->downstreams[id].use_retval = 1;
 }
 
 void ab_clear_buf(ab_buffer_t *ab, int require_size)
@@ -263,7 +286,8 @@ void ab_input_buf(ab_buffer_t *ab, const uint8_t *buf, int size/*, int timenum*/
 
 void ab_output_buf(ab_buffer_t *ab)
 {
-	int i, j, max_write_size, write_size;
+	int remain_unaligned = 0;
+	int i, j, max_write_size, write_size, written;
 	ab_downstream_t *ds;
 
 	for (i = j = 0; i < ab->n_downstreams; j++) {
@@ -276,42 +300,70 @@ void ab_output_buf(ab_buffer_t *ab)
 		}
 		i++;
 
+		assert((ds->use_retval && ds->use_alignment) || ds->remain_unaligned == 0);
+		if (ds->use_retval && ds->use_alignment) {
+			remain_unaligned = ds->remain_unaligned;
+		}
+
 		write_size = ab->buf_used - ds->pos;
-		if ( !ds->realtime && !ds->close_flg && ds->max_size > 0 && write_size < ds->max_size / 2 ) {
+		if ( !ds->realtime && !ds->close_flg && (ds->use_minsize && write_size < ds->minsize) ) {
 			continue;
 		}
 
-		if (ds->handler.start_hook) {
-			ds->handler.start_hook(ab, ds->param);
+		if (ds->use_maxsize) {
+			max_write_size = ds->maxsize;
 		}
-		if (ds->busy && ds->handler.pre_output) {
-			ds->busy = ds->handler.pre_output(ab, ds->param, &max_write_size);
-			max_write_size = alignment_floor(max_write_size, ds->alignment_size);
+		if (ds->handler.pre_output) {
+			if (ds->handler.pre_output(ab, ds->param, &max_write_size)) {
+				ds->busy = 1;
+			} else {
+				ds->busy = 0;
+			}
 		}
-		if (ds->busy) {
+		if (ds->busy || (max_write_size > 0 && max_write_size < remain_unaligned)) {
 			continue;
 		}
 
-		if (ds->max_size > 0 && (max_write_size > ds->max_size || max_write_size == 0)) {
-			max_write_size = ds->max_size;
+		if (ds->use_alignment) {
+			max_write_size = 
+				alignment_floor(max_write_size - remain_unaligned, ds->alignment_size) +
+				remain_unaligned;
+		}
+		assert(max_write_size >= 0);
+		assert(write_size >= remain_unaligned);
+
+		if (max_write_size > 0 && write_size > max_write_size) {
+			write_size = max_write_size/*is aligned*/;
+		} else if(ds->use_alignment) {
+			write_size = alignment_floor(write_size - remain_unaligned, ds->alignment_size) +
+				remain_unaligned;
 		}
 
-		if (max_write_size/*is aligned*/ > 0 && write_size > max_write_size) {
-			write_size = max_write_size;
-		} else if(ds->alignment_size > 0) {
-			write_size = alignment_floor(write_size, ds->alignment_size);
+		if (ds->close_flg && write_size > ds->remain_to_close) {
+			write_size = ds->remain_to_close/*is aligned*/;
 		}
 
-		if (ds->close_flg && write_size > ds->remain_to_close/*is aligned*/) {
-			write_size = ds->remain_to_close;
-		}
+		assert(!ds->use_alignment || (write_size - remain_unaligned) % ds->alignment_size == 0);
 
 		if (write_size > 0) {
 			if (ds->handler.output) {
-				ds->handler.output(ab, ds->param, &ab->buf[ds->pos], write_size);
-			}
-			if (ds->handler.pre_output) {
-				ds->busy = 1;
+				written = ds->handler.output(ab, ds->param, &ab->buf[ds->pos], write_size);
+				if (ds->use_retval) {
+					if (written <= 0) {
+						write_size = 0;
+					} else {
+						write_size = written;
+					}
+					if (write_size > 0 && ds->use_alignment) {
+						assert(ds->remain_unaligned < ds->alignment_size);
+						ds->remain_unaligned = alignment_ceil(write_size - ds->remain_unaligned, ds->alignment_size) -
+								(write_size - ds->remain_unaligned);
+					}
+				} else if(written) {
+					ds->busy = 1;
+				} else {
+					ds->busy = 0;
+				}
 			}
 			ds->pos += write_size;
 			if (ds->close_flg) {
@@ -366,6 +418,7 @@ int ab_get_downstream_status(ab_buffer_t *ab, int id, int *buf_pos, int *remain_
 
 void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate)
 {
+	int remain;
 	ab_downstream_t *ds = &ab->downstreams[id];
 	assert(ds->in_use);
 	if (immediate) {
@@ -373,7 +426,17 @@ void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate)
 		ds->remain_to_close = 0;
 	} else {
 		ds->close_flg = 1;
-		ds->remain_to_close = alignment_floor(ab->buf_used - ds->pos, ds->alignment_size);
+		remain = ab->buf_used - ds->pos;
+		if (ds->use_retval) {
+			remain -= ds->remain_unaligned;
+		}
+		if (ds->use_alignment) {
+			remain = alignment_floor(remain, ds->alignment_size);
+		}
+		if (ds->use_retval) {
+			remain += ds->remain_unaligned;
+		}
+		ds->remain_to_close = remain;
 	}
 }
 
@@ -396,7 +459,7 @@ static int64_t gettime()
 	return result;
 }
 
-static void history_handler_output(ab_buffer_t *ab, void *param, const uint8_t *buf, int size)
+static int history_handler_output(ab_buffer_t *ab, void *param, const uint8_t *buf, int size)
 {
 	UNREF_ARG(ab);
 	UNREF_ARG(buf);
@@ -425,6 +488,10 @@ static void history_handler_output(ab_buffer_t *ab, void *param, const uint8_t *
 	}
 	history->records[0].bytes += size;
 	history->backward_bytes += size;
+
+	assert(history->backward_bytes >= 0);
+
+	return 0;
 }
 
 static void history_handler_close(ab_buffer_t *ab, void *param, const uint8_t *buf, int size)
@@ -443,25 +510,21 @@ static void history_handler_close(ab_buffer_t *ab, void *param, const uint8_t *b
 	}
 }
 
-static void history_handler_start(ab_buffer_t *ab, void *param)
-{
-	UNREF_ARG(ab);
-	int buf_used, buf_pos;
-	ab_history_t *history = (ab_history_t*)param;
-	ab_get_status(history->buffer, &buf_used);
-	ab_get_downstream_status(history->buffer, history->stream_id, &buf_pos, NULL);
-	history->buf_remain_bytes = buf_used - buf_pos;
-}
-
 static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbytes)
 {
-	UNREF_ARG(ab);
+	//UNREF_ARG(ab);
+	int buf_used, buf_pos, buf_remain_bytes;
 	ab_history_t *history = (ab_history_t*)param;
+
 	if (history->close_flg) {
 		return 0;
 	}
-	if (history->buf_remain_bytes > history->backward_bytes) {
-		*outbytes = history->buf_remain_bytes - history->backward_bytes;
+
+	ab_get_status(ab, &buf_used);
+	ab_get_downstream_status(ab, history->stream_id, &buf_pos, NULL);
+	buf_remain_bytes = buf_used - buf_pos;
+	if (buf_remain_bytes > history->backward_bytes) {
+		*outbytes = buf_remain_bytes - history->backward_bytes;
 		return 0;
 	}
 	return 1;
@@ -470,8 +533,8 @@ static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbyte
 int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms, int backward_ms)
 {
 	ab_history_t *history;
-	const ab_downstream_handler_t history_handler1 = { history_handler_output, NULL, history_handler_close, NULL, NULL };
-	const ab_downstream_handler_t history_handler2 = { NULL, NULL, history_handler_close, history_handler_start, history_handler_pre_output };
+	const ab_downstream_handler_t history_handler1 = { history_handler_output, NULL, history_handler_close, NULL };
+	const ab_downstream_handler_t history_handler2 = { NULL, NULL, history_handler_close, history_handler_pre_output };
 	int num = (backward_ms + resolution_ms - 1) / resolution_ms;
 
 	if (num <= 0) {
@@ -479,10 +542,11 @@ int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms
 	}
 
 	history = (ab_history_t*)malloc(sizeof(ab_history_t));
-	if ((history->stream_id0 = ab_connect_downstream(ab, &history_handler1, 0, 0, 1, history)) < 0) {
+	if ((history->stream_id0 = ab_connect_downstream(ab, &history_handler1, 0, history)) < 0) {
 		free(history);
 		return 1;
 	}
+	ab_set_realtime(ab, history->stream_id0);
 
 	history->buffer = ab;
 	ab->history = history;
@@ -491,14 +555,15 @@ int ab_set_history(ab_buffer_t *ab, ab_history_t **history_in, int resolution_ms
 	history->used = 0;
 	history->records = malloc(sizeof(ab_history_record_t) * num);
 	history->backward_ms = backward_ms;
-	history->buf_remain_bytes = 0;
+	//history->buf_remain_bytes = 0;
 	history->backward_bytes = 0;
 	history->close_flg = 1;
 
-	if ((history->stream_id = ab_connect_downstream(ab, &history_handler2, 0, 0, 1, history)) < 0) {
+	if ((history->stream_id = ab_connect_downstream(ab, &history_handler2, 0, history)) < 0) {
 		ab_disconnect_downstream(ab, history->stream_id0, 1);
 		return 1;
 	}
+	ab_set_realtime(ab, history->stream_id);
 	history->close_flg = 0;
 
 	if (history_in) {

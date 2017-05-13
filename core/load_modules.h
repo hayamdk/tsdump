@@ -1,4 +1,6 @@
 typedef struct {
+	unsigned int pgoutput_use_retval : 1;
+	int output_block_size;
 	hook_pgoutput_precreate_t hook_pgoutput_precreate;
 	hook_pgoutput_changed_t hook_pgoutput_changed;
 	hook_pgoutput_end_t hook_pgoutput_end;
@@ -18,7 +20,6 @@ typedef struct {
 	hook_close_stream_t hook_close_stream;
 	hook_message_t hook_message;
 	hook_tick_t hook_tick;
-	int output_block_size;
 } module_hooks_t;
 
 typedef struct {

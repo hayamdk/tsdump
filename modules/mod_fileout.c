@@ -9,10 +9,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-
-#define TRUE		1
-#define FALSE		0
-
 #endif
 
 #include <stdio.h>
@@ -34,22 +30,19 @@ static int flg_set_no_fileout = 0;
 #define FILEOUT_BLOCK_SIZE	1024*1024
 
 typedef struct {
-	TSDCHAR fn[MAX_PATH_LEN];
-	int is_pi;
-	TSDCHAR fn_pi[MAX_PATH_LEN];
 #ifdef TSD_PLATFORM_MSVC
+	unsigned int write_busy : 1;
 	HANDLE fh;
 	OVERLAPPED ol;
 	uint8_t writebuf[FILEOUT_BLOCK_SIZE];
+	int written_bytes;
+	int write_bytes;
 #else
 	int fd;
-	/* TODO: 下の仮定を満たすためにadvanced_buffer_tのリファクタリング */
-	/* writeはその場で処理が完了するのでバッファを持っておく必要がない */
-	const uint8_t *writebuf;
 #endif
-	int write_bytes;
-	int written_bytes;
-	int write_busy;
+	TSDCHAR fn[MAX_PATH_LEN];
+	int is_pi;
+	TSDCHAR fn_pi[MAX_PATH_LEN];
 	proginfo_t initial_pi;
 } file_output_stat_t;
 
@@ -154,16 +147,11 @@ static void add_ovelapped_offset(OVERLAPPED *ol, int add_offset)
 	ol->OffsetHigh = new_offset.HighPart;
 	ol->Offset = new_offset.LowPart;
 }
-#endif
 
 static int nonblock_write(file_output_stat_t *fos)
 {
 	int remain;
-#ifdef TSD_PLATFORM_MSVC
 	DWORD written, errnum;
-#else
-	int written;
-#endif
 
 	while(1) {
 		remain = fos->write_bytes - fos->written_bytes;
@@ -172,36 +160,22 @@ static int nonblock_write(file_output_stat_t *fos)
 			break;
 		}
 
-#ifdef TSD_PLATFORM_MSVC
 		if ( !WriteFile(fos->fh, &fos->writebuf[fos->written_bytes], (DWORD)remain, &written, &(fos->ol)) ) {
 			if ((errnum = GetLastError()) == ERROR_IO_PENDING) {
-#else
-		written = write(fos->fd, &fos->writebuf[fos->written_bytes], remain);
-		if (written < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-#endif
 				/* do nothing */
 			} else {
-#ifdef TSD_PLATFORM_MSVC
 				output_message(MSG_SYSERROR, TSD_TEXT("WriteFile()に失敗しました"));
-#else
-				output_message(MSG_SYSERROR, "write(fd=%d)", fos->fd);
-#endif
 				fos->write_busy = 0;
 				break;
 			}
 			break;
 		} else {
 			fos->written_bytes += written;
-#ifdef TSD_PLATFORM_MSVC
 			add_ovelapped_offset(&(fos->ol), written);
-#endif
 		}
 	}
 	return fos->write_busy;
 }
-
-#ifdef TSD_PLATFORM_MSVC
 
 static int check_io_status(file_output_stat_t *fos, int wait_mode)
 {
@@ -248,12 +222,20 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 
 #else
 
-static int check_io_status(file_output_stat_t *fos, int wait_mode)
+static int nonblock_write(file_output_stat_t *fos, const uint8_t *buf, int write_bytes)
 {
-	if (!fos->write_busy) {
-		return 1;
+	int w = write_bytes * (rand() % 100) / 100 + 1;
+	int written = write(fos->fd, buf, w);
+	if (written < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+			/* do nothing */
+			return 0;
+		} else {
+			output_message(MSG_SYSERROR, "write(fd=%d)", fos->fd);
+			return 0;
+		}
 	}
-	return nonblock_write(fos);
+	return written;
 }
 
 #endif
@@ -298,8 +280,8 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 #endif
 
 	file_output_stat_t *fos = (file_output_stat_t*)malloc(sizeof(file_output_stat_t));
-	fos->write_busy = 0;
 #ifdef TSD_PLATFORM_MSVC
+	fos->write_busy = 0;
 	fos->fh = fh;
 	memset(&(fos->ol), 0, sizeof(OVERLAPPED));
 #else
@@ -314,31 +296,31 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 	return fos;
 }
 
-static void hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
+static int hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 {
 	file_output_stat_t *fos = (file_output_stat_t*)pstat;
 	if (!fos) {
-		return;
-	}
-
-	if (fos->write_busy) {
-		output_message(MSG_ERROR, TSD_TEXT("ファイルIOが完了しないうちに新たなファイルIOを発行しました"));
-		assert(1);
-		return;
+		return 0;
 	}
 
 #ifdef TSD_PLATFORM_MSVC
+	if (fos->write_busy) {
+		output_message(MSG_ERROR, TSD_TEXT("ファイルIOが完了しないうちに新たなファイルIOを発行しました"));
+		assert(1);
+		return 1;
+	}
 	memcpy(fos->writebuf, buf, size);
-#else
-	fos->writebuf = buf;
-#endif
+	fos->write_busy = 1;
 	fos->write_bytes = size;
 	fos->written_bytes = 0;
-	fos->write_busy = 1;
-
 	nonblock_write(fos);
+#else
+	return nonblock_write(fos, buf, size);
+#endif
+	return 1;
 }
 
+#ifdef TSD_PLATFORM_MSVC
 static const int hook_pgoutput_check(void *pstat)
 {
 	file_output_stat_t *fos = (file_output_stat_t*)pstat;
@@ -365,6 +347,7 @@ static const int hook_pgoutput_wait(void *pstat)
 	}
 	return err;
 }
+#endif
 
 static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 {
@@ -373,14 +356,12 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 		return;
 	}
 
+#ifdef TSD_PLATFORM_MSVC
 	if (fos->write_busy) {
 		output_message(MSG_WARNING, TSD_TEXT("IOが完了しないうちにファイルを閉じようとしました"));
-#ifdef TSD_PLATFORM_MSVC
 		CancelIo(fos->fh);
 		check_io_status(fos, 1);
-#endif
 	}
-#ifdef TSD_PLATFORM_MSVC
 	CloseHandle(fos->fh);
 #else
 	close(fos->fd);
@@ -404,8 +385,12 @@ static void register_hooks()
 		register_hook_pgoutput_precreate(hook_pgoutput_precreate);
 		register_hook_pgoutput_create(hook_pgoutput_create);
 		register_hook_pgoutput(hook_pgoutput, FILEOUT_BLOCK_SIZE);
+#ifdef TSD_PLATFORM_MSVC
 		register_hook_pgoutput_check(hook_pgoutput_check);
 		register_hook_pgoutput_wait(hook_pgoutput_wait);
+#else
+		set_use_retval_pgoutput();
+#endif
 		register_hook_pgoutput_close(hook_pgoutput_close);
 	}
 }

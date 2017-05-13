@@ -82,6 +82,11 @@ void register_hook_pgoutput(hook_pgoutput_t handler, int block_size)
 	module_hooks_current->output_block_size = block_size;
 }
 
+void set_use_retval_pgoutput()
+{
+	module_hooks_current->pgoutput_use_retval = 1;
+}
+
 void register_hook_pgoutput_check(hook_pgoutput_check_t handler)
 {
 	module_hooks_current->hook_pgoutput_check = handler;

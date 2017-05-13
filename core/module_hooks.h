@@ -46,7 +46,7 @@ typedef void(*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_
 typedef void(*hook_pgoutput_end_t)(void*, const proginfo_t*);
 typedef void(*hook_pgoutput_postclose_t)(void*, const proginfo_t*);
 typedef void* (*hook_pgoutput_create_t)(void*, const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int);
-typedef void (*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
+typedef int (*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int (*hook_pgoutput_check_t)(void*);
 typedef const int (*hook_pgoutput_wait_t)(void*);
 typedef void (*hook_pgoutput_close_t)(void*, const proginfo_t*);
@@ -195,6 +195,7 @@ TSD_API_DEF(void, register_hook_pgoutput_end, (hook_pgoutput_end_t));
 TSD_API_DEF(void, register_hook_pgoutput_postclose, (hook_pgoutput_postclose_t));
 TSD_API_DEF(void, register_hook_pgoutput_create, (hook_pgoutput_create_t));
 TSD_API_DEF(void, register_hook_pgoutput, (hook_pgoutput_t, int));
+TSD_API_DEF(void, set_use_retval_pgoutput, ());
 TSD_API_DEF(void, register_hook_pgoutput_check, (hook_pgoutput_check_t));
 TSD_API_DEF(void, register_hook_pgoutput_wait, (hook_pgoutput_wait_t));
 TSD_API_DEF(void, register_hook_pgoutput_close, (hook_pgoutput_close_t));

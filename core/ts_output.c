@@ -36,13 +36,14 @@ void do_pgoutput_postclose(output_status_prog_t *pgos)
 	}
 }
 
-static void module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
+static int module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
 {
 	UNREF_ARG(gb);
 	output_status_t *status = (output_status_t*)param;
 	if (status->parent->module->hooks.hook_pgoutput) {
-		status->parent->module->hooks.hook_pgoutput(status->param, buf, size);
+		return status->parent->module->hooks.hook_pgoutput(status->param, buf, size);
 	}
+	return 0;
 }
 
 static void module_buffer_notify_skip(ab_buffer_t *gb, void *param, int skip_bytes)
@@ -149,7 +150,6 @@ static const ab_downstream_handler_t module_buffer_handlers = {
 	module_buffer_output,
 	module_buffer_notify_skip,
 	module_buffer_close,
-	NULL,
 	module_buffer_pre_output
 };
 
@@ -180,11 +180,16 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			output_status_array[j].parent = &module_status_array[i];
 			output_status_array[j].param = NULL;
 			output_status_array[j].downstream_id = ab_connect_downstream_history_backward(
-					buf, &module_buffer_handlers, 188, modules[i].hooks.output_block_size, 0, &output_status_array[j], history
+					buf, &module_buffer_handlers, 188, &output_status_array[j], history
 				);
 			if (output_status_array[j].downstream_id < 0) {
 				output_message(MSG_ERROR, TSD_TEXT("バッファに対して下流ストリームを追加できませんでした: モジュール:%s"), modules[i].def->modname);
 				continue;
+			}
+			ab_set_maxsize(buf, output_status_array[j].downstream_id, modules[i].hooks.output_block_size);
+			ab_set_minsize(buf, output_status_array[j].downstream_id, modules[i].hooks.output_block_size / 2);
+			if (modules[i].hooks.pgoutput_use_retval) {
+				ab_set_use_retval(buf, output_status_array[j].downstream_id);
 			}
 
 			if (modules[i].hooks.hook_pgoutput_create) {
