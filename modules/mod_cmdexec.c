@@ -43,9 +43,9 @@ typedef int my_retcode_t;
 #define CMDEXEC_BLOCK_SIZE	512*1024
 
 typedef struct {
-	int use_stdout;
+	unsigned int use_stdout : 1;
+	unsigned int use_stderr : 1;
 	TSDCHAR stdout_path[MAX_PATH_LEN];
-	int use_stderr;
 	TSDCHAR stderr_path[MAX_PATH_LEN];
 	int64_t timenum;
 } redirect_pathinfo_t;
@@ -254,9 +254,9 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	tsd_replace_sets(arg, maxlen_arg - 1, sets, n_sets, 0);
 }
 
-#ifdef TSD_PLATFORM_MSVC
-static HANDLE create_redirect_file(TSDCHAR *path)
+static my_file_handle_t create_redirect_file(TSDCHAR *path)
 {
+#ifdef TSD_PLATFORM_MSVC
 	HANDLE fh;
 	SECURITY_ATTRIBUTES sa;
 	sa.nLength = sizeof(sa);
@@ -264,8 +264,6 @@ static HANDLE create_redirect_file(TSDCHAR *path)
 	sa.lpSecurityDescriptor = NULL;
 
 #else
-static int create_redirect_file(TSDCHAR *path)
-{
 	int fd;
 #endif
 	static int counter = 0;
@@ -319,20 +317,18 @@ static void copy_redirect_pathinfo(redirect_pathinfo_t *dst, const redirect_path
 	}
 	dst->use_stderr = src->use_stderr;
 	if (dst->use_stderr) {
-		tsd_strlcpy(dst->stderr_path, src->stderr_path, MAX_PATH_LEN - 1);
+		tsd_strlcpy(dst->stderr_path, src->stderr_path, MAX_PATH_LEN-1);
 	}
 	dst->timenum = src->timenum;
 }
 
-static void rename_redirect_file(int pid, orphan_process_info_t *orphan)
+static void rename_redirect_file(int pid, const redirect_pathinfo_t *redirects)
 {
-	redirect_pathinfo_t *redirects;
 	TSDCHAR fname[MAX_PATH_LEN], path[MAX_PATH_LEN];
 
 	if (!output_redirect) {
 		return;
 	}
-	redirects = &orphan->redirects;
 
 	if (redirects->use_stdout) {
 		tsd_snprintf(fname, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%d_stdout.out"), redirects->timenum, pid);
@@ -1151,7 +1147,7 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 		pid = pid_of_orphan(&orphans[0]);
 		output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが多すぎるため最も古いものを強制終了します(pid=%d): %s"), pid, orphans[0].cmd);
 		hard_kill(orphans[0].child_process, orphans[0].cmd);
-		rename_redirect_file(pid, &orphans[0]);
+		rename_redirect_file(pid, &orphans[0].redirects);
 		for (i = 1; i < n_orphans; i++) {
 			orphans[i - 1] = orphans[i];
 		}
@@ -1166,11 +1162,12 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 }
 
 /* return: 0 if child process exited, 1 if child process is still alive. */
-int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retcode, const TSDCHAR *cmd)
+int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retcode, const redirect_pathinfo_t *redirects, const TSDCHAR *cmd)
 {
 	/* TODO: 1つずつチェックするのではなく、
 		WaitMultipleObjectsあるいはwaitを用いてシステムコール呼び出しを減らす */
 	my_retcode_t retcode;
+	int pid;
 #ifdef TSD_PLATFORM_MSVC
 	if (WaitForSingleObject(child_process, 0) == WAIT_OBJECT_0) {
 		GetExitCodeProcess(child_process, &retcode);
@@ -1187,9 +1184,11 @@ int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retco
 	if (p_retcode) {
 		*p_retcode = retcode;
 	}
+	pid = pid_of(child_process);
 #ifdef TSD_PLATFORM_MSVC
 	CloseHandle(child_process);
 #endif
+	rename_redirect_file(pid, redirects);
 	return 0;
 }
 
@@ -1198,7 +1197,7 @@ void collect_zombies(const int64_t time_ms, const int timeout_soft, const int ti
 	my_retcode_t retcode;
 	int i, j, del;
 	for (i = 0; i < n_orphans; i++) {
-		del = !check_child_process(orphans[i].child_process, &retcode, orphans[i].cmd);
+		del = !check_child_process(orphans[i].child_process, &retcode, &orphans[i].redirects, orphans[i].cmd);
 		if (!del && orphans[i].killmode == 0 && orphans[i].lasttime + timeout_soft < time_ms) {
 			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
 				timeout_soft/1000, pid_of_orphan(&orphans[i]), orphans[i].cmd);
@@ -1208,11 +1207,11 @@ void collect_zombies(const int64_t time_ms, const int timeout_soft, const int ti
 			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
 				timeout_hard/1000, pid_of_orphan(&orphans[i]), orphans[i].cmd);
 			hard_kill(orphans[i].child_process, orphans[i].cmd);
+			rename_redirect_file(pid_of_orphan(&orphans[i]), &orphans[i].redirects);
 			del = 1;
 		}
 
 		if (del) {
-			rename_redirect_file(pid_of_orphan(&orphans[i]), &orphans[i]);
 			for (j = i + 1; j < n_orphans; j++) {
 				orphans[j - 1] = orphans[j];
 			}
@@ -1352,7 +1351,7 @@ static int hook_pgoutput(void *param, const uint8_t *buf, const size_t size)
 	}
 
 	if (pstat->aborted) {
-		if (check_child_process(pstat->child_process, &retcode, pstat->cmd) == 0) {
+		if (check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
 			pstat->used = 0;
 		}
 #ifdef TSD_PLATFORM_MSVC
@@ -1420,7 +1419,7 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 	my_retcode_t retcode;
 
 	if (pstat->used &&
-			check_child_process(pstat->child_process, &retcode, pstat->cmd) == 0) {
+			check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
 		pstat->used = 0;
 	}
 	if (pstat->used) {
@@ -1437,7 +1436,7 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 
 	for (i = 1; i <= pstat->n_connected_cmds; i++) {
 		if (pstat[i].used &&
-				check_child_process(pstat[i].child_process, &retcode, pstat[i].cmd) == 0) {
+				check_child_process(pstat[i].child_process, &retcode, &pstat[i].redirects, pstat[i].cmd) == 0) {
 			pstat[i].used = 0;
 		}
 		if (!pstat[i].used) {
