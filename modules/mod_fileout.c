@@ -334,19 +334,6 @@ static const int hook_pgoutput_check(void *pstat)
 	return fos->write_busy;
 }
 
-static const int hook_pgoutput_wait(void *pstat)
-{
-	int err = 0;
-	file_output_stat_t *fos = (file_output_stat_t*)pstat;
-	if (!fos) {
-		return 0;
-	}
-
-	while ( fos->write_busy ) {
-		err = !check_io_status(fos, TRUE);
-	}
-	return err;
-}
 #endif
 
 static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
@@ -360,7 +347,7 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 	if (fos->write_busy) {
 		output_message(MSG_WARNING, TSD_TEXT("IO‚ªŠ®—¹‚µ‚È‚¢‚¤‚¿‚Éƒtƒ@ƒCƒ‹‚ð•Â‚¶‚æ‚¤‚Æ‚µ‚Ü‚µ‚½"));
 		CancelIo(fos->fh);
-		check_io_status(fos, 1);
+		check_io_status(fos, TRUE);
 	}
 	CloseHandle(fos->fh);
 #else
@@ -387,7 +374,6 @@ static void register_hooks()
 		register_hook_pgoutput(hook_pgoutput, FILEOUT_BLOCK_SIZE);
 #ifdef TSD_PLATFORM_MSVC
 		register_hook_pgoutput_check(hook_pgoutput_check);
-		register_hook_pgoutput_wait(hook_pgoutput_wait);
 #else
 		set_use_retval_pgoutput();
 #endif

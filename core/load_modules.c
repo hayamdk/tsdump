@@ -92,11 +92,6 @@ void register_hook_pgoutput_check(hook_pgoutput_check_t handler)
 	module_hooks_current->hook_pgoutput_check = handler;
 }
 
-void register_hook_pgoutput_wait(hook_pgoutput_wait_t handler)
-{
-	module_hooks_current->hook_pgoutput_wait = handler;
-}
-
 void register_hook_pgoutput_forceclose(hook_pgoutput_forceclose_t handler)
 {
 	module_hooks_current->hook_pgoutput_forceclose = handler;

@@ -8,7 +8,6 @@ typedef struct {
 	hook_pgoutput_create_t hook_pgoutput_create;
 	hook_pgoutput_t hook_pgoutput;
 	hook_pgoutput_check_t hook_pgoutput_check;
-	hook_pgoutput_wait_t hook_pgoutput_wait;
 	hook_pgoutput_close_t hook_pgoutput_close;
 	hook_pgoutput_forceclose_t hook_pgoutput_forceclose;
 	hook_postconfig_t hook_postconfig;

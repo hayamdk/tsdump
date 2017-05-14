@@ -1389,12 +1389,6 @@ static const int hook_pgoutput_check(void *param)
 	return ps->write_busy;
 }
 
-static const int hook_pgoutput_wait(void *stat)
-{
-	UNREF_ARG(stat);
-	return 0;
-}
-
 #endif
 
 static void hook_pgoutput_close(void *param, const proginfo_t *pi)
@@ -1626,7 +1620,6 @@ static void register_hooks()
 	register_hook_pgoutput(hook_pgoutput, CMDEXEC_BLOCK_SIZE);
 #ifdef TSD_PLATFORM_MSVC
 	register_hook_pgoutput_check(hook_pgoutput_check);
-	register_hook_pgoutput_wait(hook_pgoutput_wait);
 #else
 	set_use_retval_pgoutput();
 #endif
