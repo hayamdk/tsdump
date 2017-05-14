@@ -16,13 +16,9 @@ typedef struct {
 	DWORD n_rem;
 } bondriver_stat_t;
 
-//static WCHAR errmsg[1024];
-
 static const WCHAR *bon_dll_name = NULL;
 static int sp_num = -1;
 static int ch_num = -1;
-
-//static const WCHAR *reg_hook_msg;
 static int reg_hook = 0;
 
 LPWSTR lasterr_msg()

@@ -591,16 +591,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			/* パケットをバッファにコピー */
-			//ts_copybuf(tos, decbuf, n_dec);
 			ab_input_buf(tos->ab, decbuf, n_dec);
-			//ts_update_transfer_history(tos, nowtime, n_dec);
 
 		} else {  /* サービスごと書き出しモード */
-			/* pos_filledをコピー */
-			//for (i = 0; i < n_tos; i++) {
-			//	tos[i].pos_filled_old = tos[i].pos_filled;
-			//}
-
 			/* パケットを処理 */
 			for (pos = 0; pos < (int)n_dec; pos += 188) {
 				packet = &decbuf[pos];
@@ -618,11 +611,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 					copy_current_service_packet(&tos[i], &service_list, packet);
 				}
 			}
-
-			/* コピーしたバイト数の履歴を保存 */
-			//for (i = 0; i < n_tos; i++) {
-			//	ts_update_transfer_history( &tos[i], nowtime, tos[i].pos_filled - tos[i].pos_filled_old );
-			//}
 		}
 		//tc_end();
 

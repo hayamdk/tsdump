@@ -58,10 +58,10 @@ typedef struct {
 	unsigned int write_busy : 1;
 	OVERLAPPED ol;
 	uint8_t buf[CMDEXEC_BLOCK_SIZE];
-#endif
-	my_retcode_t retval;
 	int write_bytes;
 	int written_bytes;
+#endif
+	my_retcode_t retval;
 	int n_connected_cmds;
 	const TSDCHAR *cmd;
 	redirect_pathinfo_t redirects;
@@ -72,8 +72,6 @@ typedef struct {
 typedef struct {
 	TSDCHAR filename[MAX_PATH_LEN];
 	pipestat_t pipestats[MAX_PIPECMDS];
-	//const proginfo_t *initial_proginfo;
-	//proginfo_t last_proginfo;
 	int idx_of_pipestats;
 } module_stat_t;
 
@@ -1162,7 +1160,7 @@ void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo
 }
 
 /* return: 0 if child process exited, 1 if child process is still alive. */
-int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retcode, const redirect_pathinfo_t *redirects, const TSDCHAR *cmd)
+static int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retcode, const redirect_pathinfo_t *redirects, const TSDCHAR *cmd)
 {
 	/* TODO: 1つずつチェックするのではなく、
 		WaitMultipleObjectsあるいはwaitを用いてシステムコール呼び出しを減らす */
@@ -1192,7 +1190,7 @@ int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retco
 	return 0;
 }
 
-void collect_zombies(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
+static void collect_zombies(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
 {
 	my_retcode_t retcode;
 	int i, j, del;

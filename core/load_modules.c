@@ -204,13 +204,11 @@ static void init_stream_stats()
 int do_postconfig()
 {
 	int i;
-	//const TSDCHAR *msg;
 	int ret;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_postconfig) {
 			ret = modules[i].hooks.hook_postconfig();
 			if (!ret) {
-				//fwprintf(stderr, TSD_TEXT("%s\n"), msg );
 				return 0;
 			}
 		}
