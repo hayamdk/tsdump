@@ -991,6 +991,8 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	int i, n, connected = 0;
 	int last_pipe_cmd = 0;
 
+	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
+
 	for (i = n = 0; i < n_pipecmds; i++) {
 		if (!connected) {
 			n++;
@@ -1007,6 +1009,7 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	}
 	stat->idx_of_pipestats = 0;
 	*n_output = n;
+
 	return stat;
 }
 
