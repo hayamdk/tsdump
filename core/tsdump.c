@@ -20,8 +20,8 @@
 #include <stdarg.h>
 
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
-#include "utils/ts_parser.h"
+#include "core/module_api.h"
+#include "utils/arib_parser.h"
 #include "core/tsdump.h"
 #include "utils/advanced_buffer.h"
 #include "core/load_modules.h"

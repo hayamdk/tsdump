@@ -93,7 +93,7 @@
     <ClCompile Include="modules/mod_fileout.c" />
     <ClCompile Include="utils/aribstr.c" />
     <ClCompile Include="utils/tsdstr.c" />
-    <ClCompile Include="utils/ts_parser.c" />
+    <ClCompile Include="utils/arib_parser.c" />
     <ClCompile Include="utils/path.c" />
     <ClCompile Include="utils/advanced_buffer.c" />
   </ItemGroup>
@@ -103,14 +103,14 @@
     <ClInclude Include="core/default_decoder.h" />
     <ClInclude Include="core/load_modules.h" />
     <ClInclude Include="core/tsdump_def.h" />
-    <ClInclude Include="core/module_hooks.h" />
+    <ClInclude Include="core/module_api.h" />
     <ClInclude Include="modules/modules.h" />
     <ClInclude Include="modules/IB25Decoder.h" />
     <ClInclude Include="modules/IBonDriver2.h" />
     <ClInclude Include="utils/aribstr.h" />
     <ClInclude Include="utils/arib_proginfo.h" />
     <ClInclude Include="utils/tsdstr.h" />
-    <ClInclude Include="utils/ts_parser.h" />
+    <ClInclude Include="utils/arib_parser.h" />
     <ClInclude Include="utils/path.h" />
     <ClInclude Include="utils/advanced_buffer.h" />
   </ItemGroup>

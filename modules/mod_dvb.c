@@ -18,7 +18,7 @@
 #include <linux/dvb/version.h>
 
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 
 #define BLOCK_SIZE		(188*256)
 #define TYPE_ISDB_T		0

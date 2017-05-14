@@ -1,6 +1,6 @@
 PROGRAM = tsdump
 
-SOURCES_CP932 = core/tsdump.c core/ts_output.c core/load_modules.c core/default_decoder.c utils/tsdstr.c utils/ts_parser.c utils/path.c utils/advanced_buffer.c
+SOURCES_CP932 = core/tsdump.c core/ts_output.c core/load_modules.c core/default_decoder.c utils/tsdstr.c utils/arib_parser.c utils/path.c utils/advanced_buffer.c
 MODULES_CP932 = modules/mod_path_resolver.c modules/mod_log.c modules/mod_filein.c modules/mod_fileout.c modules/mod_cmdexec.c
 SOURCES = utils/aribstr.c
 MODULES = 

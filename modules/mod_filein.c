@@ -18,10 +18,10 @@
 #include <sys/timeb.h>
 
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 #include "utils/tsdstr.h"
 #include "utils/path.h"
-#include "utils/ts_parser.h"
+#include "utils/arib_parser.h"
 #include "core/default_decoder.h"
 
 static int flg_set_infile = 0;

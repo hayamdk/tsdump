@@ -139,7 +139,7 @@ typedef const TSDCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_
 #define TSD_API_DEF(type, name, args) type (* name) args
 #define __TSD_MODULES_HOOKS2
 typedef struct {
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 } tsd_api_set_t;
 #undef __TSD_MODULES_HOOKS2
 
@@ -239,7 +239,7 @@ static void __tsd_api_init(void *p)
 static void tsd_api_init_set(void *p)
 {
 	tsd_api_set_t *set =(tsd_api_set_t*)p;
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 }
 #endif
 

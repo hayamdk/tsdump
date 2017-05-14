@@ -10,8 +10,8 @@
 #include <inttypes.h>
 
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
-#include "utils/ts_parser.h"
+#include "core/module_api.h"
+#include "utils/arib_parser.h"
 #include "core/default_decoder.h"
 
 int64_t ts_n_drops = 0;

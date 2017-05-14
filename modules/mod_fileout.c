@@ -21,7 +21,7 @@
 #include <assert.h>
 
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 #include "utils/tsdstr.h"
 #include "utils/path.h"
 

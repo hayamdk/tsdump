@@ -4,7 +4,7 @@
 
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 
 #include "IBonDriver2.h"
 

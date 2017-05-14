@@ -19,7 +19,7 @@
 
 #include "utils/arib_proginfo.h"
 #include "utils/tsdstr.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 
 static int output_log = 0;
 static int set_log_fname = 0;

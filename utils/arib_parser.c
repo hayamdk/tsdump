@@ -9,8 +9,8 @@ typedef uint32_t DWORD;
 
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
-#include "utils/ts_parser.h"
+#include "core/module_api.h"
+#include "utils/arib_parser.h"
 #include "utils/tsdstr.h"
 #include "utils/aribstr.h"
 #include "core/tsdump.h"

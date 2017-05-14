@@ -7,7 +7,7 @@
 
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
-#include "core/module_hooks.h"
+#include "core/module_api.h"
 
 static int use_arib25 = 0;
 static int reg_hook = 0;

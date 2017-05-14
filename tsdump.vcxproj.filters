@@ -54,7 +54,7 @@
     <ClCompile Include="utils/tsdstr.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/ts_parser.c" >
+    <ClCompile Include="utils/arib_parser.c" >
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="utils/path.c" >
@@ -80,7 +80,7 @@
     <ClInclude Include="core/tsdump_def.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/module_hooks.h" >
+    <ClInclude Include="core/module_api.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="modules/modules.h" >
@@ -101,7 +101,7 @@
     <ClInclude Include="utils/tsdstr.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/ts_parser.h" >
+    <ClInclude Include="utils/arib_parser.h" >
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="utils/path.h" >
