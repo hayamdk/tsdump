@@ -40,7 +40,9 @@ typedef int my_retcode_t;
 
 #define MAX_PIPECMDS		32
 #define MAX_CMDS			32
-#define CMDEXEC_BLOCK_SIZE	512*1024
+#define PIPE_BLOCK_SIZE		512*1024
+#define CMDEXEC_LIMIT_SEC	120
+#define CMDEXEC_KILL_SEC	30
 
 typedef struct {
 	unsigned int use_stdout : 1;
@@ -57,7 +59,7 @@ typedef struct {
 #ifdef TSD_PLATFORM_MSVC
 	unsigned int write_busy : 1;
 	OVERLAPPED ol;
-	uint8_t buf[CMDEXEC_BLOCK_SIZE];
+	uint8_t buf[PIPE_BLOCK_SIZE];
 	int write_bytes;
 	int written_bytes;
 #endif
@@ -88,12 +90,12 @@ typedef struct {
 	int64_t lasttime;
 	int killmode;
 	redirect_pathinfo_t redirects;
-} orphan_process_info_t;
+} running_process_info_t;
 
-#define MAX_ORPHANS	128
+#define MAX_EXEC_PROCESSES	128
 
-static int n_orphans = 0;
-static orphan_process_info_t orphans[MAX_ORPHANS];
+static int n_exec_ps = 0;
+static running_process_info_t exec_ps[MAX_EXEC_PROCESSES];
 
 static int n_pipecmds = 0;
 static cmd_opt_t pipecmds[MAX_PIPECMDS];
@@ -361,11 +363,6 @@ static int pid_of(my_process_handle_t pid)
 #else
 	return (int)pid;
 #endif
-}
-
-static int pid_of_orphan(orphan_process_info_t *orphan)
-{
-	return pid_of(orphan->child_process);
 }
 
 #ifdef TSD_PLATFORM_MSVC
@@ -1090,21 +1087,22 @@ static void soft_kill(HANDLE h_process)
 	EnumWindows((WNDENUMPROC)term_enum_windows, (LPARAM)GetProcessId(h_process));
 }
 
-static void hard_kill(HANDLE h_process, const WCHAR *cmd)
+static my_retcode_t hard_kill(HANDLE h_process, const WCHAR *cmd)
 {
 	int i;
-	DWORD ret;
+	my_retcode_t ret;
 	TerminateProcess(h_process, 1);
 	for (i = 0; i < 10; i++) {
 		if (WaitForSingleObject(h_process, 1) == WAIT_OBJECT_0) {
 			GetExitCodeProcess(h_process, &ret);
 			CloseHandle(h_process);
 			output_message(MSG_NOTIFY, L"子プロセスの強制終了(pid=%d, exitcode=%d): %s", pid_of(h_process), ret, cmd);
-			return;
+			return ret;
 		}
 	}
 	output_message(MSG_NOTIFY, L"子プロセスの終了を確認できませんでした(pid=%d): %s", pid_of(h_process), cmd);
 	CloseHandle(h_process);
+	return 99;
 }
 
 #else
@@ -1114,7 +1112,7 @@ static void soft_kill(pid_t pid)
 	kill(pid, SIGINT);
 }
 
-static void hard_kill(pid_t pid, const char *cmd)
+static my_retcode_t hard_kill(pid_t pid, const char *cmd)
 {
 	int i, ret, status;
 	kill(pid, SIGKILL);
@@ -1122,41 +1120,38 @@ static void hard_kill(pid_t pid, const char *cmd)
 		ret = waitpid(pid, &status, WNOHANG);
 		if (ret > 0) {
 			output_message(MSG_NOTIFY, "子プロセス終了(pid=%d, exitcode=%d): %s", (int)pid, WEXITSTATUS(status), cmd);
-			return;
+			return WEXITSTATUS(status);
 		} else if (ret < 0) {
 			output_message(MSG_SYSERROR, "子プロセスを強制終了しましたがwaitpidがエラーを返しました(pid=%d): %s", (int)pid, cmd);
-			return;
+			return 98;
 		}
 		usleep(1000);
 	}
 	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした(pid=%d): %s", (int)pid, cmd);
+	return 99;
 }
 
 #endif
 
-#ifdef TSD_PLATFORM_MSVC
-void insert_orphan(HANDLE child_process, const WCHAR *cmd, const redirect_pathinfo_t *redirects)
-#else
-void insert_orphan(pid_t child_process, const char *cmd, const redirect_pathinfo_t *redirects)
-#endif
+void insert_runngin_ps(my_process_handle_t child_process, const TSDCHAR *cmd, const redirect_pathinfo_t *redirects)
 {
 	int i, pid;
-	if (n_orphans >= MAX_ORPHANS) {
-		pid = pid_of_orphan(&orphans[0]);
-		output_message(MSG_ERROR, TSD_TEXT("終了待ちの子プロセスが多すぎるため最も古いものを強制終了します(pid=%d): %s"), pid, orphans[0].cmd);
-		hard_kill(orphans[0].child_process, orphans[0].cmd);
-		rename_redirect_file(pid, &orphans[0].redirects);
-		for (i = 1; i < n_orphans; i++) {
-			orphans[i - 1] = orphans[i];
+	if (n_exec_ps >= MAX_EXEC_PROCESSES) {
+		pid = pid_of(exec_ps[0].child_process);
+		output_message(MSG_ERROR, TSD_TEXT("実行中の子プロセスが多すぎるため最も古いものを強制終了します(pid=%d): %s"), pid, exec_ps[0].cmd);
+		hard_kill(exec_ps[0].child_process, exec_ps[0].cmd);
+		rename_redirect_file(pid, &exec_ps[0].redirects);
+		for (i = 1; i < n_exec_ps; i++) {
+			exec_ps[i-1] = exec_ps[i];
 		}
-		n_orphans--;
+		n_exec_ps--;
 	}
-	copy_redirect_pathinfo(&orphans[n_orphans].redirects, redirects);
-	orphans[n_orphans].cmd = cmd;
-	orphans[n_orphans].child_process = child_process;
-	orphans[n_orphans].lasttime = gettime();
-	orphans[n_orphans].killmode = 0;
-	n_orphans++;
+	copy_redirect_pathinfo(&exec_ps[n_exec_ps].redirects, redirects);
+	exec_ps[n_exec_ps].cmd = cmd;
+	exec_ps[n_exec_ps].child_process = child_process;
+	exec_ps[n_exec_ps].lasttime = gettime();
+	exec_ps[n_exec_ps].killmode = 0;
+	n_exec_ps++;
 }
 
 /* return: 0 if child process exited, 1 if child process is still alive. */
@@ -1190,30 +1185,31 @@ static int check_child_process(my_process_handle_t child_process, my_retcode_t *
 	return 0;
 }
 
-static void collect_zombies(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
+static void check_exec_child_processes(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
 {
 	my_retcode_t retcode;
 	int i, j, del;
-	for (i = 0; i < n_orphans; i++) {
-		del = !check_child_process(orphans[i].child_process, &retcode, &orphans[i].redirects, orphans[i].cmd);
-		if (!del && orphans[i].killmode == 0 && orphans[i].lasttime + timeout_soft < time_ms) {
-			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
-				timeout_soft/1000, pid_of_orphan(&orphans[i]), orphans[i].cmd);
-			soft_kill(orphans[i].child_process);
-			orphans[i].killmode = 1;
-		} else if (!del && orphans[i].lasttime + timeout_hard < time_ms) {
-			output_message(MSG_ERROR, TSD_TEXT("子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
-				timeout_hard/1000, pid_of_orphan(&orphans[i]), orphans[i].cmd);
-			hard_kill(orphans[i].child_process, orphans[i].cmd);
-			rename_redirect_file(pid_of_orphan(&orphans[i]), &orphans[i].redirects);
+	for (i = 0; i < n_exec_ps; i++) {
+		del = !check_child_process(exec_ps[i].child_process, &retcode, &exec_ps[i].redirects, exec_ps[i].cmd);
+		if (!del && !exec_ps[i].killmode && exec_ps[i].lasttime + timeout_soft < time_ms) {
+			output_message(MSG_WARNING, TSD_TEXT("子プロセスが%d秒経っても終了しないため終了を試みます(pid=%d): %s"),
+				timeout_soft/1000, pid_of(exec_ps[i].child_process), exec_ps[i].cmd);
+			soft_kill(exec_ps[i].child_process);
+			exec_ps[i].killmode = 1;
+			exec_ps[i].lasttime = time_ms;
+		} else if (!del && exec_ps[i].killmode && exec_ps[i].lasttime + timeout_hard < time_ms) {
+			output_message(MSG_WARNING, TSD_TEXT("子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
+				timeout_hard/1000, pid_of(exec_ps[i].child_process), exec_ps[i].cmd);
+			hard_kill(exec_ps[i].child_process, exec_ps[i].cmd);
+			rename_redirect_file(pid_of(exec_ps[i].child_process), &exec_ps[i].redirects);
 			del = 1;
 		}
 
 		if (del) {
-			for (j = i + 1; j < n_orphans; j++) {
-				orphans[j - 1] = orphans[j];
+			for (j = i + 1; j < n_exec_ps; j++) {
+				exec_ps[j-1] = exec_ps[j];
 			}
-			n_orphans--;
+			n_exec_ps--;
 		}
 	}
 }
@@ -1274,8 +1270,7 @@ static void ps_check(pipestat_t *ps, int cancel)
 			} else {
 				output_message(MSG_SYSERROR, L"書き込みエラーのためパイプを閉じます(GetOverlappedResult): pid=%d", pid_of(ps->child_process));
 				close_pipe(ps);
-				insert_orphan(ps->child_process, ps->cmd, &ps->redirects);
-				ps->used = 0;
+				ps->aborted = 1;
 				return;
 			}
 			ps->write_busy = 0;
@@ -1404,20 +1399,24 @@ static void hook_pgoutput_close(void *param, const proginfo_t *pi)
 	}
 }
 
-static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
+static int check_pipe_child_process(pipestat_t *pstat, int force_close, int remain_ms)
 {
-	pipestat_t *pstat = (pipestat_t*)param;
-	int i, busy = 0;
 	my_retcode_t retcode;
-
-	if (pstat->used &&
-			check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
+	int pid;
+	if (!pstat->used) {
+		return 0;
+	}
+	if (check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
 		pstat->used = 0;
+		return 0;
 	}
 	if (pstat->used) {
-		busy = 1;
 		if (force_close) {
-			hard_kill(pstat->child_process, pstat->cmd);
+			pid = pid_of(pstat->child_process);
+			retcode = hard_kill(pstat->child_process, pstat->cmd);
+			rename_redirect_file(pid, &pstat->redirects);
+			pstat->used = 0;
+			return 0;
 		} else if (remain_ms < 1*1000 && !pstat->soft_closed) {
 			pstat->soft_closed = 1;
 			output_message(MSG_ERROR, TSD_TEXT("子プロセスの終了を試みます(pid=%d): %s"),
@@ -1425,24 +1424,17 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 			soft_kill(pstat->child_process);
 		}
 	}
+	return 1;
+}
 
+static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
+{
+	pipestat_t *pstat = (pipestat_t*)param;
+	int i, busy = 0;
+
+	busy |= check_pipe_child_process(pstat, force_close, remain_ms);
 	for (i = 1; i <= pstat->n_connected_cmds; i++) {
-		if (pstat[i].used &&
-				check_child_process(pstat[i].child_process, &retcode, &pstat[i].redirects, pstat[i].cmd) == 0) {
-			pstat[i].used = 0;
-		}
-		if (!pstat[i].used) {
-			continue;
-		}
-		busy = 1;
-		if(force_close) {
-			hard_kill(pstat[i].child_process, pstat[i].cmd);
-		} else if(remain_ms < 1*1000 && !pstat[i].soft_closed) {
-			pstat[i].soft_closed = 1;
-			output_message(MSG_ERROR, TSD_TEXT("子プロセスの終了を試みます(pid=%d): %s"),
-				pid_of(pstat[i].child_process), pstat[i].cmd);
-			soft_kill(pstat[i].child_process);
-		}
+		busy |= check_pipe_child_process(&pstat[i], force_close, remain_ms);
 	}
 	return busy;
 }
@@ -1480,7 +1472,7 @@ static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 	timeout = total_timeout;
 	for (i = 0; i < n_pipecmds; i++) {
 		if (pstat->pipestats[i].used) {
-			insert_orphan(pstat->pipestats[i].child_process, pstat->pipestats[i].cmd, &pstat->pipestats[i].redirects);
+			insert_runngin_ps(pstat->pipestats[i].child_process, pstat->pipestats[i].cmd, &pstat->pipestats[i].redirects);
 			timeout = time1 + total_timeout - gettime();
 			if (timeout < 0) {
 				timeout = 0;
@@ -1488,7 +1480,7 @@ static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 		}
 	}
 	for (i = 0; i < n_children; i++) {
-		insert_orphan(children[i], cmds[i], &redirects[i]);
+		insert_runngin_ps(children[i], cmds[i], &redirects[i]);
 		timeout = time1 + total_timeout - gettime();
 		if (timeout < 0) {
 			timeout = 0;
@@ -1501,17 +1493,23 @@ static void hook_tick(int64_t time_ms)
 {
 	static int64_t last_time = 0;
 	if (last_time / 1000 != time_ms / 1000) {
-		/* ゾンビコレクタは1秒に1回だけ呼び出す */
-		collect_zombies(time_ms, 60*1000, 120*1000);
+		/* 実行中プロセスのチェックは1秒に1回だけ呼び出す */
+		check_exec_child_processes(time_ms, CMDEXEC_LIMIT_SEC*1000, CMDEXEC_KILL_SEC*1000);
 		last_time = time_ms;
 	}
 }
 
+static void hook_preclose_module()
+{
+	/* prepare */
+	check_exec_child_processes(gettime(), 10*1000, CMDEXEC_KILL_SEC*1000);
+}
+
 static void hook_close_module()
 {
-	/* ゾンビプロセスをすべて回収する */
-	while (n_orphans > 0) {
-		collect_zombies(gettime(), 5*1000, 10*1000);
+	/* collect all processes */
+	while (n_exec_ps > 0) {
+		check_exec_child_processes(gettime(), 5*1000, 5*1000);
 #ifdef TSD_PLATFORM_MSVC
 		Sleep(10);
 #else
@@ -1615,7 +1613,7 @@ static void register_hooks()
 	register_hook_pgoutput_precreate(hook_pgoutput_precreate);
 	register_hook_pgoutput_postclose(hook_pgoutput_postclose);
 	register_hook_pgoutput_create(hook_pgoutput_create);
-	register_hook_pgoutput(hook_pgoutput, CMDEXEC_BLOCK_SIZE);
+	register_hook_pgoutput(hook_pgoutput, PIPE_BLOCK_SIZE);
 #ifdef TSD_PLATFORM_MSVC
 	register_hook_pgoutput_check(hook_pgoutput_check);
 #else
@@ -1624,6 +1622,7 @@ static void register_hooks()
 	register_hook_pgoutput_close(hook_pgoutput_close);
 	register_hook_pgoutput_forceclose(hook_pgoutput_forceclose);
 	register_hook_tick(hook_tick);
+	register_hook_preclose_module(hook_preclose_module);
 	register_hook_close_module(hook_close_module);
 	register_hook_postconfig(hook_postconfig);
 }
