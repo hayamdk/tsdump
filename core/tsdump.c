@@ -696,10 +696,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	//tc_report_id(123);
 }
 
-void load_ini()
-{
-}
-
 #ifdef TSD_PLATFORM_MSVC
 int wmain(int argc, const WCHAR* argv[])
 #else

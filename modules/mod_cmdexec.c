@@ -1445,8 +1445,6 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 {
 	int i, n_children=0;
-	int64_t time1, timeout;
-	const int total_timeout = 100;
 
 #ifdef TSD_PLATFORM_MSVC
 	HANDLE c, children[MAX_CMDS];
@@ -1471,23 +1469,8 @@ static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 		}
 	}
 
-	time1 = gettime();
-	timeout = total_timeout;
-	for (i = 0; i < n_pipecmds; i++) {
-		if (pstat->pipestats[i].used) {
-			insert_runngin_ps(pstat->pipestats[i].child_process, pstat->pipestats[i].cmd, &pstat->pipestats[i].redirects);
-			timeout = time1 + total_timeout - gettime();
-			if (timeout < 0) {
-				timeout = 0;
-			}
-		}
-	}
 	for (i = 0; i < n_children; i++) {
 		insert_runngin_ps(children[i], cmds[i], &redirects[i]);
-		timeout = time1 + total_timeout - gettime();
-		if (timeout < 0) {
-			timeout = 0;
-		}
 	}
 	free(pstat);
 }
