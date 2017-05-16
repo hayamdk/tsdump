@@ -63,7 +63,8 @@ typedef struct {
 	int write_bytes;
 	int written_bytes;
 #endif
-	my_retcode_t retval;
+	my_retcode_t cmd_retcode;
+	int cmd_result;
 	int n_connected_cmds;
 	const TSDCHAR *cmd;
 	redirect_pathinfo_t redirects;
@@ -135,7 +136,7 @@ static int get_primary_audio_pid(const proginfo_t *proginfo)
 	return -1;
 }
 
-static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, const TSDCHAR *fname, const proginfo_t *proginfo)
+static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, const TSDCHAR *fname, const proginfo_t *proginfo, pipestat_t *ps)
 {
 	const TSDCHAR *chname = TSD_TEXT("unknown"), *progname = TSD_TEXT("unkonwn");
 	int year, mon, day, hour, min, sec;
@@ -144,12 +145,15 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	TSDCHAR tn_str[20], year_str[5], mon_str[3], day_str[3], hour_str[3], min_str[3], sec_str[3];
 	TSDCHAR mon_str0[3], day_str0[3], hour_str0[3], min_str0[3], sec_str0[3];
 	TSDCHAR v_pid_str[8], a_pid_str[8], eid_str[8], tsid_str[8], nid_str[8], sid_str[8];
+	TSDCHAR retcode_name[MAX_PIPECMDS][8], retcode[MAX_PIPECMDS][16];
+	TSDCHAR cmdresult_name[MAX_PIPECMDS][8], cmdresult[MAX_PIPECMDS][16];
 	time_t t;
 	struct tm lt;
 	int64_t timenum;
-	tsdstr_replace_set_t sets[32];
+	tsdstr_replace_set_t sets[32+MAX_PIPECMDS];
 	int n_sets = 0;
 	int v_pid, a_pid;
+	int i;
 
 	if (PGINFO_READY(proginfo->status)) {
 		chname = proginfo->event_name.str;
@@ -222,33 +226,44 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		a_pid_str[0] = TSD_NULLCHAR;
 	}
 
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%Q%"), TSD_TEXT("\""));
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%BS%"), TSD_TEXT("\\"));
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%%"), TSD_TEXT("%"));
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILE%"), fname);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FILENE%"), fname_base);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FNAME%"), fname_r);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%FNAMENE%"), fname_base_r);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%CH%"), chname);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PROG%"), progname);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%TN%"), tn_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%Y%"), year_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%M%"), mon_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%D%"), day_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%h%"), hour_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%m%"), min_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%s%"), sec_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%MM%"), mon_str0);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%DD%"), day_str0);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%hh%"), hour_str0);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%mm%"), min_str0);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%ss%"), sec_str0);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_V%"), v_pid_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%PID_A%"), a_pid_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%EVID%"), eid_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%TSID%"), tsid_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%NID%"), nid_str);
-	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("%SID%"), sid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{Q}"), TSD_TEXT("\""));
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{BS}"), TSD_TEXT("\\"));
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{{"), TSD_TEXT("{"));
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{FILE}"), fname);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{FILENE}"), fname_base);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{FNAME}"), fname_r);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{FNAMENE}"), fname_base_r);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{CH}"), chname);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{PROG}"), progname);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{TN}"), tn_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{Y}"), year_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{M}"), mon_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{D}"), day_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{h}"), hour_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{m}"), min_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{s}"), sec_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{MM}"), mon_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{DD}"), day_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{hh}"), hour_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{mm}"), min_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{ss}"), sec_str0);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{PID_V}"), v_pid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{PID_A}"), a_pid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{EVID}"), eid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{TSID}"), tsid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{NID}"), nid_str);
+	TSD_REPLACE_ADD_SET(sets, n_sets, TSD_TEXT("{SID}"), sid_str);
+
+	if (ps) {
+		for (i = 0; i < n_pipecmds; i++) {
+			tsd_snprintf(cmdresult_name[i], 8, TSD_TEXT("{RES%d}"), i);
+			tsd_snprintf(retcode_name[i], 8, TSD_TEXT("{RET%d}"), i);
+			tsd_snprintf(cmdresult[i], 16, TSD_TEXT("%d"), ps[i].cmd_result);
+			tsd_snprintf(retcode[i], 16, TSD_TEXT("%d"), (int)ps[i].cmd_retcode);
+			TSD_REPLACE_ADD_SET(sets, n_sets, cmdresult_name[i], cmdresult[i]);
+			TSD_REPLACE_ADD_SET(sets, n_sets, retcode_name[i], retcode[i]);
+		}
+	}
 
 	tsd_strlcpy(arg, cmd->opt, maxlen_arg - 1);
 	tsd_replace_sets(arg, maxlen_arg - 1, sets, n_sets, 0);
@@ -492,6 +507,8 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 
 	WCHAR cmdarg[2048];
 
+	ps->cmd_result = -1;
+	ps->cmd_retcode = 1;
 	ps->used = 0;
 
 	if (prev) {
@@ -555,7 +572,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 	if (pipe_cmd->set_opt) {
 		swprintf(cmdarg, 2048 - 1, L"\"%s\" ", pipe_cmd->cmd);
 		size_t len = tsd_strlen(cmdarg);
-		generate_arg(&cmdarg[len], 2048 - 1 - len, pipe_cmd, fname, proginfo);
+		generate_arg(&cmdarg[len], 2048 - 1 - len, pipe_cmd, fname, proginfo, NULL);
 	} else {
 		swprintf(cmdarg, 2048 - 1, L"\"%s\" \"%s\"", pipe_cmd->cmd, fname);
 	}
@@ -597,7 +614,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 	return 1;
 }
 
-static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_t *proginfo, redirect_pathinfo_t *redirects)
+static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_t *proginfo, redirect_pathinfo_t *redirects, pipestat_t *ps)
 {
 	STARTUPINFO si = { 0 };
 	PROCESS_INFORMATION pi = { 0 };
@@ -614,7 +631,7 @@ static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_
 	if (cmd->set_opt) {
 		swprintf(cmdarg, 2048 - 1, L"\"%s\" ", cmd->cmd);
 		size_t len = tsd_strlen(cmdarg);
-		generate_arg(&cmdarg[len], 2048 - 1 - len, cmd, fname, proginfo);
+		generate_arg(&cmdarg[len], 2048 - 1 - len, cmd, fname, proginfo, ps);
 	} else {
 		swprintf(cmdarg, 2048 - 1, L"\"%s\" \"%s\"", cmd->cmd, fname);
 	}
@@ -778,6 +795,10 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 	int n_args;
 	char *args[32];
 
+	ps->cmd_result = -1;
+	ps->cmd_retcode = 1;
+	ps->used = 0;
+
 	if (prev) {
 		readfd = *prev;
 	} else {
@@ -810,7 +831,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 	}
 
 	if (pipe_cmd->set_opt) {
-		generate_arg(argline, 2048 - 1, pipe_cmd, fname, proginfo);
+		generate_arg(argline, 2048 - 1, pipe_cmd, fname, proginfo, NULL);
 		tsd_strlcpy(argline2, argline, 2048);
 		args[0] = (char*)pipe_cmd->cmd;
 		split_args(argline2, &args[1], &n_args, 32 - 2);
@@ -908,7 +929,7 @@ ERROR1:
 	return ret;
 }
 
-static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t *proginfo, redirect_pathinfo_t *redirects)
+static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t *proginfo, redirect_pathinfo_t *redirects, pipestat_t *ps)
 {
 	int ret;
 	pid_t pid;
@@ -917,7 +938,7 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 	char *args[32];
 
 	if (cmd->set_opt) {
-		generate_arg(argline, 2048 - 1, cmd, fname, proginfo);
+		generate_arg(argline, 2048 - 1, cmd, fname, proginfo, ps);
 		tsd_strlcpy(argline2, argline, 2048);
 		args[0] = (char*)cmd->cmd;
 		split_args(argline2, &args[1], &n_args, 32 - 2);
@@ -1348,6 +1369,8 @@ static int hook_pgoutput(void *param, const uint8_t *buf, const size_t size)
 
 	if (pstat->aborted) {
 		if (check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
+			pstat->cmd_result = -2;
+			pstat->cmd_retcode = retcode;
 			pstat->used = 0;
 		}
 #ifdef TSD_PLATFORM_MSVC
@@ -1410,6 +1433,8 @@ static int check_pipe_child_process(pipestat_t *pstat, int force_close, int rema
 		return 0;
 	}
 	if (check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
+		pstat->cmd_result = pstat->soft_closed;
+		pstat->cmd_retcode = retcode;
 		pstat->used = 0;
 		return 0;
 	}
@@ -1418,6 +1443,8 @@ static int check_pipe_child_process(pipestat_t *pstat, int force_close, int rema
 			pid = pid_of(pstat->child_process);
 			retcode = hard_kill(pstat->child_process, pstat->cmd);
 			rename_redirect_file(pid, &pstat->redirects);
+			pstat->cmd_result = 2;
+			pstat->cmd_retcode = retcode;
 			pstat->used = 0;
 			return 0;
 		} else if (remain_ms < 1*1000 && !pstat->soft_closed) {
@@ -1457,7 +1484,7 @@ static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 	module_stat_t *pstat = (module_stat_t*)stat;
 
 	for (i = 0; i < n_execcmds; i++) {
-		c = exec_cmd(&execcmds[i], pstat->filename, pi, &redirects[n_children]);
+		c = exec_cmd(&execcmds[i], pstat->filename, pi, &redirects[n_children], pstat->pipestats);
 #ifdef TSD_PLATFORM_MSVC
 		if (c != INVALID_HANDLE_VALUE) {
 #else
