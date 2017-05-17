@@ -25,7 +25,7 @@ struct output_status_module_struct {
 struct output_status_prog_struct {
 	unsigned int close_flag1 : 1;
 	unsigned int close_flag2 : 1;
-	const TSDCHAR *fn;
+	TSDCHAR fn[MAX_PATH_LEN];
 	int close_remain;
 	int64_t closetime;
 	proginfo_t final_pi;

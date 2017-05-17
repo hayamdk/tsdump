@@ -403,7 +403,7 @@ void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *er
 	}
 }
 
-const TSDCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
+void default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info, TSDCHAR *fn)
 {
 	int pid;
 	UNREF_ARG(pi);
@@ -415,17 +415,15 @@ const TSDCHAR *default_path_resolver(const proginfo_t *pi, const ch_info_t *ch_i
 	pid = getpid();
 #endif
 
-	TSDCHAR *fname = (TSDCHAR*)malloc(sizeof(TSDCHAR)*MAX_PATH_LEN);
-	tsd_snprintf(fname, MAX_PATH_LEN-1, TSD_TEXT("%"PRId64"_%s_%s_%d.ts"), gettime(), ch_info->tuner_name, ch_info->ch_str, pid);
-	return fname;
+	tsd_snprintf(fn, MAX_PATH_LEN-1, TSD_TEXT("%"PRId64"_%s_%s_%d.ts"), gettime(), ch_info->tuner_name, ch_info->ch_str, pid);
 }
 
-const TSDCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info)
+void do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info, TSDCHAR *fn)
 {
 	if (hook_path_resolver) {
-		return hook_path_resolver(proginfo, ch_info);
+		hook_path_resolver(proginfo, ch_info, fn);
 	} else {
-		return default_path_resolver(proginfo, ch_info);
+		default_path_resolver(proginfo, ch_info, fn);
 	}
 }
 

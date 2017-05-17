@@ -65,4 +65,4 @@ int is_implemented_stream_decoder_stats();
 void do_stream_decoder_stats(void *param);
 void do_stream_decoder_close(void *param);
 void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg);
-const TSDCHAR *do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info);
+void do_path_resolver(const proginfo_t *proginfo, const ch_info_t *ch_info, TSDCHAR *fn);

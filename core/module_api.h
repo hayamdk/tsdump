@@ -129,8 +129,8 @@ typedef enum {
 	typedef int tsd_syserr_t;
 #endif
 
-typedef void(*hook_message_t)(const TSDCHAR*, message_type_t, tsd_syserr_t*, const TSDCHAR*);
-typedef const TSDCHAR *(*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*);
+typedef void (*hook_message_t)(const TSDCHAR*, message_type_t, tsd_syserr_t*, const TSDCHAR*);
+typedef void (*hook_path_resolver_t)(const proginfo_t*, const ch_info_t*, TSDCHAR*);
 
 //typedef void(*hook_stream_splitter)();
 

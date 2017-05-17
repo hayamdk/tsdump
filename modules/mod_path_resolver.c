@@ -114,11 +114,9 @@ END:
 	return;
 }
 
-static const TSDCHAR* hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info)
+static void hook_path_resolver(const proginfo_t *pi, const ch_info_t *ch_info, TSDCHAR *fn)
 {
-	TSDCHAR *fname = (TSDCHAR*)malloc(sizeof(TSDCHAR)*MAX_PATH_LEN);
-	get_fname(fname, pi, ch_info, TSD_TEXT(".ts"));
-	return fname;
+	get_fname(fn, pi, ch_info, TSD_TEXT(".ts"));
 }
 
 static const TSDCHAR* set_dir(const TSDCHAR *param)

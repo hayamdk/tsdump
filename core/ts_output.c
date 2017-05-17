@@ -382,7 +382,6 @@ void init_tos(output_status_stream_t *tos)
 	tos->n_pgos = 0;
 	tos->pgos = (output_status_prog_t*)malloc(MAX_PGOVERLAP * sizeof(output_status_prog_t));
 	for (i = 0; i < MAX_PGOVERLAP; i++) {
-		tos->pgos[i].fn = (TSDCHAR*)malloc(MAX_PATH_LEN*sizeof(TSDCHAR));
 		tos->pgos[i].refcount = 0;
 	}
 
@@ -429,15 +428,7 @@ void close_tos(output_status_stream_t *tos)
 	int i;
 
 	ab_close_buf(tos->ab);
-
-	for (i = 0; i < MAX_PGOVERLAP; i++) {
-		free((TSDCHAR*)tos->pgos[i].fn);
-	}
 	free(tos->pgos);
-
-	//free(tos->th);
-	//free(tos->buf);
-	//free(tos);
 }
 
 void ts_output(output_status_stream_t *tos, int64_t nowtime)
@@ -595,7 +586,7 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 		}
 
 		pgos->initial_pi_status = tos->proginfo->status;
-		pgos->fn = do_path_resolver(tos->proginfo, ch_info); /* ここでch_infoにアクセス */
+		do_path_resolver(tos->proginfo, ch_info, pgos->fn); /* ここでch_infoにアクセス */
 		pgos->client_array = do_pgoutput_create(tos->ab, tos->ab_history, pgos, tos->proginfo, ch_info, actually_start); /* ここでch_infoにアクセス */
 		pgos->closetime = -1;
 		pgos->close_flag1 = 0;
