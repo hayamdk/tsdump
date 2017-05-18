@@ -92,7 +92,7 @@ int ab_first_downstream(ab_buffer_t *ab)
 	return ab_next_downstream(ab, -1);
 }
 
-static void ab_check_close(ab_buffer_t *ab)
+static void check_close(ab_buffer_t *ab)
 {
 	int i, j;
 	ab_downstream_t *ds;
@@ -101,17 +101,20 @@ static void ab_check_close(ab_buffer_t *ab)
 		assert(j < AB_MAX_DOWNSTREAMS);
 		ds = &ab->downstreams[j];
 		if (!ds->in_use) {
-			/* do nothing */
-		} else if (!ds->busy && ds->close_flg && ds->remain_to_close <= 0) {
-			/* close */
-			if (ds->handler.close) {
-				ds->handler.close(ab, ds->param, NULL, 0);
+			continue;
+		} else if (ds->close_flg && ds->remain_to_close <= 0) {
+			if (!ds->busy) {
+				/* close */
+				if (ds->handler.close) {
+					ds->handler.close(ab, ds->param, NULL, 0);
+				}
+				ds->in_use = 0;
+				ab->n_downstreams--;
+				continue;
 			}
-			ds->in_use = 0;
-			ab->n_downstreams--;
-		} else {
-			i++;
+			ds->pos = ab->buf_used;
 		}
+		i++;
 	}
 }
 
@@ -223,7 +226,7 @@ void ab_set_use_retval(ab_buffer_t *ab, int id)
 
 void ab_clear_buf(ab_buffer_t *ab, int require_size)
 {
-	assert(0 <= require_size && require_size <= ab->buf_used);
+	assert(0 <= require_size && require_size <= ab->buf_size);
 
 	int i, j;
 	int clear_size, move_size, skip_size;
@@ -259,6 +262,10 @@ void ab_clear_buf(ab_buffer_t *ab, int require_size)
 		}
 		i++;
 
+		if (ab->downstreams[j].close_flg && ab->downstreams[j].remain_to_close <= 0) {
+			continue;
+		}
+
 		skip_size = clear_size - ab->downstreams[j].pos;
 		if (skip_size < 0) {
 			skip_size = 0;
@@ -270,6 +277,9 @@ void ab_clear_buf(ab_buffer_t *ab, int require_size)
 
 		if (skip_size > 0 && ab->downstreams[j].handler.notify_skip) {
 			ab->downstreams[j].handler.notify_skip(ab, ab->downstreams[j].param, skip_size);
+		}
+		if (skip_size > 0 && ab->downstreams[j].close_flg) {
+			ab->downstreams[j].remain_to_close -= skip_size;
 		}
 	}
 }
@@ -372,7 +382,7 @@ void ab_output_buf(ab_buffer_t *ab)
 		}
 	}
 
-	ab_check_close(ab);
+	check_close(ab);
 }
 
 void ab_close_buf(ab_buffer_t *ab)

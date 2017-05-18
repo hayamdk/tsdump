@@ -49,8 +49,14 @@ static int module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf
 static void module_buffer_notify_skip(ab_buffer_t *gb, void *param, int skip_bytes)
 {
 	UNREF_ARG(gb);
-	UNREF_ARG(param);
-	UNREF_ARG(skip_bytes);
+	output_status_t *status = (output_status_t*)param;
+	status->dropped_bytes += skip_bytes;
+	if (!status->dropped) {
+		status->dropped = 1;
+		output_message(MSG_ERROR, TSD_TEXT("出力が滞っているためドロップが発生しました: %s"),
+			status->parent->module->def->modname);
+	}
+	status->parent->parent->parent->need_clear_buf = 1;
 }
 
 static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
@@ -95,6 +101,10 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 					status->closed = 1;
 					status->parent->refcount--;
 				}
+			}
+			if (status->closed && status->dropped) {
+				output_message(MSG_ERROR, TSD_TEXT("出力中の合計ドロップバイト数: %d bytes (モジュール:%s)"),
+					status->dropped_bytes, status->parent->module->def->modname);
 			}
 		}
 
@@ -177,8 +187,10 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 			output_status_array[j].disconnect_tried = 0;
 			output_status_array[j].close_waiting = 0;
 			output_status_array[j].closed = 0;
+			output_status_array[j].dropped = 0;
 			output_status_array[j].parent = &module_status_array[i];
 			output_status_array[j].param = NULL;
+			output_status_array[j].dropped_bytes = 0;
 			output_status_array[j].downstream_id = ab_connect_downstream_history_backward(
 					buf, &module_buffer_handlers, 188, &output_status_array[j], history
 				);
@@ -396,6 +408,7 @@ void init_tos(output_status_stream_t *tos)
 	tos->pcr_retry_count = 0;
 	tos->last_bufminimize_time = gettime();
 	tos->curr_pgos = NULL;
+	tos->need_clear_buf;
 
 	return;
 }
@@ -425,8 +438,6 @@ void prepare_close_tos(output_status_stream_t *tos)
 
 void close_tos(output_status_stream_t *tos)
 {
-	int i;
-
 	ab_close_buf(tos->ab);
 	free(tos->pgos);
 }
@@ -464,9 +475,15 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 		//ts_minimize_buf(tos);
 		ab_clear_buf(tos->ab, 0);
 		tos->last_bufminimize_time = nowtime;
-	} else if ( nowtime < tos->last_bufminimize_time ) {
-		/* 時刻の巻き戻りに対応 */
-		tos->last_bufminimize_time = nowtime;
+	} else {
+		if (tos->need_clear_buf) {
+			ab_clear_buf(tos->ab, ab_get_history_backward_bytes(tos->ab_history) / 4);
+			tos->need_clear_buf = 0;
+		}
+		if (nowtime < tos->last_bufminimize_time) {
+			/* 時刻の巻き戻りに対応 */
+			tos->last_bufminimize_time = nowtime;
+		}
 	}
 
 	/* ファイル書き出し */

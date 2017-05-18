@@ -7,8 +7,10 @@ struct output_status_struct {
 	unsigned int closed : 1;
 	unsigned int close_waiting : 1;
 	unsigned int disconnect_tried : 1;
+	unsigned int dropped : 1;
 	int64_t closetime;
 	int downstream_id;
+	int dropped_bytes;
 	void *param;
 	output_status_module_t *parent;
 };
@@ -30,33 +32,28 @@ struct output_status_prog_struct {
 	int64_t closetime;
 	proginfo_t final_pi;
 	int initial_pi_status;
-
 	output_status_module_t *client_array;
 	output_status_stream_t *parent;
 	int refcount;
 };
 
 struct output_status_stream_struct {
+	unsigned int need_clear_buf : 1;
 	ab_buffer_t *ab;
 	ab_history_t *ab_history;
-
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
 	int64_t last_checkpi_time;
 	int proginfo_retry_count;
 	int pcr_retry_count;
-
 	int64_t last_bufminimize_time;
-
 	int n_pgos;
 	output_status_prog_t *pgos;
 	int tps_index;
 	int singlemode;
 	int PAT_packet_counter;
 	int dropped_bytes;
-
 	output_status_prog_t *curr_pgos;
-
 };
 
 void init_tos(output_status_stream_t *tos);
