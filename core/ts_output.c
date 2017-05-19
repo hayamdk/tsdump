@@ -408,7 +408,7 @@ void init_tos(output_status_stream_t *tos)
 	tos->pcr_retry_count = 0;
 	tos->last_bufminimize_time = gettime();
 	tos->curr_pgos = NULL;
-	tos->need_clear_buf;
+	tos->need_clear_buf = 0;
 
 	return;
 }
