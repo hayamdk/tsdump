@@ -43,6 +43,7 @@ typedef int my_retcode_t;
 #define PIPE_BLOCK_SIZE		512*1024
 #define CMDEXEC_LIMIT_SEC	120
 #define CMDEXEC_KILL_SEC	30
+#define MAX_KILL_WAIT_MS	100
 
 typedef struct {
 	unsigned int use_stdout : 1;
@@ -1113,16 +1114,13 @@ static void soft_kill(HANDLE h_process)
 
 static my_retcode_t hard_kill(HANDLE h_process, const WCHAR *cmd)
 {
-	int i;
 	my_retcode_t ret;
 	TerminateProcess(h_process, 1);
-	for (i = 0; i < 10; i++) {
-		if (WaitForSingleObject(h_process, 1) == WAIT_OBJECT_0) {
-			GetExitCodeProcess(h_process, &ret);
-			CloseHandle(h_process);
-			output_message(MSG_NOTIFY, L"子プロセスの強制終了(pid=%d, exitcode=%d): %s", pid_of(h_process), ret, cmd);
-			return ret;
-		}
+	if (WaitForSingleObject(h_process, MAX_KILL_WAIT_MS) == WAIT_OBJECT_0) {
+		GetExitCodeProcess(h_process, &ret);
+		CloseHandle(h_process);
+		output_message(MSG_NOTIFY, L"子プロセスの強制終了(pid=%d, exitcode=%d): %s", pid_of(h_process), ret, cmd);
+		return ret;
 	}
 	output_message(MSG_NOTIFY, L"子プロセスの終了を確認できませんでした(pid=%d): %s", pid_of(h_process), cmd);
 	CloseHandle(h_process);
@@ -1149,7 +1147,7 @@ static my_retcode_t hard_kill(pid_t pid, const char *cmd)
 			output_message(MSG_SYSERROR, "子プロセスを強制終了しましたがwaitpidがエラーを返しました(pid=%d): %s", (int)pid, cmd);
 			return 98;
 		}
-		usleep(1000);
+		usleep(1000 * MAX_KILL_WAIT_MS / 10);
 	}
 	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした(pid=%d): %s", (int)pid, cmd);
 	return 99;
@@ -1212,7 +1210,7 @@ static int check_child_process(my_process_handle_t child_process, my_retcode_t *
 static void check_exec_child_processes(const int64_t time_ms, const int timeout_soft, const int timeout_hard)
 {
 	my_retcode_t retcode;
-	int i, j, del;
+	int i, j, del, pid;
 	for (i = 0; i < n_exec_ps; i++) {
 		del = !check_child_process(exec_ps[i].child_process, &retcode, &exec_ps[i].redirects, exec_ps[i].cmd);
 		if (!del && !exec_ps[i].killmode && exec_ps[i].lasttime + timeout_soft < time_ms) {
@@ -1222,10 +1220,11 @@ static void check_exec_child_processes(const int64_t time_ms, const int timeout_
 			exec_ps[i].killmode = 1;
 			exec_ps[i].lasttime = time_ms;
 		} else if (!del && exec_ps[i].killmode && exec_ps[i].lasttime + timeout_hard < time_ms) {
+			pid = pid_of(exec_ps[i].child_process);
 			output_message(MSG_WARNING, TSD_TEXT("子プロセスが%d秒経っても終了しないため強制終了します(pid=%d): %s"),
 				timeout_hard/1000, pid_of(exec_ps[i].child_process), exec_ps[i].cmd);
 			hard_kill(exec_ps[i].child_process, exec_ps[i].cmd);
-			rename_redirect_file(pid_of(exec_ps[i].child_process), &exec_ps[i].redirects);
+			rename_redirect_file(pid, &exec_ps[i].redirects);
 			del = 1;
 		}
 
