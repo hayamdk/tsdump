@@ -340,7 +340,7 @@ void ab_output_buf(ab_buffer_t *ab)
 				remain_unaligned;
 		}
 		assert(max_write_size >= 0);
-		assert(write_size >= remain_unaligned);
+		assert(write_size >= remain_unaligned || (ds->close_flg && ds->remain_to_close <= 0));
 
 		if (max_write_size > 0 && write_size > max_write_size) {
 			write_size = max_write_size/*is aligned*/;
