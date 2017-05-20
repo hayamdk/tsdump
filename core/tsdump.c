@@ -18,6 +18,7 @@
 #include <sys/timeb.h>
 #include <inttypes.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "utils/arib_proginfo.h"
 #include "core/module_api.h"
@@ -246,20 +247,27 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 	COORD new_pos;
 	time_mjd_t time_jst;
 #endif
-	int buf_used;
+	int buf_used, buf_used_sv;
 	double rate;
 
 	if(!tos) {
 		return;
 	}
 
-	ab_get_status(tos->ab, &buf_used);
 #ifdef TSD_PLATFORM_MSVC
 	console_width = save_line(&new_pos);
 	if (console_width < 0) {
 		fprintf(stderr, "console error\r");
 	} else if (console_width == 0) {
 #endif
+		assert(n_tos >= 1);
+		ab_get_status(tos[0].ab, &buf_used);
+		for (i = 1; i < n_tos; i++) {
+			ab_get_status(tos[i].ab, &buf_used_sv);
+			if (buf_used_sv > buf_used) {
+				buf_used = buf_used_sv;
+			}
+		}
 		rate = 100.0 * buf_used / BUFSIZE;
 		tsd_printf(TSD_TEXT("%s buf:%.1f%% \r"), stat, rate);
 		fflush(stdout);
@@ -268,11 +276,12 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
 		for (i = 0; i < n_tos; i++) {
-			backward_size = ab_get_history_backward_bytes(tos->ab_history);
+			ab_get_status(tos[i].ab, &buf_used);
+			backward_size = ab_get_history_backward_bytes(tos[i].ab_history);
 
 			pos_write = buf_used;
-			for (n = ab_first_downstream(tos->ab); n >= 0; n = ab_next_downstream(tos->ab, n)) {
-				ab_get_downstream_status(tos->ab, n, &pos, NULL);
+			for (n = ab_first_downstream(tos[i].ab); n >= 0; n = ab_next_downstream(tos[i].ab, n)) {
+				ab_get_downstream_status(tos[i].ab, n, &pos, NULL);
 				if (pos < pos_write) {
 					pos_write = pos;
 				}
