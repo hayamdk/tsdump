@@ -482,7 +482,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	int64_t total = 0;
 	int64_t subtotal = 0;
 
-	int64_t nowtime, lasttime;
+	int64_t nowtime, lasttime, nowtime_base;
 
 	output_status_stream_t *tos = NULL;
 	int n_tos = 0;
@@ -491,7 +491,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	double tdiff, Mbps=0.0;
 
-	int i, j;
+	int n, i, j;
 	int single_mode = 0;
 
 	int pos;
@@ -512,116 +512,129 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	do_open_stream();
 
 	while ( !termflag ) {
-		nowtime = gettime();
+		nowtime_base = gettime();
 
-		if (n_recv == 0) {
-			/* 前回の取得サイズが0だった場合はストリームの到着を待つ */
-			if (do_stream_generator_wait(generator_stat, 100) < 0) {
-				/* 待ち機能に非対応なストリームジェネレータの場合10ms待つ */
+		/* 最大100回まで連続して取得を試みる */
+		for(n = 0; n < 100; n++) {
+			if (n_recv == 0) {
+				/* 前回の取得サイズが0だった場合はストリームの到着を待つ */
+				if (do_stream_generator_wait(generator_stat, 100) < 0) {
+					/* 待ち機能に非対応なストリームジェネレータの場合10ms待つ */
 #ifdef TSD_PLATFORM_MSVC
-				Sleep(10);
+					Sleep(10);
 #else
-				usleep(10*1000);
+					usleep(10*1000);
 #endif
+				}
 			}
-		}
-		do_stream_generator(generator_stat, &recvbuf, &n_recv);
-		do_encrypted_stream(recvbuf, n_recv);
 
-		do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
-		do_stream(decbuf, n_dec, encrypted);
+			do_stream_generator(generator_stat, &recvbuf, &n_recv);
+			do_encrypted_stream(recvbuf, n_recv);
 
-		add_stream_stats_total_bytes(n_recv);
+			do_stream_decoder(decoder_stat, &decbuf, &n_dec, recvbuf, n_recv);
+			do_stream(decbuf, n_dec, encrypted);
 
-		do_tick(nowtime);
+			add_stream_stats_total_bytes(n_recv);
 
-		int valid_ts_header;
-		int need_default_counter = !(is_implemented_stream_decoder_stats());
+			nowtime = gettime();
 
-		for (i = 0; i < n_dec; i+=188) {
-			packet = &decbuf[i];
-			valid_ts_header = parse_ts_header(packet, &tsh);
+			int valid_ts_header;
+			int need_default_counter = !(is_implemented_stream_decoder_stats());
 
-			if (need_default_counter) {
+			for (i = 0; i < n_dec; i+=188) {
+				packet = &decbuf[i];
+				valid_ts_header = parse_ts_header(packet, &tsh);
+
+				if (need_default_counter) {
+					if (!valid_ts_header) {
+						ts_packet_counter(NULL);
+					} else {
+						ts_packet_counter(&tsh);
+					}
+				}
+
+				if (tsh.transport_scrambling_control) {
+					continue;
+				}
+
 				if (!valid_ts_header) {
-					ts_packet_counter(NULL);
+					if (tsh.valid_sync_byte) {
+						/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+						   PESパケットの規格を要調査 */
+						//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+					} else {
+						output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
+					}
+					continue; /* pass */
+				}
+
+				if (service_list.n_services == 0) {
+					/* PATの取得は初回のみ */
+					parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, pat_handler);
 				} else {
-					ts_packet_counter(&tsh);
+					for (j = 0; j < service_list.n_services; j++) {
+						parse_PMT(packet, &tsh, &service_list.PMT_payloads[j], &service_list.proginfos[j]);
+					}
+					if (!printservice) {
+						printservice = print_services(&service_list);
+						if(printservice) {
+							ts_n_drops = 0;
+							ts_n_total = 0;
+							ts_n_scrambled = 0;
+						}
+					}
 				}
+				parse_PCR(packet, &tsh, &service_list, find_curr_service_pcr_pid);
+				parse_TOT_TDT(packet, &tsh, &service_list.pid0x14, &service_list, tot_handler);
+				parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list, find_curr_service);
+				parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
+				parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
+				parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
 			}
 
-			if (tsh.transport_scrambling_control) {
-				continue;
-			}
-
-			if (!valid_ts_header) {
-				if (tsh.valid_sync_byte) {
-					/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
-					   PESパケットの規格を要調査 */
-					//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
-				} else {
-					output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
+			//tc_start("bufcopy");
+			if ( single_mode ) { /* 単一書き出しモード */
+				/* tosを生成 */
+				if ( ! tos ) {
+					n_tos = param_n_services = 1;
+					tos = (output_status_stream_t*)malloc(1 * sizeof(output_status_stream_t));
+					init_tos(tos);
+					tos->proginfo = &service_list.proginfos[0];
 				}
-				continue; /* pass */
-			}
 
-			if (service_list.n_services == 0) {
-				/* PATの取得は初回のみ */
-				parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, pat_handler);
-			} else {
-				for (j = 0; j < service_list.n_services; j++) {
-					parse_PMT(packet, &tsh, &service_list.PMT_payloads[j], &service_list.proginfos[j]);
-				}
-				if (!printservice) {
-					printservice = print_services(&service_list);
-					if(printservice) {
-						ts_n_drops = 0;
-						ts_n_total = 0;
-						ts_n_scrambled = 0;
+				/* パケットをバッファにコピー */
+				ab_input_buf(tos->ab, decbuf, n_dec);
+
+			} else {  /* サービスごと書き出しモード */
+				/* パケットを処理 */
+				for (pos = 0; pos < (int)n_dec; pos += 188) {
+					packet = &decbuf[pos];
+
+					/* PAT, PMTを取得 */
+					//parse_ts_packet(&tps, packet);
+
+					/* tosを生成 */
+					if ( ! tos && service_list.pid0x00.stat == PAYLOAD_STAT_FINISHED ) {
+						n_tos = create_tos_per_service(&tos, &service_list, ch_info);
+					}
+
+					/* サービスごとにパケットをバッファにコピー */
+					for (i = 0; i < n_tos; i++) {
+						copy_current_service_packet(&tos[i], &service_list, packet);
 					}
 				}
 			}
-			parse_PCR(packet, &tsh, &service_list, find_curr_service_pcr_pid);
-			parse_TOT_TDT(packet, &tsh, &service_list.pid0x14, &service_list, tot_handler);
-			parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list, find_curr_service);
-			parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
-			parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
-			parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
+
+			subtotal += n_dec;
+			total += n_dec;
+
+			if (n_recv == 0 || nowtime - nowtime_base > 50) {
+				break;
+			}
+			//tc_end();
 		}
 
-		//tc_start("bufcopy");
-		if ( single_mode ) { /* 単一書き出しモード */
-			/* tosを生成 */
-			if ( ! tos ) {
-				n_tos = param_n_services = 1;
-				tos = (output_status_stream_t*)malloc(1 * sizeof(output_status_stream_t));
-				init_tos(tos);
-				tos->proginfo = &service_list.proginfos[0];
-			}
-
-			/* パケットをバッファにコピー */
-			ab_input_buf(tos->ab, decbuf, n_dec);
-
-		} else {  /* サービスごと書き出しモード */
-			/* パケットを処理 */
-			for (pos = 0; pos < (int)n_dec; pos += 188) {
-				packet = &decbuf[pos];
-
-				/* PAT, PMTを取得 */
-				//parse_ts_packet(&tps, packet);
-
-				/* tosを生成 */
-				if ( ! tos && service_list.pid0x00.stat == PAYLOAD_STAT_FINISHED ) {
-					n_tos = create_tos_per_service(&tos, &service_list, ch_info);
-				}
-
-				/* サービスごとにパケットをバッファにコピー */
-				for (i = 0; i < n_tos; i++) {
-					copy_current_service_packet(&tos[i], &service_list, packet);
-				}
-			}
-		}
-		//tc_end();
+		do_tick(nowtime);
 
 		//tc_start("output");
 		for (i = 0; i < n_tos; i++) {
@@ -667,9 +680,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 			}
 		}
-
-		subtotal += n_dec;
-		total += n_dec;
 	}
 
 	do_close_stream();
