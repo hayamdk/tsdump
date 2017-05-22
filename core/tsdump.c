@@ -32,9 +32,6 @@
 #include "utils/path.h"
 #include "core/default_decoder.h"
 
-//#define HAVE_TIMECALC_DECLARATION
-//#include "timecalc.h"
-
 int BUFSIZE = BUFSIZE_DEFAULT * 1024 * 1024;
 int OVERLAP_SEC = OVERLAP_SEC_DEFAULT;
 int CHECK_INTERVAL = CHECK_INTERVAL_DEFAULT;
@@ -592,7 +589,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
 			}
 
-			//tc_start("bufcopy");
 			if ( single_mode ) { /* 単一書き出しモード */
 				/* tosを生成 */
 				if ( ! tos ) {
@@ -631,18 +627,14 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			if (n_recv == 0 || nowtime - nowtime_base > 50) {
 				break;
 			}
-			//tc_end();
 		}
 
 		do_tick(nowtime);
 
-		//tc_start("output");
 		for (i = 0; i < n_tos; i++) {
 			ts_output(&tos[i], nowtime);
 		}
-		//tc_end();
 
-		//tc_start("proginfo");
 		/* 定期的に番組情報をチェック */
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
 
@@ -664,9 +656,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 			}
 
-			//tc_start("printbuf");
 			print_stat(tos, n_tos, ch_info);
-			//tc_end();
 
 			/* 溢れたバイト数を表示 */
 			for (i = 0; i < n_tos; i++) {
@@ -712,7 +702,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	}
 	do_close_module();
 	free(tos);
-	//tc_report_id(123);
 }
 
 #ifdef TSD_PLATFORM_MSVC
