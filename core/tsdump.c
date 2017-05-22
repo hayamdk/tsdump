@@ -40,7 +40,7 @@ int OVERLAP_SEC = OVERLAP_SEC_DEFAULT;
 int CHECK_INTERVAL = CHECK_INTERVAL_DEFAULT;
 int MAX_PGOVERLAP = MAX_PGOVERLAP_DEFAULT;
 int MAX_OUTPUT_DELAY_SEC = 120;
-int MAX_CLOSE_DELAY_SEC = 10;
+int MAX_CLOSE_DELAY_SEC = 30;
 
 static volatile int termflag = 0;
 static volatile int termwaiting = 0;
@@ -68,8 +68,8 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl)
 	}
 	t = gettime();
 	while (!termedflag) {
-		if (gettime() - t > 1000*10) {
-			/* 10秒以上経過したら諦めて出る */
+		if (gettime() - t > 1000*20) {
+			/* 20秒以上経過したら諦めて出る */
 			output_message(MSG_NOTIFY, TSD_TEXT("\nモジュールのクローズに時間がかかっているため強制終了します"));
 			break;
 		}
@@ -240,14 +240,14 @@ void clear_line()
 void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
-	int n, i, backward_size, console_width, width, pos_write, pos;
+	int n, backward_size, console_width, width, pos_write, pos;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
 	COORD new_pos;
 	time_mjd_t time_jst;
 #endif
-	int buf_used, buf_used_sv;
+	int i, buf_used, buf_used_sv;
 	double rate;
 
 	if(!tos) {

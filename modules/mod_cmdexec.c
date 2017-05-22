@@ -1122,7 +1122,7 @@ static my_retcode_t hard_kill(HANDLE h_process, const WCHAR *cmd)
 		output_message(MSG_NOTIFY, L"子プロセスの強制終了(pid=%d, exitcode=%d): %s", pid_of(h_process), ret, cmd);
 		return ret;
 	}
-	output_message(MSG_NOTIFY, L"子プロセスの終了を確認できませんでした(pid=%d): %s", pid_of(h_process), cmd);
+	output_message(MSG_NOTIFY, L"子プロセスを強制終了しましたが終了状態を確認できませんでした(pid=%d): %s", pid_of(h_process), cmd);
 	CloseHandle(h_process);
 	return 99;
 }
@@ -1149,7 +1149,7 @@ static my_retcode_t hard_kill(pid_t pid, const char *cmd)
 		}
 		usleep(1000 * MAX_KILL_WAIT_MS / 10);
 	}
-	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了を確認できませんでした(pid=%d): %s", (int)pid, cmd);
+	output_message(MSG_ERROR, "子プロセスを強制終了しましたがwaitpidで終了状態を確認できませんでした(pid=%d): %s", (int)pid, cmd);
 	return 99;
 }
 
@@ -1446,9 +1446,9 @@ static int check_pipe_child_process(pipestat_t *pstat, int force_close, int rema
 			pstat->cmd_retcode = retcode;
 			pstat->used = 0;
 			return 0;
-		} else if (remain_ms < 1*1000 && !pstat->soft_closed) {
+		} else if (remain_ms <= 0) {
 			pstat->soft_closed = 1;
-			output_message(MSG_ERROR, TSD_TEXT("子プロセスの終了を試みます(pid=%d): %s"),
+			output_message(MSG_WARNING, TSD_TEXT("子プロセスの終了を試みます(pid=%d): %s"),
 				pid_of(pstat->child_process), pstat->cmd);
 			soft_kill(pstat->child_process);
 		}

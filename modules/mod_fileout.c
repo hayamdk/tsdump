@@ -306,8 +306,7 @@ static int hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 #ifdef TSD_PLATFORM_MSVC
 	if (fos->write_busy) {
 		output_message(MSG_ERROR, TSD_TEXT("ファイルIOが完了しないうちに新たなファイルIOを発行しました"));
-		assert(1);
-		return 1;
+		assert(0); // should never come here
 	}
 	memcpy(fos->writebuf, buf, size);
 	fos->write_busy = 1;

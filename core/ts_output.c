@@ -26,6 +26,154 @@
 
 //#include "timecalc.h"
 
+int ts_is_mypid(unsigned int pid, output_status_stream_t *tos, ts_service_list_t *service_list)
+{
+	int i, j, found = 0, my = 0;
+	for (i = 0; i < service_list->n_services; i++) {
+		if (pid == service_list->PMT_payloads[i].pid ) {
+			if (i == tos->tps_index) {
+				my = 1;
+			} else {
+				found = 1;
+			}
+		}
+		for (j = 0; j < service_list->proginfos[i].n_service_pids; j++) {
+			if (pid == service_list->proginfos[i].service_pids[j].pid) {
+				if (i == tos->tps_index) {
+					my = 1;
+				} else {
+					found = 1;
+				}
+			}
+		}
+	}
+	return found * 2 + my;
+}
+
+int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsigned int target_sid, unsigned int continuity_counter)
+{
+	ts_header_t tsh;
+	int payload_pos, table_pos, section_len, n;
+
+	if (!parse_ts_header(old_packet, &tsh)) {
+		if (tsh.valid_sync_byte) {
+			/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+				PESパケットの規格を要調査 */
+			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+			return 0; /* pass */
+		} else {
+			output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
+			return 0; /* pass */
+		}
+	}
+
+	/* 複数パケットにまたがるPATには未対応 */
+	if (!tsh.payload_unit_start_indicator) {
+		return 0; /* pass */
+	}
+
+	/* 不正なパケットかどうかをチェック */
+	section_len = ts_get_section_length(old_packet, &tsh);
+	if (section_len < 0) {
+		output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload pos!"));
+		return 0; /* pass */
+	}
+	payload_pos = tsh.payload_data_pos;
+	table_pos = payload_pos + 8 + 4;
+	n = (section_len - 5 - 4 - 4) / 4;
+	if ( table_pos + 8 > 188 || n <= 0 || table_pos + n*4 + 2 > 188 ) {
+		output_message(MSG_PACKETERROR, TSD_TEXT("Invalid packet!"));
+		return 0; /* pass */
+	}
+
+	memcpy(new_packet, old_packet, 188);
+
+	int i;
+	unsigned int sid;
+
+	uint32_t crc32_set;
+
+	for (i = 0; i < n; i++) {
+		sid = new_packet[table_pos + i * 4] * 256 + new_packet[table_pos + i * 4 + 1];
+		if (sid == target_sid) {
+			memmove(&new_packet[table_pos], &new_packet[table_pos + i * 4], 4);
+			break;
+		}
+	}
+	/* set new section_length */
+	new_packet[payload_pos + 1] = new_packet[payload_pos + 1] & 0xf0;
+	new_packet[payload_pos + 2] = 5 + 8 + 4;
+
+	/* set new CRC32 */
+	crc32_set = crc32(&new_packet[payload_pos], 8 + 4 + 4);
+	new_packet[table_pos + 4] = (crc32_set / 0x1000000) & 0xFF;
+	new_packet[table_pos + 4 + 1] = (crc32_set / 0x10000) & 0xFF;
+	new_packet[table_pos + 4 + 2] = (crc32_set / 0x100) & 0xFF;
+	new_packet[table_pos + 4 + 3] = crc32_set & 0xFF;
+
+	/* set new continuity_counter */
+	new_packet[3] = (new_packet[3] & 0xF0) + (continuity_counter & 0x0F);
+
+	return 1;
+}
+
+void require_a_few_buffer(ab_buffer_t *ab, ab_history_t *history)
+{
+	int clearsize = ab_get_history_backward_bytes(history) / 4;
+	if (clearsize > (int)((float)BUFSIZE * 0.9)) {
+		clearsize = (int)((float)BUFSIZE * 0.9);
+	} else if (clearsize < (int)((float)BUFSIZE * 0.1)) {
+		clearsize = (int)((float)BUFSIZE * 0.1);
+	}
+	ab_clear_buf(ab, clearsize);
+}
+
+void copy_current_service_packet(output_status_stream_t *tos, ts_service_list_t *service_list, const uint8_t *packet)
+{
+	unsigned int pid;
+	int ismypid, buf_used, cleared = 0;
+	uint8_t new_packet[188];
+	const uint8_t *p;
+	ts_header_t tsh;
+
+	if (!parse_ts_header(packet, &tsh)) {
+		if (tsh.valid_sync_byte) {
+			/* PESパケットでここに来る場合があるので警告はひとまずOFF  e.g. NHK BS1
+				PESパケットの規格を要調査 */
+			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
+		} else {
+			output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
+			return;
+		}
+	}
+
+	pid = tsh.pid;
+	ismypid = ts_is_mypid(pid, tos, service_list);
+	if (pid == 0) {
+		/* PATの内容を当該サービスだけにする */
+		if ( !ts_simplify_PAT_packet(new_packet, packet, service_list->proginfos[tos->tps_index].service_id, tos->PAT_packet_counter) ) {
+			return;
+		}
+		p = new_packet;
+		tos->PAT_packet_counter++;
+	} else if (ismypid != 2) { /* 他サービス"のみ"に属するパケットはスルー */
+		p = packet;
+	} else {
+		return;
+	}
+
+	ab_get_status(tos->ab, &buf_used);
+	if (buf_used > BUFSIZE - 188) {
+		require_a_few_buffer(tos->ab, tos->ab_history);
+		cleared = 1;
+	}
+	ab_input_buf(tos->ab, p, 188);
+	if (cleared) {
+		tos->need_clear_buf = 0;
+		tos->last_bufminimize_time = gettime();
+	}
+}
+
 void do_pgoutput_postclose(output_status_prog_t *pgos)
 {
 	int i;
@@ -40,6 +188,9 @@ static int module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf
 {
 	UNREF_ARG(gb);
 	output_status_t *status = (output_status_t*)param;
+	if (status->close_waiting || status->disconnect_tried) {
+		return 0;
+	}
 	if (status->parent->module->hooks.hook_pgoutput) {
 		return status->parent->module->hooks.hook_pgoutput(status->param, buf, size);
 	}
@@ -65,6 +216,7 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 	output_status_t *status, *to_free;
 
 	int i, j, ret, remain_ms;
+	int64_t nowtime = gettime();
 
 	assert(pgos->close_flag1);
 	if (pgos->refcount <= 0) {
@@ -83,15 +235,20 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 			}
 			if (status->close_waiting) {
 				if (mod_status->module->hooks.hook_pgoutput_forceclose) {
-					remain_ms = (int)(status->closetime + MAX_CLOSE_DELAY_SEC * 1000 - gettime());
-					if (remain_ms > 0) {
+					remain_ms = (int)(status->closetime + MAX_CLOSE_DELAY_SEC * 1000 / 2 - nowtime);
+					if (!status->soft_closed) {
+						if (remain_ms <= 0) {
+							status->soft_closed = 1;
+							remain_ms = 0;
+							status->closetime = nowtime;
+						}
 						ret = mod_status->module->hooks.hook_pgoutput_forceclose(
 							status->param, 0, remain_ms);
 						if (!ret) {
 							status->closed = 1;
 							status->parent->refcount--;
 						}
-					} else {
+					} else if(remain_ms <= 0) {
 						/* forcibly close!!! */
 						mod_status->module->hooks.hook_pgoutput_forceclose(status->param, 1, 0);
 						status->closed = 1;
@@ -101,10 +258,10 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 					status->closed = 1;
 					status->parent->refcount--;
 				}
-			}
-			if (status->closed && status->dropped) {
-				output_message(MSG_ERROR, TSD_TEXT("出力中の合計ドロップバイト数: %d bytes (モジュール:%s)"),
-					status->dropped_bytes, status->parent->module->def->modname);
+				if (status->closed && status->dropped) {
+					output_message(MSG_ERROR, TSD_TEXT("出力中の合計ドロップバイト数: %d bytes (モジュール:%s)"),
+						status->dropped_bytes, status->parent->module->def->modname);
+				}
 			}
 		}
 
@@ -186,6 +343,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 		for (j = 0; j < n; j++) {
 			output_status_array[j].disconnect_tried = 0;
 			output_status_array[j].close_waiting = 0;
+			output_status_array[j].soft_closed = 0;
 			output_status_array[j].closed = 0;
 			output_status_array[j].dropped = 0;
 			output_status_array[j].parent = &module_status_array[i];
@@ -247,7 +405,9 @@ void do_pgoutput_close1(output_status_prog_t *pgos)
 		if (pgos->client_array[i].n_clients > 0) {
 			/* 出力を行っているモジュールはストリームのcloseフックを経由してモジュールのフックを呼び出す */
 			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
-				if (pgos->client_array[i].client_array[j].downstream_id >= 0) {
+				if (pgos->client_array[i].client_array[j].downstream_id >= 0 &&
+						/* ↓能動的に切断する前にabからクローズされている場合は除外 */
+						!pgos->client_array[i].client_array[j].close_waiting) {
 					ab_disconnect_downstream(pgos->parent->ab, 
 						pgos->client_array[i].client_array[j].downstream_id, 0);
 				}
@@ -419,7 +579,7 @@ void prepare_close_tos(output_status_stream_t *tos)
 	int i, j;
 
 	MAX_OUTPUT_DELAY_SEC = 5;
-	MAX_CLOSE_DELAY_SEC = 5;
+	MAX_CLOSE_DELAY_SEC = 10;
 
 	/* flag close to all outputs */
 	for (i = j = 0; i < tos->n_pgos; j++) {
@@ -477,8 +637,9 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 		tos->last_bufminimize_time = nowtime;
 	} else {
 		if (tos->need_clear_buf) {
-			ab_clear_buf(tos->ab, ab_get_history_backward_bytes(tos->ab_history) / 4);
+			require_a_few_buffer(tos->ab, tos->ab_history);
 			tos->need_clear_buf = 0;
+			tos->last_bufminimize_time = nowtime;
 		}
 		if (nowtime < tos->last_bufminimize_time) {
 			/* 時刻の巻き戻りに対応 */
