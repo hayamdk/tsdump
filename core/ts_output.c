@@ -711,7 +711,7 @@ void check_stream_timeinfo(output_status_stream_t *tos)
 
 void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
-	int i, j, actually_start = 0;
+	int i, actually_start = 0;
 	time_mjd_t curr_time;
 	time_offset_t offset;
 	output_status_prog_t *pgos;
@@ -738,15 +738,6 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 			final_pi = &tos->last_proginfo;
 		}
 
-		/* endフックを呼び出す */
-		for (i = j = 0; i < tos->n_pgos; j++) {
-			assert(j < MAX_PGOVERLAP);
-			if (tos->pgos[j].refcount > 0) {
-				do_pgoutput_end(tos->pgos[j].client_array, final_pi);
-				i++;
-			}
-		}
-
 		/* 追加すべきpgosのスロットを探索 */
 		pgos = NULL;
 		for (i = 0; i <= tos->n_pgos; i++) {
@@ -762,6 +753,8 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 			actually_start = 1;
 			tos->curr_pgos->closetime = nowtime + OVERLAP_SEC * 1000;
 			tos->curr_pgos->final_pi = *final_pi;
+			/* endフックを呼び出す */
+			do_pgoutput_end(tos->curr_pgos->client_array, final_pi);
 		}
 
 		pgos->initial_pi_status = tos->proginfo->status;
