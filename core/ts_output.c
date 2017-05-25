@@ -353,7 +353,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 					buf, &module_buffer_handlers, 188, &output_status_array[j], history
 				);
 			if (output_status_array[j].downstream_id < 0) {
-				output_message(MSG_ERROR, TSD_TEXT("バッファに対して下流ストリームを追加できませんでした: モジュール:%s"), modules[i].def->modname);
+				output_message(MSG_ERROR, TSD_TEXT("バッファに接続できなかったため出力を行いません: モジュール:%s"), modules[i].def->modname);
 				continue;
 			}
 			ab_set_maxsize(buf, output_status_array[j].downstream_id, modules[i].hooks.output_block_size);
