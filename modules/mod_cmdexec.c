@@ -1005,7 +1005,6 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 
 static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi, const ch_info_t *ch_info_t, const int actually_start, int *n_output)
 {
-	UNREF_ARG(fname);
 	UNREF_ARG(pi);
 	UNREF_ARG(ch_info_t);
 	UNREF_ARG(actually_start);
@@ -1044,8 +1043,6 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 #endif
 		next = 0, *p_next;
 	int i;
-	UNREF_ARG(fname);
-	UNREF_ARG(pi);
 	UNREF_ARG(ch_info_t);
 	UNREF_ARG(actually_start);
 	module_stat_t *ms = (module_stat_t*)param;

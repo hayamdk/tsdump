@@ -61,11 +61,7 @@ void init_tos(output_status_stream_t *tos);
 void close_tos(output_status_stream_t *tos);
 void prepare_close_tos(output_status_stream_t *tos);
 void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info);
-//void ts_minimize_buf(output_status_stream_t *tos);
-//void ts_require_buf(output_status_stream_t *tos, int require);
 void ts_output(output_status_stream_t *tos, int64_t nowtime);
-//int ts_wait_pgoutput(output_status_stream_t *tos);
-//void ts_check_pgoutput(output_status_stream_t *tos);
 int create_tos_per_service(output_status_stream_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);
 
 int ts_is_mypid(unsigned int pid, output_status_stream_t *tos, ts_service_list_t *service_list);
