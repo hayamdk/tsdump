@@ -561,7 +561,6 @@ void init_tos(output_status_stream_t *tos)
 	tos->ab = ab_create(BUFSIZE);
 	ret = ab_set_history(tos->ab, &tos->ab_history, CHECK_INTERVAL, OVERLAP_SEC * 1000);
 	assert(!ret);
-	tos->dropped_bytes = 0;
 
 	init_proginfo(&tos->last_proginfo);
 	tos->last_checkpi_time = gettime();

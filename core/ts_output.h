@@ -53,7 +53,6 @@ struct output_status_stream_struct {
 	int tps_index;
 	int singlemode;
 	int PAT_packet_counter;
-	int dropped_bytes;
 	output_status_prog_t *curr_pgos;
 };
 

@@ -657,18 +657,6 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			}
 
 			print_stat(tos, n_tos, ch_info);
-
-			/* 溢れたバイト数を表示 */
-			for (i = 0; i < n_tos; i++) {
-				if (tos[i].dropped_bytes > 0) {
-					if (n_tos > 1) {
-						output_message(MSG_ERROR, TSD_TEXT("バッファフルのためデータが溢れました(サービス%d, %dバイト)"), tos[i].proginfo->service_id, tos[i].dropped_bytes);
-					} else {
-						output_message(MSG_ERROR, TSD_TEXT("バッファフルのためデータが溢れました(%dバイト)"), tos[i].dropped_bytes);
-					}
-					tos[i].dropped_bytes = 0;
-				}
-			}
 		}
 	}
 
