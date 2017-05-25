@@ -430,17 +430,18 @@ void do_pgoutput_close2(output_status_prog_t *pgos)
 {
 	int i, j;
 	for (i = 0; i < n_modules; i++) {
-		if (pgos->client_array[i].n_clients > 0) {
-			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
-				if (pgos->client_array[i].client_array[j].downstream_id < 0 ||
-						pgos->client_array[i].client_array[j].close_waiting ||
-						pgos->client_array[i].client_array[j].disconnect_tried ) {
-					continue;
-				}
-				ab_disconnect_downstream(pgos->parent->ab,
-					pgos->client_array[i].client_array[j].downstream_id, 1);
-				pgos->client_array[i].client_array[j].disconnect_tried = 1;
+		if (pgos->client_array[i].n_clients <= 0 || pgos->client_array[i].refcount <= 0) {
+			continue;
+		}
+		for (j = 0; j < pgos->client_array[i].n_clients; j++) {
+			if (pgos->client_array[i].client_array[j].downstream_id < 0 ||
+					pgos->client_array[i].client_array[j].close_waiting ||
+					pgos->client_array[i].client_array[j].disconnect_tried ) {
+				continue;
 			}
+			ab_disconnect_downstream(pgos->parent->ab,
+				pgos->client_array[i].client_array[j].downstream_id, 1);
+			pgos->client_array[i].client_array[j].disconnect_tried = 1;
 		}
 	}
 }
