@@ -113,6 +113,4 @@ static inline int64_t timenumnow()
 	return timenumtt(t);
 }
 
-extern int param_nowait;
-
 void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg);
