@@ -10,6 +10,8 @@
 #include <sys/time.h>
 #endif
 
+#define AB_MAX_DOWNSTREAMS	64
+
 #include "advanced_buffer.h"
 
 struct ab_downstream_struct {

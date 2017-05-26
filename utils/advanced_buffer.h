@@ -1,5 +1,3 @@
-#define AB_MAX_DOWNSTREAMS	32
-
 typedef struct ab_buffer_struct ab_buffer_t;
 typedef struct ab_downstream_struct ab_downstream_t;
 typedef struct ab_history_struct ab_history_t;
