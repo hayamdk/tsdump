@@ -578,7 +578,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 		swprintf(cmdarg, 2048 - 1, L"\"%s\" \"%s\"", pipe_cmd->cmd, fname);
 	}
 
-	if (!CreateProcess(pipe_cmd->cmd, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+	if (!CreateProcess(NULL, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
 		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess): %s", pipe_cmd->cmd);
 		CloseHandle(h_read);
 		if (!prev) {
@@ -661,7 +661,7 @@ static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_
 		redirects->timenum = timenumnow();
 	}
 
-	if (!CreateProcess(cmd->cmd, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+	if (!CreateProcess(NULL, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
 		output_message(MSG_SYSERROR, L"子プロセスの生成に失敗(CreateProcess): %s", cmdarg);
 		return INVALID_HANDLE_VALUE;
 	}
