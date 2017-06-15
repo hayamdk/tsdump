@@ -829,6 +829,26 @@ static const TSDCHAR* set_pgmargin(const TSDCHAR *param)
 	return NULL;
 }
 
+static const TSDCHAR* set_output_delay(const TSDCHAR *param)
+{
+	int od = tsd_atoi(param);
+	if (od <= 0) {
+		return TSD_TEXT("出力の最大遅延時間に不正な値が指定されました");
+	}
+	MAX_OUTPUT_DELAY_SEC = od;
+	return NULL;
+}
+
+static const TSDCHAR* set_close_delay(const TSDCHAR *param)
+{
+	int cd = tsd_atoi(param);
+	if (cd <= 0) {
+		return TSD_TEXT("終了処理の最大遅延時間に不正な値が指定されました");
+	}
+	MAX_CLOSE_DELAY_SEC = cd;
+	return NULL;
+}
+
 void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg)
 {
 	const TSDCHAR *msgtype_str = TSD_TEXT("");
@@ -896,6 +916,8 @@ static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--bufsize"), TSD_TEXT("バッファサイズを指定(MiB)"), 1, set_bufsize },
 	{ TSD_TEXT("--pginterval"), TSD_TEXT("番組情報チェックのインターバル(ms)"), 1, set_pginterval },
 	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 1, set_pgmargin },
+	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("出力の最大遅延時間(sec)"), 1, set_output_delay },
+	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("終了処理の最大遅延時間(sec)"), 1, set_close_delay },
 	{ NULL },
 };
 
