@@ -57,6 +57,7 @@ typedef struct {
 	unsigned int used : 1;
 	unsigned int soft_closed : 1;
 	unsigned int aborted : 1;
+	unsigned int no_pipe : 1;
 #ifdef TSD_PLATFORM_MSVC
 	unsigned int write_busy : 1;
 	OVERLAPPED ol;
@@ -80,10 +81,11 @@ typedef struct {
 } module_stat_t;
 
 typedef struct {
+	unsigned int set_opt : 1;
+	unsigned int connecting : 1;
+	unsigned int no_pipe : 1;
 	TSDCHAR cmd[MAX_PATH_LEN];
 	TSDCHAR opt[2048];
-	int set_opt;
-	int connecting;
 } cmd_opt_t;
 
 typedef struct {
@@ -502,7 +504,7 @@ static int create_pipe2(HANDLE *h_read, HANDLE *h_write)
 
 static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fname, const proginfo_t *proginfo, const HANDLE *prev, HANDLE *next)
 {
-	HANDLE h_pipe = INVALID_HANDLE_VALUE, h_read, h_write, h_error;
+	HANDLE h_pipe = INVALID_HANDLE_VALUE, h_read = INVALID_HANDLE_VALUE, h_write, h_error;
 	STARTUPINFO si = {0};
 	PROCESS_INFORMATION pi = {0};
 
@@ -514,7 +516,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 
 	if (prev) {
 		h_read = *prev;
-	} else {
+	} else if (!ps->no_pipe) {
 		if (!create_pipe1(&h_read, &h_pipe)) {
 			return 0;
 		}
@@ -522,7 +524,9 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 
 	if (next) {
 		if (!create_pipe2(next, &h_write)) {
-			CloseHandle(h_read);
+			if (!ps->no_pipe) {
+				CloseHandle(h_read);
+			}
 			if (!prev) {
 				CloseHandle(h_pipe);
 			}
@@ -547,7 +551,9 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 
 	si.cb = sizeof(STARTUPINFO);
 	si.dwFlags = STARTF_USESTDHANDLES;
-	si.hStdInput = h_read;
+	if (!ps->no_pipe) {
+		si.hStdInput = h_read;
+	}
 	/* 以下の2つに0を指定することで子プロセスのコンソールにカーソルを合わせても親プロセスのコンソールがブロックしない */
 	/* 定義済みの挙動なのかは未調査 */
 	if (next || ps->redirects.use_stdout) {
@@ -802,7 +808,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 
 	if (prev) {
 		readfd = *prev;
-	} else {
+	} else if(!ps->no_pipe) {
 		if (!create_pipe1(&readfd, &writefd)) {
 			goto ERROR1;
 		}
@@ -849,11 +855,13 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 		goto ERROR3;
 	} else if ( pid == 0 ) {
 		/* child */
-		if (!prev) {
-			close(writefd);
+		if (!ps->no_pipe) {
+			if (!prev) {
+				close(writefd);
+			}
+			dup2(readfd, STDIN_FILENO);
+			close(readfd);
 		}
-		dup2(readfd, STDIN_FILENO);
-		close(readfd);
 
 		if (next) {
 			dup2(conn_writefd, STDOUT_FILENO);
@@ -891,7 +899,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 		goto ERROR3;
 	}
 
-	if (prev) {
+	if (prev || ps->no_pipe) {
 		ps->write_pipe = -1;
 	} else {
 		ps->write_pipe = writefd;
@@ -922,10 +930,12 @@ ERROR3:
 		close(stderrfd);
 	}
 ERROR2:
-	if (!prev && !ret) {
-		close(writefd);
+	if (!ps->no_pipe) {
+		if (!prev && !ret) {
+			close(writefd);
+		}
+		close(readfd);
 	}
-	close(readfd);
 ERROR1:
 	return ret;
 }
@@ -1015,11 +1025,16 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
 
 	for (i = n = 0; i < n_pipecmds; i++) {
+		stat->pipestats[i].no_pipe = 0;
 		if (!connected) {
+			if (pipecmds[i].no_pipe) {
+				stat->pipestats[i].no_pipe = 1;
+			}
 			n++;
 			last_pipe_cmd = i;
 			stat->pipestats[last_pipe_cmd].n_connected_cmds = 0;
 		} else {
+			assert(!pipecmds[i].no_pipe);
 			stat->pipestats[last_pipe_cmd].n_connected_cmds++;
 		}
 		if (pipecmds[i].connecting) {
@@ -1054,6 +1069,7 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 	} else {
 		p_next = NULL;
 	}
+
 	if (!exec_child(ps, &pipecmds[ms->idx_of_pipestats], fname, pi, NULL, p_next)) {
 		return NULL;
 	}
@@ -1365,9 +1381,9 @@ static int hook_pgoutput(void *param, const uint8_t *buf, const size_t size)
 		return 0;
 	}
 
-	if (pstat->aborted) {
+	if (pstat->aborted || pstat->no_pipe) {
 		if (check_child_process(pstat->child_process, &retcode, &pstat->redirects, pstat->cmd) == 0) {
-			pstat->cmd_result = -2;
+			pstat->cmd_result = pstat->no_pipe ? 0 : -2;
 			pstat->cmd_retcode = retcode;
 			pstat->used = 0;
 		}
@@ -1397,7 +1413,7 @@ static const int hook_pgoutput_check(void *param)
 {
 	pipestat_t *ps = (pipestat_t*)param;
 
-	if (!ps->used || ps->aborted) {
+	if (!ps->used || ps->aborted || ps->no_pipe) {
 		return 0;
 	}
 	if (ps->write_busy) {
@@ -1418,9 +1434,10 @@ static void hook_pgoutput_close(void *param, const proginfo_t *pi)
 		ps_check(pstat, 1);
 	}
 #endif
-	if (!pstat->aborted) {
-		close_pipe(pstat);
+	if (pstat->aborted || pstat->no_pipe) {
+		return;
 	}
+	close_pipe(pstat);
 }
 
 static int check_pipe_child_process(pipestat_t *pstat, int force_close, int remain_ms)
@@ -1533,6 +1550,8 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 	}
 	tsd_strlcpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
 	pipecmds[n_pipecmds].set_opt = 0;
+	pipecmds[n_pipecmds].connecting = 0;
+	pipecmds[n_pipecmds].no_pipe = 0;
 	n_pipecmds++;
 	open_connect = 0;
 	return NULL;
@@ -1566,6 +1585,18 @@ static const TSDCHAR *set_connect(const TSDCHAR* param)
 	}
 	pipecmds[n_pipecmds - 1].connecting = 1;
 	open_connect = 1;
+	return NULL;
+}
+
+static const TSDCHAR *set_nopipe(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	if (n_pipecmds < 1) {
+		return TSD_TEXT("コマンドが指定されていません");
+	} else if (open_connect) {
+		return TSD_TEXT("入力があるコマンドに--nopipeは使用できません");
+	}
+	pipecmds[n_pipecmds - 1].no_pipe = 1;
 	return NULL;
 }
 
@@ -1631,6 +1662,7 @@ static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--pipeopt"), TSD_TEXT("パイプ実行コマンドのオプション (複数指定可)"), 1, set_pipe_opt },
 	{ TSD_TEXT("--pwmin"), TSD_TEXT("パイプ実行コマンドのウィンドウを最小化する"), 0, set_min },
 	{ TSD_TEXT("--pipeconn"), TSD_TEXT("パイプ実行コマンドの出力を次のコマンドの入力に接続する"), 0, set_connect },
+	{ TSD_TEXT("--nopipe"), TSD_TEXT("実行のみでパイプ出力を行わない"), 0, set_nopipe },
 	{ TSD_TEXT("--cmd"), TSD_TEXT("番組終了時実行コマンド (複数指定可)"), 1, set_cmd },
 	{ TSD_TEXT("--cmdopt"), TSD_TEXT("番組終了時実行コマンドのオプション (複数指定可)"), 1, set_cmd_opt },
 	{ TSD_TEXT("--cwmin"), TSD_TEXT("番組終了時実行コマンドのウィンドウを最小化する"), 0, set_cmin },
