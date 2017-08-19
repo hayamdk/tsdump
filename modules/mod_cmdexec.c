@@ -1469,33 +1469,21 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 
 static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
 {
-	int i, n_children=0;
-
-#ifdef TSD_PLATFORM_MSVC
-	HANDLE c, children[MAX_CMDS];
-#else
-	pid_t c, children[MAX_CMDS];
-#endif
-	TSDCHAR *cmds[MAX_CMDS];
-	redirect_pathinfo_t redirects[MAX_CMDS];
+	int i;
+	my_file_handle_t child;
+	redirect_pathinfo_t redirect;
 
 	module_stat_t *pstat = (module_stat_t*)stat;
 
 	for (i = 0; i < n_execcmds; i++) {
-		c = exec_cmd(&execcmds[i], pstat->filename, pi, &redirects[n_children], pstat->pipestats);
+		child = exec_cmd(&execcmds[i], pstat->filename, pi, &redirect, pstat->pipestats);
 #ifdef TSD_PLATFORM_MSVC
-		if (c != INVALID_HANDLE_VALUE) {
+		if (child != INVALID_HANDLE_VALUE) {
 #else
-		if (c > 0) {
+		if (child > 0) {
 #endif
-			cmds[n_children] = execcmds[i].cmd;
-			children[n_children] = c;
-			n_children++;
+			insert_runngin_ps(child, execcmds[i].cmd, &redirect);
 		}
-	}
-
-	for (i = 0; i < n_children; i++) {
-		insert_runngin_ps(children[i], cmds[i], &redirects[i]);
 	}
 	free(pstat);
 }
