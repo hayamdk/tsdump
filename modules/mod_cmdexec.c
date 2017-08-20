@@ -510,10 +510,6 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 
 	WCHAR cmdarg[2048];
 
-	ps->cmd_result = -1;
-	ps->cmd_retcode = 1;
-	ps->used = 0;
-
 	if (prev) {
 		h_read = *prev;
 	} else if (!ps->no_pipe) {
@@ -1025,7 +1021,11 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
 
 	for (i = n = 0; i < n_pipecmds; i++) {
+		stat->pipestats[i].used = 0;
 		stat->pipestats[i].no_pipe = 0;
+		stat->pipestats[i].cmd_result = -1;
+		stat->pipestats[i].cmd_retcode = 0;
+
 		if (!connected) {
 			if (pipecmds[i].no_pipe) {
 				stat->pipestats[i].no_pipe = 1;
@@ -1070,19 +1070,17 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 		p_next = NULL;
 	}
 
-	if (!exec_child(ps, &pipecmds[ms->idx_of_pipestats], fname, pi, NULL, p_next)) {
-		return NULL;
-	}
-
-	for (i = 1; i <= ps->n_connected_cmds; i++) {
-		ps_conn = &ms->pipestats[ms->idx_of_pipestats + i];
-		if (pipecmds[ms->idx_of_pipestats + i].connecting) {
-			p_next = &next;
-		} else {
-			p_next = NULL;
-		}
-		if (!exec_child(ps_conn, &pipecmds[ms->idx_of_pipestats + i], fname, pi, &next, p_next)) {
-			break;
+	if (exec_child(ps, &pipecmds[ms->idx_of_pipestats], fname, pi, NULL, p_next)) {
+		for (i = 1; i <= ps->n_connected_cmds; i++) {
+			ps_conn = &ms->pipestats[ms->idx_of_pipestats + i];
+			if (pipecmds[ms->idx_of_pipestats + i].connecting) {
+				p_next = &next;
+			} else {
+				p_next = NULL;
+			}
+			if (!exec_child(ps_conn, &pipecmds[ms->idx_of_pipestats + i], fname, pi, &next, p_next)) {
+				break;
+			}
 		}
 	}
 	ms->idx_of_pipestats += ps->n_connected_cmds + 1;
