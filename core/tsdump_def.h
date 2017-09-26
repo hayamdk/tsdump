@@ -11,6 +11,11 @@
 	#define TSD_NULLCHAR				L'\0'
 	#define TSD_TEXT(str)				L##str
 	#define TSD_CHAR(c)					L##c
+	#ifdef _WIN64
+		typedef __int64					ssize_t;
+	#else
+		typedef int						ssize_t;
+	#endif
 #else
 	/* ‚»‚êˆÈŠO */
 	#define MAX_PATH_LEN				1024

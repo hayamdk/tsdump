@@ -101,7 +101,7 @@ static void hook_message(const TSDCHAR* modname, message_type_t msgtype, tsd_sys
 	}
 
 	/* ‰üs‚ðŽæ‚èœ‚­ */
-	len = tsd_strlen(msg);
+	len = (int)tsd_strlen(msg);
 	if (len >= 1024) {
 		len = 1023;
 	}

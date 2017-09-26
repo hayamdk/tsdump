@@ -1396,7 +1396,7 @@ static int hook_pgoutput(void *param, const uint8_t *buf, const size_t size)
 	assert(!pstat->write_busy);
 	memcpy(pstat->buf, buf, size);
 	pstat->written_bytes = 0;
-	pstat->write_bytes = size;
+	pstat->write_bytes = (int)size;
 	pstat->write_busy = 1;
 	ps_write(pstat);
 	return 1;

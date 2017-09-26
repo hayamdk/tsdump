@@ -154,7 +154,7 @@ double tsd_atof(const TSDCHAR *str)
 #endif
 }
 
-static int get_old_len(tsdstr_replace_set_t *sets, size_t idx)
+static size_t get_old_len(tsdstr_replace_set_t *sets, size_t idx)
 {
 	if (sets[idx].old_len == 0) {
 		sets[idx].old_len = tsd_strlen(sets[idx].old) + 1;
@@ -162,7 +162,7 @@ static int get_old_len(tsdstr_replace_set_t *sets, size_t idx)
 	return sets[idx].old_len - 1;
 }
 
-static int get_new_len(tsdstr_replace_set_t *sets, size_t idx)
+static size_t get_new_len(tsdstr_replace_set_t *sets, size_t idx)
 {
 	if (!sets[idx].new) {
 		return 0;
@@ -173,10 +173,11 @@ static int get_new_len(tsdstr_replace_set_t *sets, size_t idx)
 	return sets[idx].new_len - 1;
 }
 
-static int search_sets(const TSDCHAR *str, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match)
+static ssize_t search_sets(const TSDCHAR *str, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match)
 {
 	size_t i, match_len=0, len;
-	int ret, found = -1;
+	ssize_t found = -1;
+	int ret;
 
 	for (i = 0; i < n_sets; i++) {
 		len = get_old_len(sets, i);
@@ -206,7 +207,7 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 {
 	size_t i;
 	size_t old_len, new_len, str_len = tsd_strlen(str);
-	int ret;
+	ssize_t ret;
 
 	for (i = 0; i < str_len; ) {
 		ret = search_sets(&str[i], sets, n_sets, longest_match);
@@ -242,7 +243,7 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 
 void tsd_rstrip(TSDCHAR *str)
 {
-	int i;
+	ssize_t i;
 	size_t len = tsd_strlen(str);
 	for (i = len - 1; i > 0; i--) {
 		switch (str[i]) {

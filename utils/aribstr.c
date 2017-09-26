@@ -245,7 +245,7 @@ const DWORD AribToStringInternal(TSDCHAR *lpszDst, const int dst_maxlen,
 					//空白は文字サイズの影響あり
 					if( IsSmallCharMode() == false ){
 						tsd_strcpy(&lpszDst[dwDstLen], TSD_TEXT("　"));
-						dwDstLen += tsd_strlen(TSD_TEXT("　"));
+						dwDstLen += (DWORD)tsd_strlen(TSD_TEXT("　"));
 					} else {
 						lpszDst[dwDstLen++] = TSD_TEXT(' ');
 					}
@@ -612,7 +612,7 @@ const DWORD PutSymbolsChar(TSDCHAR *lpszDst, const WORD wCode)
 		tsd_strcpy(lpszDst, TEXT("・"));
 	}
 
-	return tsd_strlen(lpszDst);
+	return (DWORD)tsd_strlen(lpszDst);
 }
 
 void ProcessEscapeSeq(const BYTE byCode)

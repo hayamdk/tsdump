@@ -310,7 +310,7 @@ static int hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 	}
 	memcpy(fos->writebuf, buf, size);
 	fos->write_busy = 1;
-	fos->write_bytes = size;
+	fos->write_bytes = (int)size;
 	fos->written_bytes = 0;
 	nonblock_write(fos);
 #else

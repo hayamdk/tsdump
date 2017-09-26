@@ -167,11 +167,11 @@ int print_services(ts_service_list_t *services_list)
 
 #ifdef TSD_PLATFORM_MSVC
 
-int save_line(COORD *new_pos)
+ssize_t save_line(COORD *new_pos)
 {
 	CONSOLE_SCREEN_BUFFER_INFO ci;
 	HANDLE hc;
-	int console_width = 0;
+	ssize_t console_width = 0;
 
 	hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hc != INVALID_HANDLE_VALUE) {
@@ -206,7 +206,7 @@ void restore_line(const COORD new_pos)
 
 void clear_line()
 {
-	int console_width;
+	ssize_t console_width;
 	COORD new_pos;
 	WCHAR line[256];
 	int i;
@@ -236,7 +236,8 @@ void clear_line()
 void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
-	int n, backward_size, console_width, width, pos_write, pos;
+	int n, backward_size, pos_write, pos;
+	ssize_t width, console_width;
 	char line[256], hor[256];
 	char *p = line;
 	static int cnt = 0;
