@@ -18,60 +18,60 @@ typedef uint32_t DWORD;
 #define TT TSD_TEXT
 
 const TSDCHAR *genre_main[] = {
-	TSD_TEXT("ƒjƒ…[ƒX^•ñ“¹"),			TSD_TEXT("ƒXƒ|[ƒc"),	TSD_TEXT("î•ñ^ƒƒCƒhƒVƒ‡["),	TSD_TEXT("ƒhƒ‰ƒ}"),
-	TSD_TEXT("‰¹Šy"),					TSD_TEXT("ƒoƒ‰ƒGƒeƒB"),	TSD_TEXT("‰f‰æ"),				TSD_TEXT("ƒAƒjƒ^“ÁB"),
-	TSD_TEXT("ƒhƒLƒ…ƒƒ“ƒ^ƒŠ[^‹³—{"),	TSD_TEXT("Œ€ê^Œö‰‰"),	TSD_TEXT("ï–¡^‹³ˆç"),			TSD_TEXT("•Ÿƒ"),
-	TSD_TEXT("—\”õ"),					TSD_TEXT("—\”õ"),		TSD_TEXT("Šg’£"),				TSD_TEXT("‚»‚Ì‘¼")
+	TSD_TEXT("ãƒ‹ãƒ¥ãƒ¼ã‚¹ï¼å ±é“"),			TSD_TEXT("ã‚¹ãƒãƒ¼ãƒ„"),	TSD_TEXT("æƒ…å ±ï¼ãƒ¯ã‚¤ãƒ‰ã‚·ãƒ§ãƒ¼"),	TSD_TEXT("ãƒ‰ãƒ©ãƒ"),
+	TSD_TEXT("éŸ³æ¥½"),					TSD_TEXT("ãƒãƒ©ã‚¨ãƒ†ã‚£"),	TSD_TEXT("æ˜ ç”»"),				TSD_TEXT("ã‚¢ãƒ‹ãƒ¡ï¼ç‰¹æ’®"),
+	TSD_TEXT("ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ã‚¿ãƒªãƒ¼ï¼æ•™é¤Š"),	TSD_TEXT("åŠ‡å ´ï¼å…¬æ¼”"),	TSD_TEXT("è¶£å‘³ï¼æ•™è‚²"),			TSD_TEXT("ç¦ç¥‰"),
+	TSD_TEXT("äºˆå‚™"),					TSD_TEXT("äºˆå‚™"),		TSD_TEXT("æ‹¡å¼µ"),				TSD_TEXT("ãã®ä»–")
 };
 
 const TSDCHAR *genre_detail[] = {
 	/* 0x0 */
-	TSD_TEXT("’èE‘‡"), TSD_TEXT("“V‹C"), TSD_TEXT("“ÁWEƒhƒLƒ…ƒƒ“ƒg"), TSD_TEXT("­¡E‘‰ï"), TSD_TEXT("ŒoÏEs‹µ"), TSD_TEXT("ŠCŠOE‘Û"), TSD_TEXT("‰ğà"), TSD_TEXT("“¢˜_E‰ï’k"),
-	TSD_TEXT("•ñ“¹“Á”Ô"), TSD_TEXT("ƒ[ƒJƒ‹E’nˆæ"), TSD_TEXT("Œğ’Ê"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("å®šæ™‚ãƒ»ç·åˆ"), TSD_TEXT("å¤©æ°—"), TSD_TEXT("ç‰¹é›†ãƒ»ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆ"), TSD_TEXT("æ”¿æ²»ãƒ»å›½ä¼š"), TSD_TEXT("çµŒæ¸ˆãƒ»å¸‚æ³"), TSD_TEXT("æµ·å¤–ãƒ»å›½éš›"), TSD_TEXT("è§£èª¬"), TSD_TEXT("è¨è«–ãƒ»ä¼šè«‡"),
+	TSD_TEXT("å ±é“ç‰¹ç•ª"), TSD_TEXT("ãƒ­ãƒ¼ã‚«ãƒ«ãƒ»åœ°åŸŸ"), TSD_TEXT("äº¤é€š"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x1 */
-	TSD_TEXT("ƒXƒ|[ƒcƒjƒ…[ƒX"), TSD_TEXT("–ì‹…"), TSD_TEXT("ƒTƒbƒJ["), TSD_TEXT("ƒSƒ‹ƒt"), TSD_TEXT("‚»‚Ì‘¼‚Ì‹…‹Z"), TSD_TEXT("‘Š–oEŠi“¬‹Z"), TSD_TEXT("ƒIƒŠƒ“ƒsƒbƒNE‘Û‘å‰ï"), TSD_TEXT("ƒ}ƒ‰ƒ\ƒ“E—¤ãE…‰j"),
-	TSD_TEXT("ƒ‚[ƒ^[ƒXƒ|[ƒc"), TSD_TEXT("ƒ}ƒŠƒ“EƒEƒBƒ“ƒ^[ƒXƒ|[ƒc"), TSD_TEXT("‹£”nEŒö‰c‹£‹Z"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("ã‚¹ãƒãƒ¼ãƒ„ãƒ‹ãƒ¥ãƒ¼ã‚¹"), TSD_TEXT("é‡çƒ"), TSD_TEXT("ã‚µãƒƒã‚«ãƒ¼"), TSD_TEXT("ã‚´ãƒ«ãƒ•"), TSD_TEXT("ãã®ä»–ã®çƒæŠ€"), TSD_TEXT("ç›¸æ’²ãƒ»æ ¼é—˜æŠ€"), TSD_TEXT("ã‚ªãƒªãƒ³ãƒ”ãƒƒã‚¯ãƒ»å›½éš›å¤§ä¼š"), TSD_TEXT("ãƒãƒ©ã‚½ãƒ³ãƒ»é™¸ä¸Šãƒ»æ°´æ³³"),
+	TSD_TEXT("ãƒ¢ãƒ¼ã‚¿ãƒ¼ã‚¹ãƒãƒ¼ãƒ„"), TSD_TEXT("ãƒãƒªãƒ³ãƒ»ã‚¦ã‚£ãƒ³ã‚¿ãƒ¼ã‚¹ãƒãƒ¼ãƒ„"), TSD_TEXT("ç«¶é¦¬ãƒ»å…¬å–¶ç«¶æŠ€"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x2 */
-	TSD_TEXT("Œ|”\EƒƒCƒhƒVƒ‡["), TSD_TEXT("ƒtƒ@ƒbƒVƒ‡ƒ“"), TSD_TEXT("•é‚ç‚µEZ‚Ü‚¢"), TSD_TEXT("Œ’NEˆã—Ã"), TSD_TEXT("ƒVƒ‡ƒbƒsƒ“ƒOE’Ê”Ì"), TSD_TEXT("ƒOƒ‹ƒE—¿—"), TSD_TEXT("ƒCƒxƒ“ƒg"), TSD_TEXT("”Ô‘gĞ‰îE‚¨’m‚ç‚¹"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("èŠ¸èƒ½ãƒ»ãƒ¯ã‚¤ãƒ‰ã‚·ãƒ§ãƒ¼"), TSD_TEXT("ãƒ•ã‚¡ãƒƒã‚·ãƒ§ãƒ³"), TSD_TEXT("æš®ã‚‰ã—ãƒ»ä½ã¾ã„"), TSD_TEXT("å¥åº·ãƒ»åŒ»ç™‚"), TSD_TEXT("ã‚·ãƒ§ãƒƒãƒ”ãƒ³ã‚°ãƒ»é€šè²©"), TSD_TEXT("ã‚°ãƒ«ãƒ¡ãƒ»æ–™ç†"), TSD_TEXT("ã‚¤ãƒ™ãƒ³ãƒˆ"), TSD_TEXT("ç•ªçµ„ç´¹ä»‹ãƒ»ãŠçŸ¥ã‚‰ã›"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x3 */
-	TSD_TEXT("‘“àƒhƒ‰ƒ}"), TSD_TEXT("ŠCŠOƒhƒ‰ƒ}"), TSD_TEXT("‘ãŒ€"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("å›½å†…ãƒ‰ãƒ©ãƒ"), TSD_TEXT("æµ·å¤–ãƒ‰ãƒ©ãƒ"), TSD_TEXT("æ™‚ä»£åŠ‡"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x4 */
-	TSD_TEXT("‘“àƒƒbƒNEƒ|ƒbƒvƒX"), TSD_TEXT("ŠCŠOƒƒbƒNEƒ|ƒbƒvƒX"), TSD_TEXT("ƒNƒ‰ƒVƒbƒNEƒIƒyƒ‰"), TSD_TEXT("ƒWƒƒƒYEƒtƒ…[ƒWƒ‡ƒ“"), TSD_TEXT("‰Ì—w‹ÈE‰‰‰Ì"), TSD_TEXT("ƒ‰ƒCƒuEƒRƒ“ƒT[ƒg"), TSD_TEXT("ƒ‰ƒ“ƒLƒ“ƒOEƒŠƒNƒGƒXƒg"), TSD_TEXT("ƒJƒ‰ƒIƒPE‚Ì‚Ç©–"),
-	TSD_TEXT("–¯—wE–MŠy"), TSD_TEXT("“¶—wEƒLƒbƒY"), TSD_TEXT("–¯‘°‰¹ŠyEƒ[ƒ‹ƒhƒ~ƒ…[ƒWƒbƒN"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("å›½å†…ãƒ­ãƒƒã‚¯ãƒ»ãƒãƒƒãƒ—ã‚¹"), TSD_TEXT("æµ·å¤–ãƒ­ãƒƒã‚¯ãƒ»ãƒãƒƒãƒ—ã‚¹"), TSD_TEXT("ã‚¯ãƒ©ã‚·ãƒƒã‚¯ãƒ»ã‚ªãƒšãƒ©"), TSD_TEXT("ã‚¸ãƒ£ã‚ºãƒ»ãƒ•ãƒ¥ãƒ¼ã‚¸ãƒ§ãƒ³"), TSD_TEXT("æ­Œè¬¡æ›²ãƒ»æ¼”æ­Œ"), TSD_TEXT("ãƒ©ã‚¤ãƒ–ãƒ»ã‚³ãƒ³ã‚µãƒ¼ãƒˆ"), TSD_TEXT("ãƒ©ãƒ³ã‚­ãƒ³ã‚°ãƒ»ãƒªã‚¯ã‚¨ã‚¹ãƒˆ"), TSD_TEXT("ã‚«ãƒ©ã‚ªã‚±ãƒ»ã®ã©è‡ªæ…¢"),
+	TSD_TEXT("æ°‘è¬¡ãƒ»é‚¦æ¥½"), TSD_TEXT("ç«¥è¬¡ãƒ»ã‚­ãƒƒã‚º"), TSD_TEXT("æ°‘æ—éŸ³æ¥½ãƒ»ãƒ¯ãƒ¼ãƒ«ãƒ‰ãƒŸãƒ¥ãƒ¼ã‚¸ãƒƒã‚¯"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x5 */
-	TSD_TEXT("ƒNƒCƒY"), TSD_TEXT("ƒQ[ƒ€"), TSD_TEXT("ƒg[ƒNƒoƒ‰ƒGƒeƒB"), TSD_TEXT("‚¨Î‚¢EƒRƒƒfƒB"), TSD_TEXT("‰¹Šyƒoƒ‰ƒGƒeƒB"), TSD_TEXT("—·ƒoƒ‰ƒGƒeƒB"), TSD_TEXT("—¿—ƒoƒ‰ƒGƒeƒB"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("ã‚¯ã‚¤ã‚º"), TSD_TEXT("ã‚²ãƒ¼ãƒ "), TSD_TEXT("ãƒˆãƒ¼ã‚¯ãƒãƒ©ã‚¨ãƒ†ã‚£"), TSD_TEXT("ãŠç¬‘ã„ãƒ»ã‚³ãƒ¡ãƒ‡ã‚£"), TSD_TEXT("éŸ³æ¥½ãƒãƒ©ã‚¨ãƒ†ã‚£"), TSD_TEXT("æ—…ãƒãƒ©ã‚¨ãƒ†ã‚£"), TSD_TEXT("æ–™ç†ãƒãƒ©ã‚¨ãƒ†ã‚£"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x6 */
-	TSD_TEXT("—m‰æ"), TSD_TEXT("–M‰æ"), TSD_TEXT("ƒAƒjƒ"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("æ´‹ç”»"), TSD_TEXT("é‚¦ç”»"), TSD_TEXT("ã‚¢ãƒ‹ãƒ¡"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x7 */
-	TSD_TEXT("‘“àƒAƒjƒ"), TSD_TEXT("ŠCŠOƒAƒjƒ"), TSD_TEXT("“ÁB"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("å›½å†…ã‚¢ãƒ‹ãƒ¡"), TSD_TEXT("æµ·å¤–ã‚¢ãƒ‹ãƒ¡"), TSD_TEXT("ç‰¹æ’®"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x8 */
-	TSD_TEXT("Ğ‰ïE–"), TSD_TEXT("—ğjE‹Is"), TSD_TEXT("©‘RE“®•¨EŠÂ‹«"), TSD_TEXT("‰F’ˆE‰ÈŠwEˆãŠw"), TSD_TEXT("ƒJƒ‹ƒ`ƒƒ[E“`“Œ|”\"), TSD_TEXT("•¶ŠwE•¶Œ|"), TSD_TEXT("ƒXƒ|[ƒc"), TSD_TEXT("ƒhƒLƒ…ƒƒ“ƒ^ƒŠ[‘S”Ê"),
-	TSD_TEXT("ƒCƒ“ƒ^ƒrƒ…[E“¢˜_"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("ç¤¾ä¼šãƒ»æ™‚äº‹"), TSD_TEXT("æ­´å²ãƒ»ç´€è¡Œ"), TSD_TEXT("è‡ªç„¶ãƒ»å‹•ç‰©ãƒ»ç’°å¢ƒ"), TSD_TEXT("å®‡å®™ãƒ»ç§‘å­¦ãƒ»åŒ»å­¦"), TSD_TEXT("ã‚«ãƒ«ãƒãƒ£ãƒ¼ãƒ»ä¼çµ±èŠ¸èƒ½"), TSD_TEXT("æ–‡å­¦ãƒ»æ–‡èŠ¸"), TSD_TEXT("ã‚¹ãƒãƒ¼ãƒ„"), TSD_TEXT("ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ã‚¿ãƒªãƒ¼å…¨èˆ¬"),
+	TSD_TEXT("ã‚¤ãƒ³ã‚¿ãƒ“ãƒ¥ãƒ¼ãƒ»è¨è«–"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0x9 */
-	TSD_TEXT("Œ»‘ãŒ€EVŒ€"), TSD_TEXT("ƒ~ƒ…[ƒWƒJƒ‹"), TSD_TEXT("ƒ_ƒ“ƒXEƒoƒŒƒG"), TSD_TEXT("—ŒêE‰‰Œ|"), TSD_TEXT("‰Ì•‘ŠêEŒÃ“T"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("ç¾ä»£åŠ‡ãƒ»æ–°åŠ‡"), TSD_TEXT("ãƒŸãƒ¥ãƒ¼ã‚¸ã‚«ãƒ«"), TSD_TEXT("ãƒ€ãƒ³ã‚¹ãƒ»ãƒãƒ¬ã‚¨"), TSD_TEXT("è½èªãƒ»æ¼”èŠ¸"), TSD_TEXT("æ­Œèˆä¼ãƒ»å¤å…¸"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0xA */
-	TSD_TEXT("—·E’Ş‚èEƒAƒEƒgƒhƒA"), TSD_TEXT("‰€Œ|EƒyƒbƒgEèŒ|"), TSD_TEXT("‰¹ŠyE”üpEHŒ|"), TSD_TEXT("ˆÍŒéE«Šû"), TSD_TEXT("–ƒEƒpƒ`ƒ“ƒR"), TSD_TEXT("ÔEƒI[ƒgƒoƒC"), TSD_TEXT("ƒRƒ“ƒsƒ…[ƒ^E‚s‚uƒQ[ƒ€"), TSD_TEXT("‰ï˜bEŒêŠw"),
-	TSD_TEXT("—c™E¬Šw¶"), TSD_TEXT("’†Šw¶E‚Z¶"), TSD_TEXT("‘åŠw¶EóŒ±"), TSD_TEXT("¶ŠU‹³ˆçE‘Ši"), TSD_TEXT("‹³ˆç–â‘è"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("æ—…ãƒ»é‡£ã‚Šãƒ»ã‚¢ã‚¦ãƒˆãƒ‰ã‚¢"), TSD_TEXT("åœ’èŠ¸ãƒ»ãƒšãƒƒãƒˆãƒ»æ‰‹èŠ¸"), TSD_TEXT("éŸ³æ¥½ãƒ»ç¾è¡“ãƒ»å·¥èŠ¸"), TSD_TEXT("å›²ç¢ãƒ»å°†æ£‹"), TSD_TEXT("éº»é›€ãƒ»ãƒ‘ãƒãƒ³ã‚³"), TSD_TEXT("è»Šãƒ»ã‚ªãƒ¼ãƒˆãƒã‚¤"), TSD_TEXT("ã‚³ãƒ³ãƒ”ãƒ¥ãƒ¼ã‚¿ãƒ»ï¼´ï¼¶ã‚²ãƒ¼ãƒ "), TSD_TEXT("ä¼šè©±ãƒ»èªå­¦"),
+	TSD_TEXT("å¹¼å…ãƒ»å°å­¦ç”Ÿ"), TSD_TEXT("ä¸­å­¦ç”Ÿãƒ»é«˜æ ¡ç”Ÿ"), TSD_TEXT("å¤§å­¦ç”Ÿãƒ»å—é¨“"), TSD_TEXT("ç”Ÿæ¶¯æ•™è‚²ãƒ»è³‡æ ¼"), TSD_TEXT("æ•™è‚²å•é¡Œ"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0xB */
-	TSD_TEXT("‚—îÒ"), TSD_TEXT("áŠQÒ"), TSD_TEXT("Ğ‰ï•Ÿƒ"), TSD_TEXT("ƒ{ƒ‰ƒ“ƒeƒBƒA"), TSD_TEXT("è˜b"), TSD_TEXT("•¶šiš–‹j"), TSD_TEXT("‰¹º‰ğà"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼"),
+	TSD_TEXT("é«˜é½¢è€…"), TSD_TEXT("éšœå®³è€…"), TSD_TEXT("ç¤¾ä¼šç¦ç¥‰"), TSD_TEXT("ãƒœãƒ©ãƒ³ãƒ†ã‚£ã‚¢"), TSD_TEXT("æ‰‹è©±"), TSD_TEXT("æ–‡å­—ï¼ˆå­—å¹•ï¼‰"), TSD_TEXT("éŸ³å£°è§£èª¬"), TSD_TEXT("-"),
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–"),
 
 	/* 0xC */
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
@@ -82,24 +82,24 @@ const TSDCHAR *genre_detail[] = {
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
 	/* 0xE */
-	TSD_TEXT("BS/’nãƒfƒWƒ^ƒ‹•ú‘——p”Ô‘g•t‘®î•ñ"), TSD_TEXT("L‘ÑˆæCSƒfƒWƒ^ƒ‹•ú‘——pŠg’£"), TSD_TEXT("‰q¯ƒfƒWƒ^ƒ‹‰¹º•ú‘——pŠg’£"), TSD_TEXT("ƒT[ƒo[Œ^”Ô‘g•t‘®î•ñ"), TSD_TEXT("IP•ú‘——p”Ô‘g•t‘®î•ñ"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
+	TSD_TEXT("BS/åœ°ä¸Šãƒ‡ã‚¸ã‚¿ãƒ«æ”¾é€ç”¨ç•ªçµ„ä»˜å±æƒ…å ±"), TSD_TEXT("åºƒå¸¯åŸŸCSãƒ‡ã‚¸ã‚¿ãƒ«æ”¾é€ç”¨æ‹¡å¼µ"), TSD_TEXT("è¡›æ˜Ÿãƒ‡ã‚¸ã‚¿ãƒ«éŸ³å£°æ”¾é€ç”¨æ‹¡å¼µ"), TSD_TEXT("ã‚µãƒ¼ãƒãƒ¼å‹ç•ªçµ„ä»˜å±æƒ…å ±"), TSD_TEXT("IPæ”¾é€ç”¨ç•ªçµ„ä»˜å±æƒ…å ±"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
 	/* 0xF */
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
-	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("‚»‚Ì‘¼")
+	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("ãã®ä»–")
 };
 
 const TSDCHAR *genre_user[] = {
-	TSD_TEXT("’†~‚Ì‰Â”\«‚ ‚è"),
-	TSD_TEXT("‰„’·‚Ì‰Â”\«‚ ‚è"),
-	TSD_TEXT("’†’f‚Ì‰Â”\«‚ ‚è"),
-	TSD_TEXT("“¯ˆêƒVƒŠ[ƒY‚Ì•Ê˜b”•ú‘—‚Ì‰Â”\«‚ ‚è"),
-	TSD_TEXT("•Ò¬–¢’è˜g"),
-	TSD_TEXT("ŒJ‚èã‚°‚Ì‰Â”\«‚ ‚è"),
+	TSD_TEXT("ä¸­æ­¢ã®å¯èƒ½æ€§ã‚ã‚Š"),
+	TSD_TEXT("å»¶é•·ã®å¯èƒ½æ€§ã‚ã‚Š"),
+	TSD_TEXT("ä¸­æ–­ã®å¯èƒ½æ€§ã‚ã‚Š"),
+	TSD_TEXT("åŒä¸€ã‚·ãƒªãƒ¼ã‚ºã®åˆ¥è©±æ•°æ”¾é€ã®å¯èƒ½æ€§ã‚ã‚Š"),
+	TSD_TEXT("ç·¨æˆæœªå®šæ "),
+	TSD_TEXT("ç¹°ã‚Šä¸Šã’ã®å¯èƒ½æ€§ã‚ã‚Š"),
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"),
 
-	TSD_TEXT("’†’fƒjƒ…[ƒX‚ ‚è"), TSD_TEXT("“–ŠYƒCƒxƒ“ƒg‚ÉŠÖ˜A‚·‚é—ÕƒT[ƒrƒX‚ ‚è")
+	TSD_TEXT("ä¸­æ–­ãƒ‹ãƒ¥ãƒ¼ã‚¹ã‚ã‚Š"), TSD_TEXT("å½“è©²ã‚¤ãƒ™ãƒ³ãƒˆã«é–¢é€£ã™ã‚‹è‡¨æ™‚ã‚µãƒ¼ãƒ“ã‚¹ã‚ã‚Š")
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-")
 };
 
@@ -169,7 +169,7 @@ int cmp_time(const time_mjd_t *offset1, const time_mjd_t *offset2)
 	return 0;
 }
 
-/* ˜_—OR‰‰Zq‚Í•›ì—pŠ®—¹“_‚È‚Ì‚Å•s³‚Èƒƒ‚ƒŠQÆ‚Í–³‚¢ */
+/* è«–ç†ORæ¼”ç®—å­ã¯å‰¯ä½œç”¨å®Œäº†ç‚¹ãªã®ã§ä¸æ­£ãªãƒ¡ãƒ¢ãƒªå‚ç…§ã¯ç„¡ã„ */
 #define cmp_aribstr(x, y) ( ((x)->aribstr_len != (y)->aribstr_len) || \
 	(((x)->aribstr_len > 0) && memcmp((x)->aribstr, (y)->aribstr, (x)->aribstr_len)) )
 
@@ -257,13 +257,13 @@ int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2)
 	return 0;
 }
 
-/* MJD(C³ƒ†ƒŠƒEƒX“ú) -> YMD */
+/* MJD(ä¿®æ­£ãƒ¦ãƒªã‚¦ã‚¹æ—¥) -> YMD */
 void mjd_to_ymd(const unsigned int mjd16, int *year, int *mon, int *day)
 {
 	double mjd;
 	int y, m, d, k;
 
-	/*@2100”N2Œ28“ú‚Ü‚Å‚ÌŠÔ—LŒø‚ÈŒö®iARIB STD-B10 ‘æ‚Q•”‚æ‚èj@*/
+	/*ã€€2100å¹´2æœˆ28æ—¥ã¾ã§ã®é–“æœ‰åŠ¹ãªå…¬å¼ï¼ˆARIB STD-B10 ç¬¬ï¼’éƒ¨ã‚ˆã‚Šï¼‰ã€€*/
 	mjd = (double)mjd16;
 	y = (int)((mjd - 15078.2) / 365.25);
 	m = (int)((mjd - 14956.1 - (int)((double)y*365.25)) / 30.6001);
@@ -323,7 +323,7 @@ int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time)
 	return 1;
 }
 
-/* Å’á‚Å‚àTOT‚ª‚ ‚ê‚Îƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚ğ•Ô‚· */
+/* æœ€ä½ã§ã‚‚TOTãŒã‚ã‚Œã°ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã‚’è¿”ã™ */
 int get_stream_timestamp_rough(const proginfo_t *pi, time_mjd_t *time_mjd)
 {
 	if (PGINFO_READY_TIMESTAMP(pi->status)) {
@@ -500,10 +500,10 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 {
 	int pos, remain, pointer_field;
 
-	/* FINISHEDó‘Ô‚ğ‰Šúó‘Ô‚É–ß‚· */
+	/* FINISHEDçŠ¶æ…‹ã‚’åˆæœŸçŠ¶æ…‹ã«æˆ»ã™ */
 	if (ps->stat == PAYLOAD_STAT_FINISHED) {
 		if (ps->next_recv_payload > 0) {
-			/* ‘O‰ñóM‚µ‚½c‚è‚ÌƒyƒCƒ[ƒh */
+			/* å‰å›å—ä¿¡ã—ãŸæ®‹ã‚Šã®ãƒšã‚¤ãƒ­ãƒ¼ãƒ‰ */
 			ps->stat = PAYLOAD_STAT_PROC;
 			memcpy(ps->payload, ps->next_payload, ps->next_recv_payload);
 			ps->n_payload = ps->n_next_payload;
@@ -511,17 +511,17 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 			ps->n_next_payload = 0;
 			ps->next_recv_payload = 0;
 		} else {
-			/* ‘O‰ñ‚Ìc‚è‚ª–³‚¢‚Ì‚Å‰Šúó‘Ô‚É‚·‚é */
+			/* å‰å›ã®æ®‹ã‚ŠãŒç„¡ã„ã®ã§åˆæœŸçŠ¶æ…‹ã«ã™ã‚‹ */
 			ps->stat = PAYLOAD_STAT_INIT;
 		}
 	}
 
-	/* ‘ÎÛPID‚©‚Ç‚¤‚©ƒ`ƒFƒbƒN */
+	/* å¯¾è±¡PIDã‹ã©ã†ã‹ãƒã‚§ãƒƒã‚¯ */
 	if (ps->pid != tsh->pid) {
 		return;
 	}
 
-	/* ƒpƒPƒbƒg‚Ìˆ— */
+	/* ãƒ‘ã‚±ãƒƒãƒˆã®å‡¦ç† */
 	if (ps->stat == PAYLOAD_STAT_INIT) {
 		if (!tsh->payload_unit_start_indicator) {
 			//printf("pass!\n");
@@ -542,7 +542,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 		memcpy(ps->payload, &packet[pos], remain);
 		ps->recv_payload += remain;
 	} else if (ps->stat == PAYLOAD_STAT_PROC) {
-		/* continuity_counter ‚Ì˜A‘±«‚ğŠm”F */
+		/* continuity_counter ã®é€£ç¶šæ€§ã‚’ç¢ºèª */
 		if ((ps->continuity_counter + 1) % 16 != tsh->continuity_counter) {
 			/* drop! */
 			output_message(MSG_PACKETERROR, TSD_TEXT("packet continuity_counter is discontinuous! (pid=0x%02x)"), ps->pid);
@@ -557,7 +557,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 			pointer_field = tsh->pointer_field;
 			pos++;
 
-			/* •s³‚ÈƒpƒPƒbƒg‚©‚Ç‚¤‚©‚Ìƒ`ƒFƒbƒN */
+			/* ä¸æ­£ãªãƒ‘ã‚±ãƒƒãƒˆã‹ã©ã†ã‹ã®ãƒã‚§ãƒƒã‚¯ */
 			if (pos + pointer_field >= 188) {
 				ps->stat = PAYLOAD_STAT_INIT;
 				output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload data_byte offset! (pid=0x%02x)"), ps->pid);
@@ -575,7 +575,7 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 			remain = pointer_field;
 		} else {
 			pos = tsh->payload_data_pos;
-			/* •s³‚ÈƒpƒPƒbƒg‚©‚Ç‚¤‚©‚Ìƒ`ƒFƒbƒN */
+			/* ä¸æ­£ãªãƒ‘ã‚±ãƒƒãƒˆã‹ã©ã†ã‹ã®ãƒã‚§ãƒƒã‚¯ */
 			if (pos > 188) {
 				ps->stat = PAYLOAD_STAT_INIT;
 				output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload data_byte offset! (pid=0x%02x)"), ps->pid);
@@ -605,9 +605,9 @@ static inline void parse_PSI(const uint8_t *packet, const ts_header_t *tsh, PSI_
 
 void clear_proginfo_all(proginfo_t *proginfo)
 {
-	/* Å’áŒÀ‚Ì‚à‚Ì‚ğœ‚¢‚½ƒI[ƒ‹ƒNƒŠƒA */
-	/* PATAPMTASDT‚Ìæ“¾ó‹µ‚ÍƒCƒxƒ“ƒg‚ÌØ‚è‘Ö‚í‚è‚Æ–³ŠÖŒW‚È‚Ì‚ÅƒNƒŠƒA‚µ‚È‚¢ */
-	/* TOT‚ÆPCR‚à“¯—l */
+	/* æœ€ä½é™ã®ã‚‚ã®ã‚’é™¤ã„ãŸã‚ªãƒ¼ãƒ«ã‚¯ãƒªã‚¢ */
+	/* PATã€PMTã€SDTã®å–å¾—çŠ¶æ³ã¯ã‚¤ãƒ™ãƒ³ãƒˆã®åˆ‡ã‚Šæ›¿ã‚ã‚Šã¨ç„¡é–¢ä¿‚ãªã®ã§ã‚¯ãƒªã‚¢ã—ãªã„ */
+	/* TOTã¨PCRã‚‚åŒæ§˜ */
 	proginfo->status &= (PGINFO_GET_PAT | PGINFO_GET_PMT | PGINFO_GET_SERVICE_INFO | PGINFO_TIMEINFO);
 	proginfo->last_desc = -1;
 }
@@ -736,12 +736,12 @@ void store_EIT_Sed(const Sed_t *sed, proginfo_t *proginfo)
 void store_EIT_body(const EIT_body_t *eit_b, proginfo_t *proginfo)
 {
 	if (proginfo->status & PGINFO_GET_EVENT_INFO && proginfo->event_id != eit_b->event_id) {
-		/* ‘O‰ñ‚Ìæ“¾‚©‚ç”Ô‘g‚ªØ‚è‘Ö‚í‚Á‚½ */
+		/* å‰å›ã®å–å¾—ã‹ã‚‰ç•ªçµ„ãŒåˆ‡ã‚Šæ›¿ã‚ã£ãŸ */
 		clear_proginfo_all(proginfo);
 	}
 	proginfo->event_id = eit_b->event_id;
 
-	/* EIT‚Å‚Íg‚í‚ê‚È‚¢€–Ú */
+	/* EITã§ã¯ä½¿ã‚ã‚Œãªã„é …ç›® */
 	proginfo->start.usec = 0;
 	proginfo->dur.sign = 1;
 	proginfo->dur.day = 0;
@@ -800,25 +800,25 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 	Eed_itemset_t *curr_item;
 
 	if (proginfo->last_desc != -1) {
-		/* ˜A‘±«ƒ`ƒFƒbƒN */
+		/* é€£ç¶šæ€§ãƒã‚§ãƒƒã‚¯ */
 		if (proginfo->curr_desc == (int)eed->descriptor_number) {
 			if (eed_item->item_description_length > 0) {
-				/* ‘O‰ñ‚Æ“¯‚¶descriptor_number‚Å€–Ú–¼‚ª‚ ‚é‚Ì‚Å•s˜A‘± */
+				/* å‰å›ã¨åŒã˜descriptor_numberã§é …ç›®åãŒã‚ã‚‹ã®ã§ä¸é€£ç¶š */
 				proginfo->last_desc = -1;
 			} else {
-				/* ‘O‰ñ‚Ì‘±‚« */
+				/* å‰å›ã®ç¶šã */
 				proginfo->curr_desc = eed->descriptor_number;
 			}
 		} else if( proginfo->curr_desc + 1 == (int)eed->descriptor_number ) {
-			/* ‘O‰ñ‚Ì‘±‚« */
+			/* å‰å›ã®ç¶šã */
 			proginfo->curr_desc = eed->descriptor_number;
 		} else {
-			/* •s˜A‘± */
+			/* ä¸é€£ç¶š */
 			proginfo->last_desc = -1;
 		}
 	}
 
-	/* ‰Šúó‘Ô‚©‚ç */
+	/* åˆæœŸçŠ¶æ…‹ã‹ã‚‰ */
 	if (proginfo->last_desc == -1) {
 		if (eed->descriptor_number == 0 && eed_item->item_description_length > 0) {
 			proginfo->curr_desc = 0;
@@ -830,24 +830,24 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 	}
 
 	if (eed_item->item_description_length > 0) {
-		/* V‹K€–Ú */
+		/* æ–°è¦é …ç›® */
 		curr_item = &proginfo->items[proginfo->n_items];
 		if (proginfo->n_items < sizeof(proginfo->items) / sizeof(proginfo->items[0])) {
 			proginfo->n_items++;
 			if (eed_item->item_description_length <= sizeof(curr_item->desc.aribstr)) {
 				curr_item->desc.aribstr_len = eed_item->item_description_length;
 			} else {
-				/* ƒTƒCƒYƒI[ƒo[‚È‚Ì‚ÅØ‚è‹l‚ß‚é */
+				/* ã‚µã‚¤ã‚ºã‚ªãƒ¼ãƒãƒ¼ãªã®ã§åˆ‡ã‚Šè©°ã‚ã‚‹ */
 				curr_item->desc.aribstr_len = sizeof(curr_item->desc.aribstr);
 			}
 			memcpy(curr_item->desc.aribstr, eed_item->item_description_char, eed_item->item_description_length);
 			curr_item->item.aribstr_len = 0;
 		} else {
-			/* ‚±‚êˆÈãitem‚ğ’Ç‰Á‚Å‚«‚È‚¢ */
+			/* ã“ã‚Œä»¥ä¸Šitemã‚’è¿½åŠ ã§ããªã„ */
 			return;
 		}
 	} else {
-		/* ‘O‰ñ‚Ì€–Ú‚Ì‘±‚« */
+		/* å‰å›ã®é …ç›®ã®ç¶šã */
 		if (proginfo->n_items == 0) {
 			//curr_item = &proginfo->items[0];
 			return;
@@ -858,7 +858,7 @@ void store_EIT_Eed_item(const Eed_t *eed, const Eed_item_t *eed_item, proginfo_t
 
 	item_len = curr_item->item.aribstr_len + eed_item->item_length;
 	if ( item_len > sizeof(curr_item->item.aribstr) ) {
-		/* ƒTƒCƒYƒI[ƒo[‚È‚Ì‚ÅØ‚è‹l‚ß‚é */
+		/* ã‚µã‚¤ã‚ºã‚ªãƒ¼ãƒãƒ¼ãªã®ã§åˆ‡ã‚Šè©°ã‚ã‚‹ */
 		item_len = sizeof(curr_item->item.aribstr);
 	}
 	memcpy(&curr_item->item.aribstr[curr_item->item.aribstr_len], eed_item->item_char, eed_item->item_length);
@@ -929,7 +929,7 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, servi
 		offset = (int64_t)PCR_base - (int64_t)current_proginfo->PCR_base;
 		wraparounded = 0;
 		if (offset < 0) {
-			/* wrap-around‘Îô */
+			/* wrap-aroundå¯¾ç­– */
 			offset += PCR_BASE_MAX;
 			wraparounded = 1;
 		}
@@ -940,7 +940,7 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, servi
 			//output_message(MSG_DISP, TSD_TEXT("PCR %x: %"PRId64" %I64x %d %d"),
 			//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
 		} else {
-			/* ‘O‚ÌPCR‚©‚ç1•bˆÈã·‚ª‚ ‚ê‚Î—LŒø‚Æ‚ÍŒ©‚È‚³‚È‚¢ */
+			/* å‰ã®PCRã‹ã‚‰1ç§’ä»¥ä¸Šå·®ãŒã‚ã‚Œã°æœ‰åŠ¹ã¨ã¯è¦‹ãªã•ãªã„ */
 			current_proginfo->status &= ~PGINFO_VALID_PCR;
 		}
 		current_proginfo->PCR_base = PCR_base;
@@ -1016,7 +1016,7 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 
 	parse_EIT_header(payload_stat->payload, &eit_h);
 
-	/* ƒR[ƒ‹ƒoƒbƒNŠÖ”‚ğŒÄ‚ÑAæ“¾‘ÎÛ‚Ì”Ô‘gî•ñ‚©‚Ç‚¤‚©ƒ`ƒFƒbƒN‚·‚é */
+	/* ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ã‚’å‘¼ã³ã€å–å¾—å¯¾è±¡ã®ç•ªçµ„æƒ…å ±ã‹ã©ã†ã‹ãƒã‚§ãƒƒã‚¯ã™ã‚‹ */
 	curr_proginfo = handler(param, &eit_h);
 	if(!curr_proginfo) {
 		return;
@@ -1060,10 +1060,10 @@ void parse_EIT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 					while (p_eed_item < p_eed_item_end) {
 						if (parse_EIT_Eed_item(p_eed_item, p_eed_item_end, &eed_item)) {
 
-							/* ARIB TR-B14 ‘æl•Ò ’nãƒfƒWƒ^ƒ‹ƒeƒŒƒrƒWƒ‡ƒ“•ú‘— PSI/SI ‰^—p‹K’è 12.2 ƒZƒNƒVƒ‡ƒ“‚Ö‚Ì‹Lqq‚Ì”z’u ‚ÍA
-							Eed‚ª•¡”‚ÌEIT‚É‚Ü‚½‚ª‚Á‚Ä‘—M‚³‚ê‚é‚±‚Æ‚Í–³‚¢‚±‚Æ‚ğ‹K’è‚µ‚Ä‚¢‚é‚Æ‰ğß‚Å‚«‚éB
-							‚æ‚Á‚Äparse_EIT()‚ğ”²‚¯‚½‚Æ‚«‚Ícurr_proginfo->items‚É‘S‚Ä‚ÌƒAƒCƒeƒ€‚ªû”[‚³‚ê‚Ä‚¢‚é‚±‚Æ‚ª•Ûá‚³‚ê‚éB
-							‰¼‚É‚±‚Ì‰¼’è‚ª–‚½‚³‚ê‚È‚¢ê‡‚Å‚àA’P‚É’†“r”¼’[‚È”Ô‘gî•ñ‚ªŒ©‚¦‚Ä‚µ‚Ü‚¤ƒ^ƒCƒ~ƒ“ƒO‚ª‘¶İ‚·‚é‚¾‚¯‚Å‚ ‚é */
+							/* ARIB TR-B14 ç¬¬å››ç·¨ åœ°ä¸Šãƒ‡ã‚¸ã‚¿ãƒ«ãƒ†ãƒ¬ãƒ“ã‚¸ãƒ§ãƒ³æ”¾é€ PSI/SI é‹ç”¨è¦å®š 12.2 ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã¸ã®è¨˜è¿°å­ã®é…ç½® ã¯ã€
+							EedãŒè¤‡æ•°ã®EITã«ã¾ãŸãŒã£ã¦é€ä¿¡ã•ã‚Œã‚‹ã“ã¨ã¯ç„¡ã„ã“ã¨ã‚’è¦å®šã—ã¦ã„ã‚‹ã¨è§£é‡ˆã§ãã‚‹ã€‚
+							ã‚ˆã£ã¦parse_EIT()ã‚’æŠœã‘ãŸã¨ãã¯curr_proginfo->itemsã«å…¨ã¦ã®ã‚¢ã‚¤ãƒ†ãƒ ãŒåç´ã•ã‚Œã¦ã„ã‚‹ã“ã¨ãŒä¿éšœã•ã‚Œã‚‹ã€‚
+							ä»®ã«ã“ã®ä»®å®šãŒæº€ãŸã•ã‚Œãªã„å ´åˆã§ã‚‚ã€å˜ã«ä¸­é€”åŠç«¯ãªç•ªçµ„æƒ…å ±ãŒè¦‹ãˆã¦ã—ã¾ã†ã‚¿ã‚¤ãƒŸãƒ³ã‚°ãŒå­˜åœ¨ã™ã‚‹ã ã‘ã§ã‚ã‚‹ */
 							store_EIT_Eed_item(&eed, &eed_item, curr_proginfo);
 						}
 						p_eed_item += ( 2 + eed_item.item_description_length + eed_item.item_length );
@@ -1178,7 +1178,7 @@ void parse_SDT(PSI_parse_t *payload_stat, const uint8_t *packet, const ts_header
 			break;
 		}
 
-		/* ‘ÎÛ‚ÌƒT[ƒrƒXID‚©‚Ç‚¤‚© */
+		/* å¯¾è±¡ã®ã‚µãƒ¼ãƒ“ã‚¹IDã‹ã©ã†ã‹ */
 		curr_proginfo = handler(param, sdt_b.service_id);
 		if (curr_proginfo) {
 			while( p_desc < p_desc_end ) {

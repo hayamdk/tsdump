@@ -1,4 +1,4 @@
-﻿/* epgdump由来のコード */
+/* epgdump由来のコード */
 /*
 epgdumpライセンス(Solaris版より引用) :
 >epgdumpに関しては、BonTest Ver.1.40からそのままソースを持ってきている部分も

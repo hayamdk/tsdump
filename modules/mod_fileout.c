@@ -74,7 +74,7 @@ int create_proginfo_file(TSDCHAR *fname, const TSDCHAR *fname_ts, const proginfo
 	int i;
 
 	if (!PGINFO_READY(pi->status)) {
-		output_message(MSG_WARNING, TSD_TEXT("”Ô‘gî•ñ‚ªæ“¾‚Å‚«‚È‚©‚Á‚½‚Ì‚Å”Ô‘gî•ñƒtƒ@ƒCƒ‹‚ğ¶¬‚µ‚Ü‚¹‚ñ"));
+		output_message(MSG_WARNING, TSD_TEXT("ç•ªçµ„æƒ…å ±ãŒå–å¾—ã§ããªã‹ã£ãŸã®ã§ç•ªçµ„æƒ…å ±ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ç”Ÿæˆã—ã¾ã›ã‚“"));
 		return 0;
 	}
 
@@ -88,7 +88,7 @@ int create_proginfo_file(TSDCHAR *fname, const TSDCHAR *fname_ts, const proginfo
 	fp = fopen(fname, "wt");
 	if (!fp) {
 #endif
-		output_message(MSG_ERROR, TSD_TEXT("”Ô‘gî•ñƒtƒ@ƒCƒ‹‚ğ•Û‘¶‚Å‚«‚Ü‚¹‚ñ: %s"), fname);
+		output_message(MSG_ERROR, TSD_TEXT("ç•ªçµ„æƒ…å ±ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä¿å­˜ã§ãã¾ã›ã‚“: %s"), fname);
 		return 0;
 	}
 
@@ -164,7 +164,7 @@ static int nonblock_write(file_output_stat_t *fos)
 			if ((errnum = GetLastError()) == ERROR_IO_PENDING) {
 				/* do nothing */
 			} else {
-				output_message(MSG_SYSERROR, TSD_TEXT("WriteFile()‚É¸”s‚µ‚Ü‚µ‚½"));
+				output_message(MSG_SYSERROR, TSD_TEXT("WriteFile()ã«å¤±æ•—ã—ã¾ã—ãŸ"));
 				fos->write_busy = 0;
 				break;
 			}
@@ -194,10 +194,10 @@ static int check_io_status(file_output_stat_t *fos, int wait_mode)
 			/* do nothing */
 			return 1;
 		} else {
-			/* IOƒGƒ‰[”­¶ */
+			/* IOã‚¨ãƒ©ãƒ¼ç™ºç”Ÿæ™‚ */
 			now = gettime();
 			if (now - last > 1000 || errnum_last != errnum) {
-				output_message(MSG_SYSERROR, L"IOƒGƒ‰[(GetOverlappedResult)");
+				output_message(MSG_SYSERROR, L"IOã‚¨ãƒ©ãƒ¼(GetOverlappedResult)");
 				errnum_last = errnum;
 				last = now;
 			}
@@ -268,13 +268,13 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 	);
 
 	if (fh == INVALID_HANDLE_VALUE) {
-		output_message(MSG_SYSERROR, L"ƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(CreateFile): %s", fname);
+		output_message(MSG_SYSERROR, L"ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(CreateFile): %s", fname);
 		return NULL;
 	}
 #else
 	int fd = open(fname, O_WRONLY | O_NONBLOCK | O_CREAT, 0644);
 	if (fd < 0) {
-		output_message(MSG_SYSERROR, "ƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(open): %s", fname);
+		output_message(MSG_SYSERROR, "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(open): %s", fname);
 		return NULL;
 	}
 #endif
@@ -292,7 +292,7 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 	fos->initial_pi = *pi;
 	fos->is_pi = create_proginfo_file(fos->fn_pi, fname, pi);
 
-	output_message(MSG_NOTIFY, TSD_TEXT("[˜^‰æŠJn]: %s"), fos->fn);
+	output_message(MSG_NOTIFY, TSD_TEXT("[éŒ²ç”»é–‹å§‹]: %s"), fos->fn);
 	return fos;
 }
 
@@ -305,7 +305,7 @@ static int hook_pgoutput(void *pstat, const uint8_t *buf, const size_t size)
 
 #ifdef TSD_PLATFORM_MSVC
 	if (fos->write_busy) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒtƒ@ƒCƒ‹IO‚ªŠ®—¹‚µ‚È‚¢‚¤‚¿‚ÉV‚½‚Èƒtƒ@ƒCƒ‹IO‚ğ”­s‚µ‚Ü‚µ‚½"));
+		output_message(MSG_ERROR, TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«IOãŒå®Œäº†ã—ãªã„ã†ã¡ã«æ–°ãŸãªãƒ•ã‚¡ã‚¤ãƒ«IOã‚’ç™ºè¡Œã—ã¾ã—ãŸ"));
 		assert(0); // should never come here
 	}
 	memcpy(fos->writebuf, buf, size);
@@ -344,7 +344,7 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 
 #ifdef TSD_PLATFORM_MSVC
 	if (fos->write_busy) {
-		output_message(MSG_WARNING, TSD_TEXT("IO‚ªŠ®—¹‚µ‚È‚¢‚¤‚¿‚Éƒtƒ@ƒCƒ‹‚ğ•Â‚¶‚æ‚¤‚Æ‚µ‚Ü‚µ‚½"));
+		output_message(MSG_WARNING, TSD_TEXT("IOãŒå®Œäº†ã—ãªã„ã†ã¡ã«ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã‚ˆã†ã¨ã—ã¾ã—ãŸ"));
 		CancelIo(fos->fh);
 		check_io_status(fos, TRUE);
 	}
@@ -354,13 +354,13 @@ static void hook_pgoutput_close(void *pstat, const proginfo_t *final_pi)
 #endif
 
 	if (fos->is_pi) {
-		/* ”Ô‘gî•ñ‚ª“r’†‚Å•Ï‚í‚Á‚Ä‚¢‚½‚çV‚µ‚­ì‚é */
+		/* ç•ªçµ„æƒ…å ±ãŒé€”ä¸­ã§å¤‰ã‚ã£ã¦ã„ãŸã‚‰æ–°ã—ãä½œã‚‹ */
 		if ( proginfo_cmp(&fos->initial_pi, final_pi) ) {
 			create_new_proginfo_file(fos->fn, fos->fn_pi, final_pi);
 		}
 	}
 
-	output_message(MSG_NOTIFY, TSD_TEXT("[˜^‰æI—¹] %s"), fos->fn);
+	output_message(MSG_NOTIFY, TSD_TEXT("[éŒ²ç”»çµ‚äº†] %s"), fos->fn);
 
 	free(fos);
 }
@@ -388,7 +388,7 @@ static const TSDCHAR *set_no_fileout(const TSDCHAR* param)
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--no-fileout"), TSD_TEXT("ƒtƒ@ƒCƒ‹‚ğo—Í‚µ‚È‚¢"), 0, set_no_fileout },
+	{ TSD_TEXT("--no-fileout"), TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«ã‚’å‡ºåŠ›ã—ãªã„"), 0, set_no_fileout },
 	{ NULL },
 };
 

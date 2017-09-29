@@ -19,7 +19,7 @@ public:
 };
 
 
-// ƒCƒ“ƒXƒ^ƒ“ƒX¶¬ƒƒ\ƒbƒh
+// ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ç”Ÿæˆãƒ¡ã‚½ãƒƒãƒ‰
 extern "C" __declspec(dllimport) IBonDriver * CreateBonDriver();
 
 class IBonDriver2 : public IBonDriver

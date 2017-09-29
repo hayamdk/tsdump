@@ -15,99 +15,99 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="core/tsdump.c" >
+    <ClCompile Include="core\default_decoder.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="core/ts_output.c" >
+    <ClCompile Include="core\load_modules.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="core/default_decoder.c" >
+    <ClCompile Include="core\ts_output.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="core/load_modules.c" >
+    <ClCompile Include="core\tsdump.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_b25decoder.cpp" >
+    <ClCompile Include="modules\mod_b25decoder.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_bondriver.cpp" >
+    <ClCompile Include="modules\mod_bondriver.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_cmdexec.c" >
+    <ClCompile Include="modules\mod_cmdexec.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_path_resolver.c" >
+    <ClCompile Include="modules\mod_filein.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_log.c" >
+    <ClCompile Include="modules\mod_fileout.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_filein.c" >
+    <ClCompile Include="modules\mod_log.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="modules/mod_fileout.c" >
+    <ClCompile Include="modules\mod_path_resolver.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/aribstr.c" >
+    <ClCompile Include="utils\advanced_buffer.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/tsdstr.c" >
+    <ClCompile Include="utils\arib_parser.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/arib_parser.c" >
+    <ClCompile Include="utils\aribstr.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/path.c" >
+    <ClCompile Include="utils\path.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils/advanced_buffer.c" >
+    <ClCompile Include="utils\tsdstr.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="core/tsdump.h" >
+    <ClInclude Include="core\default_decoder.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/ts_output.h" >
+    <ClInclude Include="core\load_modules.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/default_decoder.h" >
+    <ClInclude Include="core\module_api.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/load_modules.h" >
+    <ClInclude Include="core\ts_output.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/tsdump_def.h" >
+    <ClInclude Include="core\tsdump.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="core/module_api.h" >
+    <ClInclude Include="core\tsdump_def.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="modules/modules.h" >
+    <ClInclude Include="modules\IB25Decoder.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="modules/IB25Decoder.h" >
+    <ClInclude Include="modules\IBonDriver2.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="modules/IBonDriver2.h" >
+    <ClInclude Include="modules\modules.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/aribstr.h" >
+    <ClInclude Include="utils\advanced_buffer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/arib_proginfo.h" >
+    <ClInclude Include="utils\arib_parser.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/tsdstr.h" >
+    <ClInclude Include="utils\arib_proginfo.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/arib_parser.h" >
+    <ClInclude Include="utils\aribstr.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/path.h" >
+    <ClInclude Include="utils\path.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils/advanced_buffer.h" >
+    <ClInclude Include="utils\tsdstr.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

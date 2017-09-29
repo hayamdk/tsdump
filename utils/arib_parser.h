@@ -169,7 +169,7 @@ typedef struct {
 	PSI_parse_t PMT_payloads[MAX_SERVICES_PER_CH];
 } ts_service_list_t;
 
-/* ’ZŒ`®ƒCƒxƒ“ƒg‹LqqiShort event descriptorj */
+/* çŸ­å½¢å¼ã‚¤ãƒ™ãƒ³ãƒˆè¨˜è¿°å­ï¼ˆShort event descriptorï¼‰ */
 typedef struct {
 	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;
@@ -180,7 +180,7 @@ typedef struct {
 	const uint8_t *text_char;
 } Sed_t;
 
-/* Šg’£Œ`®ƒCƒxƒ“ƒg‹LqqiExtended event descriptorj */
+/* æ‹¡å¼µå½¢å¼ã‚¤ãƒ™ãƒ³ãƒˆè¨˜è¿°å­ï¼ˆExtended event descriptorï¼‰ */
 typedef struct {
 	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;
@@ -225,7 +225,7 @@ typedef struct {
 	unsigned int last_table_id : 8;
 } EIT_header_t;
 
-/* ƒT[ƒrƒX‹LqqiService descriptorj */
+/* ã‚µãƒ¼ãƒ“ã‚¹è¨˜è¿°å­ï¼ˆService descriptorï¼‰ */
 typedef struct {
 	//unsigned int descriptor_tag : 8;
 	unsigned int descriptor_length : 8;

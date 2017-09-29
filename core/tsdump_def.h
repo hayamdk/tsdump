@@ -17,7 +17,7 @@
 		typedef int						ssize_t;
 	#endif
 #else
-	/* ÇªÇÍà»äO */
+	/* „Åù„Çå‰ª•Â§ñ */
 	#define MAX_PATH_LEN				1024
 	#define	TSD_PLATFORM_OTHER
 

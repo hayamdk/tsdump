@@ -18,8 +18,8 @@
 #include <string.h>
 #endif
 
-/* strncpy‚ÆˆÙ‚È‚èƒRƒs[æ‚Ì•¶š—ñ‚Í•K‚¸I’[‚³‚ê‚éB
-—Ìˆæ‚ªd‚È‚Á‚Ä‚¢‚Ä‚à‚©‚Ü‚í‚È‚¢B–ß‚è’l‚ÍI’[•¶š‚ğœ‚­ƒRƒs[‚µ‚½—v‘f”B */
+/* strncpyã¨ç•°ãªã‚Šã‚³ãƒ”ãƒ¼å…ˆã®æ–‡å­—åˆ—ã¯å¿…ãšçµ‚ç«¯ã•ã‚Œã‚‹ã€‚
+é ˜åŸŸãŒé‡ãªã£ã¦ã„ã¦ã‚‚ã‹ã¾ã‚ãªã„ã€‚æˆ»ã‚Šå€¤ã¯çµ‚ç«¯æ–‡å­—ã‚’é™¤ãã‚³ãƒ”ãƒ¼ã—ãŸè¦ç´ æ•°ã€‚ */
 size_t tsd_strlcpy(TSDCHAR *dst, const TSDCHAR *src, size_t n)
 {
 	size_t len = tsd_strlen(src);
@@ -27,7 +27,7 @@ size_t tsd_strlcpy(TSDCHAR *dst, const TSDCHAR *src, size_t n)
 		len = n;
 	}
 	if (src <= &dst[len] && dst <= &src[len]) {
-		/* —Ìˆæ‚ªd•¡‚µ‚Ä‚¢‚é */
+		/* é ˜åŸŸãŒé‡è¤‡ã—ã¦ã„ã‚‹ */
 		memmove(dst, src, sizeof(TSDCHAR)*len);
 	} else {
 		memcpy(dst, src, sizeof(TSDCHAR)*len);
@@ -93,7 +93,7 @@ int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n)
 #endif
 }
 
-/* WindowsƒRƒ“ƒ\[ƒ‹‚ÅWCHAR‚Ì“ú–{Œê‚ğprintf‚·‚é‚Æ‚È‚º‚©–Ò—ó‚É’x‚¢(”\ms`”•Sms)‚Ì‚ÅWriteConsole‚ğg‚¤ */
+/* Windowsã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã§WCHARã®æ—¥æœ¬èªã‚’printfã™ã‚‹ã¨ãªãœã‹çŒ›çƒˆã«é…ã„(æ•°åmsã€œæ•°ç™¾ms)ã®ã§WriteConsoleã‚’ä½¿ã† */
 #ifdef TSD_PLATFORM_MSVC
 int tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...)
 {
@@ -216,18 +216,18 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 			new_len = get_new_len(sets, ret);
 
 			if (i + new_len >= str_maxlen) {
-				/* ƒI[ƒo[‚»‚Ì1 */
+				/* ã‚ªãƒ¼ãƒãƒ¼ãã®1 */
 				old_len = 0;
 				new_len = str_maxlen - i - 1;
 				str[str_maxlen] = TSD_NULLCHAR;
 				str_len = str_maxlen - 1;
 			} else if (str_len + new_len - old_len >= str_maxlen) {
-				/* ƒI[ƒo[‚»‚Ì2 */
+				/* ã‚ªãƒ¼ãƒãƒ¼ãã®2 */
 				memmove(&str[i + new_len], &str[i + old_len], (str_maxlen - 1 - i - new_len) * sizeof(TSDCHAR));
 				str[str_maxlen] = TSD_NULLCHAR;
 				str_len = str_maxlen - 1;
 			} else {
-				/* ’Êí */
+				/* é€šå¸¸ */
 				memmove(&str[i + new_len], &str[i + old_len], (str_len + 1 - i - old_len) * sizeof(TSDCHAR));
 				str_len = str_len + new_len - old_len;
 			}

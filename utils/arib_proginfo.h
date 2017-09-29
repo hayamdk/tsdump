@@ -26,9 +26,9 @@
 #define PCR_BASE_HZ					(90*1000)
 
 #ifdef TSD_PLATFORM_MSVC
-#define ARIB_CHAR_SIZE_RATIO 1 /* WCHAR‚Å‚ÍƒTƒƒQ[ƒgƒyƒA‚ğœ‚«1•¶š‚ğ1WCHAR‚Å•\‚¹‚é‚Ì‚Å1”{‚ ‚ê‚Î\•ª */
+#define ARIB_CHAR_SIZE_RATIO 1 /* WCHARã§ã¯ã‚µãƒ­ã‚²ãƒ¼ãƒˆãƒšã‚¢ã‚’é™¤ã1æ–‡å­—ã‚’1WCHARã§è¡¨ã›ã‚‹ã®ã§1å€ã‚ã‚Œã°ååˆ† */
 #else
-#define ARIB_CHAR_SIZE_RATIO 2 /* UTF-8‚Å‚Í‚Ğ‚Æ‚Ü‚¸2”{‚ğŠm•Ûiˆê”Ê“I‚È‚Ğ‚ç‚ª‚ÈEŠ¿š‚Í1.5”{j */
+#define ARIB_CHAR_SIZE_RATIO 2 /* UTF-8ã§ã¯ã²ã¨ã¾ãš2å€ã‚’ç¢ºä¿ï¼ˆä¸€èˆ¬çš„ãªã²ã‚‰ãŒãªãƒ»æ¼¢å­—ã¯1.5å€ï¼‰ */
 #endif
 
 typedef enum {
@@ -61,25 +61,25 @@ typedef Sed_string_t Sd_string_t;
 
 typedef struct {
 	int aribdesc_len;
-	uint8_t aribdesc[20]; /* ARIB TR-B14‚É‚¨‚¢‚ÄãŒÀ‚ª16bytes‚Æ’è‚ß‚ç‚ê‚Ä‚¢‚é */
+	uint8_t aribdesc[20]; /* ARIB TR-B14ã«ãŠã„ã¦ä¸Šé™ãŒ16bytesã¨å®šã‚ã‚‰ã‚Œã¦ã„ã‚‹ */
 	int desc_len;
 	TSDCHAR desc[20*ARIB_CHAR_SIZE_RATIO+1];
 	int aribitem_len;
-	uint8_t aribitem[480]; /* ARIB TR-B14‚É‚¨‚¢‚ÄãŒÀ‚ª440bytes‚Æ’è‚ß‚ç‚ê‚Ä‚¢‚é */
+	uint8_t aribitem[480]; /* ARIB TR-B14ã«ãŠã„ã¦ä¸Šé™ãŒ440bytesã¨å®šã‚ã‚‰ã‚Œã¦ã„ã‚‹ */
 	int item_len;
 	TSDCHAR item[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_item_string_t;
 
 typedef struct {
 	int aribstr_len;
-	uint8_t aribstr[20]; /* ARIB TR-B14‚É‚¨‚¢‚ÄãŒÀ‚ª16bytes‚Æ’è‚ß‚ç‚ê‚Ä‚¢‚é */
+	uint8_t aribstr[20]; /* ARIB TR-B14ã«ãŠã„ã¦ä¸Šé™ãŒ16bytesã¨å®šã‚ã‚‰ã‚Œã¦ã„ã‚‹ */
 	int str_len;
 	TSDCHAR str[20*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_desc_t;
 
 typedef struct {
 	int aribstr_len;
-	uint8_t aribstr[480]; /* ARIB TR-B14‚É‚¨‚¢‚ÄãŒÀ‚ª440bytes‚Æ’è‚ß‚ç‚ê‚Ä‚¢‚é */
+	uint8_t aribstr[480]; /* ARIB TR-B14ã«ãŠã„ã¦ä¸Šé™ãŒ440bytesã¨å®šã‚ã‚‰ã‚Œã¦ã„ã‚‹ */
 	int str_len;
 	TSDCHAR str[480*ARIB_CHAR_SIZE_RATIO+1];
 } Eed_text_t;
@@ -94,7 +94,7 @@ typedef struct {
 	unsigned int pid : 16;
 } PMT_pid_def_t;
 
-/* ƒRƒ“ƒeƒ“ƒg‹Lqq (Content descriptor) */
+/* ã‚³ãƒ³ãƒ†ãƒ³ãƒˆè¨˜è¿°å­ (Content descriptor) */
 typedef struct {
 	unsigned int content_nibble_level_1 : 4;
 	unsigned int content_nibble_level_2 : 4;
@@ -104,7 +104,7 @@ typedef struct {
 
 typedef struct {
 	int n_items;
-	Cd_t_item items[8]; /* TR-B14‚Ì‹K’è‚Å‚ÍÅ‘å7 */
+	Cd_t_item items[8]; /* TR-B14ã®è¦å®šã§ã¯æœ€å¤§7 */
 } Cd_t;
 
 typedef struct {
@@ -141,8 +141,8 @@ typedef struct {
 
 	/* TOT,TDT */
 	time_mjd_t TOT_time;
-	/* –{—ˆ‚ÍTOT‚ÍƒT[ƒrƒX‚²‚Æ‚Ìƒf[ƒ^‚Å‚Í‚È‚¢‚ªA
-	proginfo‘S‘Ì‚ÌƒRƒs[‚È‚Ç‚ª‰Â”\‚È‚æ‚¤‚É’l‚Æ‚µ‚Ä‚½‚¹‚Ä‚¢‚é */
+	/* æœ¬æ¥ã¯TOTã¯ã‚µãƒ¼ãƒ“ã‚¹ã”ã¨ã®ãƒ‡ãƒ¼ã‚¿ã§ã¯ãªã„ãŒã€
+	proginfoå…¨ä½“ã®ã‚³ãƒ”ãƒ¼ãªã©ãŒå¯èƒ½ãªã‚ˆã†ã«å€¤ã¨ã—ã¦æŒãŸã›ã¦ã„ã‚‹ */
 	uint64_t TOT_PCR;
 
 	/***** PCR *****/
@@ -166,16 +166,16 @@ typedef struct {
 	time_mjd_t start;
 	time_offset_t dur;
 
-	/* ’ZŒ`®ƒCƒxƒ“ƒg‹Lqq */
+	/* çŸ­å½¢å¼ã‚¤ãƒ™ãƒ³ãƒˆè¨˜è¿°å­ */
 	Sed_string_t event_name;
 	Sed_string_t event_text;
 
-	/* Šg’£Œ`®ƒCƒxƒ“ƒg‹Lqq */
+	/* æ‹¡å¼µå½¢å¼ã‚¤ãƒ™ãƒ³ãƒˆè¨˜è¿°å­ */
 	int n_items;
 	//Eed_item_string_t items[8];
 	Eed_itemset_t items[8];
 
-	/* ƒRƒ“ƒeƒ“ƒg‹Lqq */
+	/* ã‚³ãƒ³ãƒ†ãƒ³ãƒˆè¨˜è¿°å­ */
 	Cd_t genre_info;
 
 } proginfo_t;

@@ -91,7 +91,7 @@ void ts_alignment_filter(ts_alignment_filter_t *filter, uint8_t **out_buf, int *
 	}
 	memcpy(&filter->buf[filter->remain], in_buf, in_bytes);
 
-	/* Å‘å‚Å4sync‚Ü‚ÅAÅ‘åsync”‚Ìskip‚ğŒ©‚Â‚¯‚é */
+	/* æœ€å¤§ã§4syncã¾ã§ã€æœ€å¤§syncæ•°ã®skipã‚’è¦‹ã¤ã‘ã‚‹ */
 	sync = 0;
 	skip = 0;
 	for (skip_tmp = 0; skip_tmp < 188; skip_tmp++) {
@@ -114,7 +114,7 @@ void ts_alignment_filter(ts_alignment_filter_t *filter, uint8_t **out_buf, int *
 	filter->remain = bytes - (*out_bytes);
 }
 
-/* 188ƒoƒCƒgƒAƒ‰ƒCƒ“‚Å‚Í‚È‚¢ƒXƒgƒŠ[ƒ€‚ğ‘—‚Á‚Ä‚­‚éBonDriveri‚½‚Æ‚¦‚ÎFriioj‚É‘Î‰‚·‚é‚½‚ß‚Ìƒ_ƒ~[ƒfƒR[ƒ_ */
+/* 188ãƒã‚¤ãƒˆã‚¢ãƒ©ã‚¤ãƒ³ã§ã¯ãªã„ã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚’é€ã£ã¦ãã‚‹BonDriverï¼ˆãŸã¨ãˆã°Friioï¼‰ã«å¯¾å¿œã™ã‚‹ãŸã‚ã®ãƒ€ãƒŸãƒ¼ãƒ‡ã‚³ãƒ¼ãƒ€ */
 void default_decoder(uint8_t **out_buf, int *out_bytes, const uint8_t *in_buf, int in_bytes)
 {
 	static ts_alignment_filter_t filter;

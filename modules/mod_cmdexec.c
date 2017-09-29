@@ -312,13 +312,13 @@ static my_file_handle_t create_redirect_file(TSDCHAR *path)
 		NULL
 	);
 	if (fh == INVALID_HANDLE_VALUE) {
-		output_message(MSG_SYSERROR, L"ƒŠƒ_ƒCƒŒƒNƒgƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(CreateFile): %s", path);
+		output_message(MSG_SYSERROR, L"ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(CreateFile): %s", path);
 	}
 	return fh;
 #else
 	fd = open(path, O_WRONLY | O_CREAT, 0644);
 	if (fd < 0) {
-		output_message(MSG_SYSERROR, "ƒŠƒ_ƒCƒŒƒNƒgƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(open): %s", fname);
+		output_message(MSG_SYSERROR, "ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(open): %s", fname);
 	}
 	return fd;
 #endif
@@ -356,7 +356,7 @@ static void rename_redirect_file(int pid, const redirect_pathinfo_t *redirects)
 #else
 		if (rename(redirects->stdout_path, path)) {
 #endif
-			output_message(MSG_SYSERROR, TSD_TEXT("ƒŠƒ_ƒCƒŒƒNƒgƒtƒ@ƒCƒ‹‚ÌƒŠƒl[ƒ€‚É¸”s‚µ‚Ü‚µ‚½: %s -> %s"),
+			output_message(MSG_SYSERROR, TSD_TEXT("ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒªãƒãƒ¼ãƒ ã«å¤±æ•—ã—ã¾ã—ãŸ: %s -> %s"),
 				redirects->stdout_path, path);
 		}
 	}
@@ -368,7 +368,7 @@ static void rename_redirect_file(int pid, const redirect_pathinfo_t *redirects)
 #else
 		if (rename(redirects->stderr_path, path)) {
 #endif
-			output_message(MSG_SYSERROR, TSD_TEXT("ƒŠƒ_ƒCƒŒƒNƒgƒtƒ@ƒCƒ‹‚ÌƒŠƒl[ƒ€‚É¸”s‚µ‚Ü‚µ‚½: %s -> %s"),
+			output_message(MSG_SYSERROR, TSD_TEXT("ãƒªãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒªãƒãƒ¼ãƒ ã«å¤±æ•—ã—ã¾ã—ãŸ: %s -> %s"),
 				redirects->stderr_path, path);
 		}
 	}
@@ -385,7 +385,7 @@ static int pid_of(my_process_handle_t pid)
 
 #ifdef TSD_PLATFORM_MSVC
 
-/* o—Í—pƒpƒCƒv‚Ìì¬ */
+/* å‡ºåŠ›ç”¨ãƒ‘ã‚¤ãƒ—ã®ä½œæˆ */
 static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 {
 	static int counter = 0;
@@ -405,7 +405,7 @@ static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 			NULL
 		);
 	if (h_pipe == INVALID_HANDLE_VALUE) {
-		output_message(MSG_SYSERROR, L"ƒpƒCƒv‚Ìì¬‚É¸”s(CreateNamedPipe)");
+		output_message(MSG_SYSERROR, L"ãƒ‘ã‚¤ãƒ—ã®ä½œæˆã«å¤±æ•—(CreateNamedPipe)");
 		return 0;
 	}
 
@@ -418,14 +418,14 @@ static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 			NULL
 		);
 	if (h_read_temp == INVALID_HANDLE_VALUE) {
-		output_message(MSG_SYSERROR, L"ƒpƒCƒv‚ÌƒI[ƒvƒ“‚É¸”s(CreateFile)");
+		output_message(MSG_SYSERROR, L"ãƒ‘ã‚¤ãƒ—ã®ã‚ªãƒ¼ãƒ—ãƒ³ã«å¤±æ•—(CreateFile)");
 		CloseHandle(h_pipe);
 		return 0;
 	}
 
 	if (!ConnectNamedPipe(h_pipe, NULL)) {
 		if (GetLastError() != 535) {
-			output_message(MSG_SYSERROR, L"ƒpƒCƒv‚ÌÚ‘±‚É¸”s(ConnectNamedPipe)");
+			output_message(MSG_SYSERROR, L"ãƒ‘ã‚¤ãƒ—ã®æ¥ç¶šã«å¤±æ•—(ConnectNamedPipe)");
 			CloseHandle(h_read_temp);
 			CloseHandle(h_pipe);
 			return 0;
@@ -444,7 +444,7 @@ static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 	CloseHandle(h_read_temp);
 
 	if (!ret) {
-		output_message(MSG_SYSERROR, L"DuplicateHandle()‚É¸”s");
+		output_message(MSG_SYSERROR, L"DuplicateHandle()ã«å¤±æ•—");
 		CloseHandle(*h_read);
 		CloseHandle(h_pipe);
 		return 0;
@@ -454,14 +454,14 @@ static int create_pipe1(HANDLE *h_read, HANDLE *h_write)
 	return 1;
 }
 
-/* qƒvƒƒZƒX¨qƒvƒƒZƒX‚ÌÚ‘±—pƒpƒCƒv‚Ìì¬ */
+/* å­ãƒ—ãƒ­ã‚»ã‚¹â†’å­ãƒ—ãƒ­ã‚»ã‚¹ã®æ¥ç¶šç”¨ãƒ‘ã‚¤ãƒ—ã®ä½œæˆ */
 static int create_pipe2(HANDLE *h_read, HANDLE *h_write)
 {
 	HANDLE h_read_temp, h_write_temp;
 	DWORD ret;
 
 	if (!CreatePipe(&h_read_temp, &h_write_temp, NULL, 0)) {
-		output_message(MSG_SYSERROR, L"ƒpƒCƒv‚Ìì¬‚É¸”s(CreatePipe)");
+		output_message(MSG_SYSERROR, L"ãƒ‘ã‚¤ãƒ—ã®ä½œæˆã«å¤±æ•—(CreatePipe)");
 		return 0;
 	}
 
@@ -477,7 +477,7 @@ static int create_pipe2(HANDLE *h_read, HANDLE *h_write)
 	CloseHandle(h_read_temp);
 
 	if (!ret) {
-		output_message(MSG_SYSERROR, L"DuplicateHandle()‚É¸”s");
+		output_message(MSG_SYSERROR, L"DuplicateHandle()ã«å¤±æ•—");
 		CloseHandle(h_write_temp);
 		return 0;
 	}
@@ -494,7 +494,7 @@ static int create_pipe2(HANDLE *h_read, HANDLE *h_write)
 	CloseHandle(h_write_temp);
 
 	if (!ret) {
-		output_message(MSG_SYSERROR, L"DuplicateHandle()‚É¸”s");
+		output_message(MSG_SYSERROR, L"DuplicateHandle()ã«å¤±æ•—");
 		CloseHandle(*h_read);
 		return 0;
 	}
@@ -550,8 +550,8 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 	if (!ps->no_pipe) {
 		si.hStdInput = h_read;
 	}
-	/* ˆÈ‰º‚Ì2‚Â‚É0‚ğw’è‚·‚é‚±‚Æ‚ÅqƒvƒƒZƒX‚ÌƒRƒ“ƒ\[ƒ‹‚ÉƒJ[ƒ\ƒ‹‚ğ‡‚í‚¹‚Ä‚àeƒvƒƒZƒX‚ÌƒRƒ“ƒ\[ƒ‹‚ªƒuƒƒbƒN‚µ‚È‚¢ */
-	/* ’è‹`Ï‚İ‚Ì‹““®‚È‚Ì‚©‚Í–¢’²¸ */
+	/* ä»¥ä¸‹ã®2ã¤ã«0ã‚’æŒ‡å®šã™ã‚‹ã“ã¨ã§å­ãƒ—ãƒ­ã‚»ã‚¹ã®ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã«ã‚«ãƒ¼ã‚½ãƒ«ã‚’åˆã‚ã›ã¦ã‚‚è¦ªãƒ—ãƒ­ã‚»ã‚¹ã®ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ãŒãƒ–ãƒ­ãƒƒã‚¯ã—ãªã„ */
+	/* å®šç¾©æ¸ˆã¿ã®æŒ™å‹•ãªã®ã‹ã¯æœªèª¿æŸ» */
 	if (next || ps->redirects.use_stdout) {
 		si.hStdOutput = h_write;
 	} else {
@@ -581,7 +581,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 	}
 
 	if (!CreateProcess(NULL, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-		output_message(MSG_SYSERROR, L"qƒvƒƒZƒX‚Ì¶¬‚É¸”s(CreateProcess): %s", pipe_cmd->cmd);
+		output_message(MSG_SYSERROR, L"å­ãƒ—ãƒ­ã‚»ã‚¹ã®ç”Ÿæˆã«å¤±æ•—(CreateProcess): %s", pipe_cmd->cmd);
 		CloseHandle(h_read);
 		if (!prev) {
 			CloseHandle(h_pipe);
@@ -595,7 +595,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const WCHAR *fn
 		return 0;
 	}
 
-	output_message(MSG_NOTIFY, L"ƒpƒCƒvƒRƒ}ƒ“ƒhÀs(pid=%d): %s ", pid_of(pi.hProcess), cmdarg);
+	output_message(MSG_NOTIFY, L"ãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰å®Ÿè¡Œ(pid=%d): %s ", pid_of(pi.hProcess), cmdarg);
 
 	ps->child_process = pi.hProcess;
 	ps->write_pipe = h_pipe;
@@ -664,11 +664,11 @@ static HANDLE exec_cmd(const cmd_opt_t *cmd, const WCHAR *fname, const proginfo_
 	}
 
 	if (!CreateProcess(NULL, cmdarg, NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-		output_message(MSG_SYSERROR, L"qƒvƒƒZƒX‚Ì¶¬‚É¸”s(CreateProcess): %s", cmdarg);
+		output_message(MSG_SYSERROR, L"å­ãƒ—ãƒ­ã‚»ã‚¹ã®ç”Ÿæˆã«å¤±æ•—(CreateProcess): %s", cmdarg);
 		return INVALID_HANDLE_VALUE;
 	}
 
-	output_message(MSG_NOTIFY, L"ƒRƒ}ƒ“ƒhÀs(pid=%d): %s", pid_of(pi.hProcess), cmdarg);
+	output_message(MSG_NOTIFY, L"ã‚³ãƒãƒ³ãƒ‰å®Ÿè¡Œ(pid=%d): %s", pid_of(pi.hProcess), cmdarg);
 
 	CloseHandle(pi.hThread);
 	if (output_redirect) {
@@ -754,20 +754,20 @@ static int create_pipe1(int *readfd, int *writefd)
 {
 	int pipefds[2];
 	if (pipe(pipefds) < 0) {
-		output_message(MSG_SYSERROR, "ƒpƒCƒv‚Ì¶¬‚É¸”s(pipe)");
+		output_message(MSG_SYSERROR, "ãƒ‘ã‚¤ãƒ—ã®ç”Ÿæˆã«å¤±æ•—(pipe)");
 		return 0;
 	}
 
 	if (fcntl(pipefds[1], F_SETFL, O_NONBLOCK) < 0) {
-		output_message(MSG_SYSERROR, "ƒpƒCƒv‚ğƒmƒ“ƒuƒƒbƒLƒ“ƒO‚Éİ’è‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(fcntl)");
+		output_message(MSG_SYSERROR, "ãƒ‘ã‚¤ãƒ—ã‚’ãƒãƒ³ãƒ–ãƒ­ãƒƒã‚­ãƒ³ã‚°ã«è¨­å®šã§ãã¾ã›ã‚“ã§ã—ãŸ(fcntl)");
 		close(pipefds[0]);
 		close(pipefds[1]);
 		return 0;
 	}
 
 	if (fcntl(pipefds[1], F_SETFD, FD_CLOEXEC) < 0) {
-		/* FD_CLOEXEC‚ğw’è‚µ‚È‚¢‚Æ•¡”‚ÌqƒvƒƒZƒX‚ğì‚Á‚½‚Æ‚«‚ÉƒpƒCƒv‚ª•Â‚¶‚ç‚ê‚È‚¢ */
-		output_message(MSG_SYSERROR, "ƒpƒCƒv‚ÉFD_CLOEXEC‚ğİ’è‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(fcntl)");
+		/* FD_CLOEXECã‚’æŒ‡å®šã—ãªã„ã¨è¤‡æ•°ã®å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’ä½œã£ãŸã¨ãã«ãƒ‘ã‚¤ãƒ—ãŒé–‰ã˜ã‚‰ã‚Œãªã„ */
+		output_message(MSG_SYSERROR, "ãƒ‘ã‚¤ãƒ—ã«FD_CLOEXECã‚’è¨­å®šã§ãã¾ã›ã‚“ã§ã—ãŸ(fcntl)");
 		close(pipefds[0]);
 		close(pipefds[1]);
 		return 0;
@@ -781,7 +781,7 @@ static int create_pipe2(int *readfd, int *writefd)
 {
 	int pipefds[2];
 	if (pipe(pipefds) < 0) {
-		output_message(MSG_SYSERROR, "ƒpƒCƒv‚Ì¶¬‚É¸”s(pipe)");
+		output_message(MSG_SYSERROR, "ãƒ‘ã‚¤ãƒ—ã®ç”Ÿæˆã«å¤±æ•—(pipe)");
 		return 0;
 	}
 	*readfd = pipefds[0];
@@ -847,7 +847,7 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 	}
 
 	if ( (pid=fork()) < 0 ) {
-		output_message(MSG_SYSERROR, "qƒvƒƒZƒX‚ğì¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(fork): %s %s", pipe_cmd->cmd, argline);
+		output_message(MSG_SYSERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’ä½œæˆã§ãã¾ã›ã‚“ã§ã—ãŸ(fork): %s %s", pipe_cmd->cmd, argline);
 		goto ERROR3;
 	} else if ( pid == 0 ) {
 		/* child */
@@ -878,19 +878,19 @@ static int exec_child(pipestat_t *ps, const cmd_opt_t *pipe_cmd, const char *fna
 			exit(1);
 		}
 	} else {
-		output_message(MSG_NOTIFY, "ƒpƒCƒvƒRƒ}ƒ“ƒhÀs(pid=%d): %s %s", (int)pid, pipe_cmd->cmd, argline);
+		output_message(MSG_NOTIFY, "ãƒ‘ã‚¤ãƒ—ã‚³ãƒãƒ³ãƒ‰å®Ÿè¡Œ(pid=%d): %s %s", (int)pid, pipe_cmd->cmd, argline);
 	}
 
 	pid_ret = waitpid(pid, &status, WNOHANG);
 	if (pid_ret < 0) {
-		output_message(MSG_SYSERROR, "qƒvƒƒZƒX‚Ìó‘Ô‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(waitpid): pid=%d", (int)pid);
+		output_message(MSG_SYSERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ã®çŠ¶æ…‹ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ(waitpid): pid=%d", (int)pid);
 		kill(pid, SIGKILL);
 		goto ERROR3;
 	} else if (pid_ret > 0) {
 		if (WIFEXITED(status)) {
-			output_message(MSG_ERROR, "qƒvƒƒZƒX‚ª‚·‚®‚ÉI—¹‚µ‚Ü‚µ‚½(waitpid): pid=%d, exitcode=%02x", (int)pid, WEXITSTATUS(status));
+			output_message(MSG_ERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ãŒã™ãã«çµ‚äº†ã—ã¾ã—ãŸ(waitpid): pid=%d, exitcode=%02x", (int)pid, WEXITSTATUS(status));
 		} else {
-			output_message(MSG_ERROR, "qƒvƒƒZƒX‚ª‚·‚®‚ÉI—¹‚µ‚Ü‚µ‚½(waitpid): pid=%d", (int)pid);
+			output_message(MSG_ERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ãŒã™ãã«çµ‚äº†ã—ã¾ã—ãŸ(waitpid): pid=%d", (int)pid);
 		}
 		goto ERROR3;
 	}
@@ -974,7 +974,7 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 	}
 
 	if ( (pid=fork()) < 0 ) {
-		output_message(MSG_SYSERROR, "qƒvƒƒZƒX‚ğì¬‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(fork): %s %s", cmd->cmd, argline);
+		output_message(MSG_SYSERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’ä½œæˆã§ãã¾ã›ã‚“ã§ã—ãŸ(fork): %s %s", cmd->cmd, argline);
 	} else if ( pid == 0 ) {
 		/* child */	
 		if (output_redirect) {
@@ -992,7 +992,7 @@ static pid_t exec_cmd(const cmd_opt_t *cmd, const char *fname, const proginfo_t 
 			exit(1);
 		}
 	} else {
-		output_message(MSG_NOTIFY, "ƒRƒ}ƒ“ƒhÀs(pid=%d): %s %s", (int)pid, cmd->cmd, argline);
+		output_message(MSG_NOTIFY, "ã‚³ãƒãƒ³ãƒ‰å®Ÿè¡Œ(pid=%d): %s %s", (int)pid, cmd->cmd, argline);
 	}
 
 	if (output_redirect) {
@@ -1119,7 +1119,7 @@ static BOOL CALLBACK term_enum_windows(HWND hwnd, LPARAM param)
 
 static void soft_kill(HANDLE h_process)
 {
-	/* Windows‚É‚Í”CˆÓ‚ÌƒvƒƒZƒXŠÔ‚ÌƒVƒOƒiƒ‹‚Ì‚æ‚¤‚ÈƒƒJƒjƒYƒ€‚Í–³‚¢‚Ì‚ÅWM_CLOSE‚ğ‘—‚Á‚Ä‚İ‚é */
+	/* Windowsã«ã¯ä»»æ„ã®ãƒ—ãƒ­ã‚»ã‚¹é–“ã®ã‚·ã‚°ãƒŠãƒ«ã®ã‚ˆã†ãªãƒ¡ã‚«ãƒ‹ã‚ºãƒ ã¯ç„¡ã„ã®ã§WM_CLOSEã‚’é€ã£ã¦ã¿ã‚‹ */
 	EnumWindows((WNDENUMPROC)term_enum_windows, (LPARAM)GetProcessId(h_process));
 }
 
@@ -1131,10 +1131,10 @@ static my_retcode_t hard_kill(HANDLE h_process, const WCHAR *cmd)
 	if (WaitForSingleObject(h_process, MAX_KILL_WAIT_MS) == WAIT_OBJECT_0) {
 		GetExitCodeProcess(h_process, &ret);
 		CloseHandle(h_process);
-		output_message(MSG_NOTIFY, L"qƒvƒƒZƒX‚Ì‹­§I—¹(pid=%d, exitcode=%d): %s", pid, ret, cmd);
+		output_message(MSG_NOTIFY, L"å­ãƒ—ãƒ­ã‚»ã‚¹ã®å¼·åˆ¶çµ‚äº†(pid=%d, exitcode=%d): %s", pid, ret, cmd);
 		return ret;
 	}
-	output_message(MSG_NOTIFY, L"qƒvƒƒZƒX‚ğ‹­§I—¹‚µ‚Ü‚µ‚½‚ªI—¹ó‘Ô‚ğŠm”F‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(pid=%d): %s", pid, cmd);
+	output_message(MSG_NOTIFY, L"å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’å¼·åˆ¶çµ‚äº†ã—ã¾ã—ãŸãŒçµ‚äº†çŠ¶æ…‹ã‚’ç¢ºèªã§ãã¾ã›ã‚“ã§ã—ãŸ(pid=%d): %s", pid, cmd);
 	CloseHandle(h_process);
 	return 99;
 }
@@ -1153,15 +1153,15 @@ static my_retcode_t hard_kill(pid_t pid, const char *cmd)
 	for(i=0; i<10; i++) {
 		ret = waitpid(pid, &status, WNOHANG);
 		if (ret > 0) {
-			output_message(MSG_NOTIFY, "qƒvƒƒZƒXI—¹(pid=%d, exitcode=%d): %s", (int)pid, WEXITSTATUS(status), cmd);
+			output_message(MSG_NOTIFY, "å­ãƒ—ãƒ­ã‚»ã‚¹çµ‚äº†(pid=%d, exitcode=%d): %s", (int)pid, WEXITSTATUS(status), cmd);
 			return WEXITSTATUS(status);
 		} else if (ret < 0) {
-			output_message(MSG_SYSERROR, "qƒvƒƒZƒX‚ğ‹­§I—¹‚µ‚Ü‚µ‚½‚ªwaitpid‚ªƒGƒ‰[‚ğ•Ô‚µ‚Ü‚µ‚½(pid=%d): %s", (int)pid, cmd);
+			output_message(MSG_SYSERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’å¼·åˆ¶çµ‚äº†ã—ã¾ã—ãŸãŒwaitpidãŒã‚¨ãƒ©ãƒ¼ã‚’è¿”ã—ã¾ã—ãŸ(pid=%d): %s", (int)pid, cmd);
 			return 98;
 		}
 		usleep(1000 * MAX_KILL_WAIT_MS / 10);
 	}
-	output_message(MSG_ERROR, "qƒvƒƒZƒX‚ğ‹­§I—¹‚µ‚Ü‚µ‚½‚ªwaitpid‚ÅI—¹ó‘Ô‚ğŠm”F‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(pid=%d): %s", (int)pid, cmd);
+	output_message(MSG_ERROR, "å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’å¼·åˆ¶çµ‚äº†ã—ã¾ã—ãŸãŒwaitpidã§çµ‚äº†çŠ¶æ…‹ã‚’ç¢ºèªã§ãã¾ã›ã‚“ã§ã—ãŸ(pid=%d): %s", (int)pid, cmd);
 	return 99;
 }
 
@@ -1172,7 +1172,7 @@ void insert_runngin_ps(my_process_handle_t child_process, const TSDCHAR *cmd, co
 	int i, pid;
 	if (n_exec_ps >= MAX_EXEC_PROCESSES) {
 		pid = pid_of(exec_ps[0].child_process);
-		output_message(MSG_ERROR, TSD_TEXT("Às’†‚ÌqƒvƒƒZƒX‚ª‘½‚·‚¬‚é‚½‚ßÅ‚àŒÃ‚¢‚à‚Ì‚ğ‹­§I—¹‚µ‚Ü‚·(pid=%d): %s"), pid, exec_ps[0].cmd);
+		output_message(MSG_ERROR, TSD_TEXT("å®Ÿè¡Œä¸­ã®å­ãƒ—ãƒ­ã‚»ã‚¹ãŒå¤šã™ãã‚‹ãŸã‚æœ€ã‚‚å¤ã„ã‚‚ã®ã‚’å¼·åˆ¶çµ‚äº†ã—ã¾ã™(pid=%d): %s"), pid, exec_ps[0].cmd);
 		hard_kill(exec_ps[0].child_process, exec_ps[0].cmd);
 		rename_redirect_file(pid, &exec_ps[0].redirects);
 		for (i = 1; i < n_exec_ps; i++) {
@@ -1191,8 +1191,8 @@ void insert_runngin_ps(my_process_handle_t child_process, const TSDCHAR *cmd, co
 /* return: 0 if child process exited, 1 if child process is still alive. */
 static int check_child_process(my_process_handle_t child_process, my_retcode_t *p_retcode, const redirect_pathinfo_t *redirects, const TSDCHAR *cmd)
 {
-	/* TODO: 1‚Â‚¸‚Âƒ`ƒFƒbƒN‚·‚é‚Ì‚Å‚Í‚È‚­A
-		WaitMultipleObjects‚ ‚é‚¢‚Íwait‚ğ—p‚¢‚ÄƒVƒXƒeƒ€ƒR[ƒ‹ŒÄ‚Ño‚µ‚ğŒ¸‚ç‚· */
+	/* TODO: 1ã¤ãšã¤ãƒã‚§ãƒƒã‚¯ã™ã‚‹ã®ã§ã¯ãªãã€
+		WaitMultipleObjectsã‚ã‚‹ã„ã¯waitã‚’ç”¨ã„ã¦ã‚·ã‚¹ãƒ†ãƒ ã‚³ãƒ¼ãƒ«å‘¼ã³å‡ºã—ã‚’æ¸›ã‚‰ã™ */
 	my_retcode_t retcode;
 	int pid;
 #ifdef TSD_PLATFORM_MSVC
@@ -1207,7 +1207,7 @@ static int check_child_process(my_process_handle_t child_process, my_retcode_t *
 		return 1;
 	}
 
-	output_message(MSG_NOTIFY, TSD_TEXT("qƒvƒƒZƒXI—¹(pid=%d, exitcode=%d): %s"), pid_of(child_process), (int)retcode, cmd);
+	output_message(MSG_NOTIFY, TSD_TEXT("å­ãƒ—ãƒ­ã‚»ã‚¹çµ‚äº†(pid=%d, exitcode=%d): %s"), pid_of(child_process), (int)retcode, cmd);
 	if (p_retcode) {
 		*p_retcode = retcode;
 	}
@@ -1227,14 +1227,14 @@ static void check_exec_child_processes(const int64_t time_ms, const int timeout_
 		pid = pid_of(exec_ps[i].child_process);
 		del = !check_child_process(exec_ps[i].child_process, &retcode, &exec_ps[i].redirects, exec_ps[i].cmd);
 		if (!del && !exec_ps[i].killmode && exec_ps[i].lasttime + timeout_soft < time_ms) {
-			output_message(MSG_WARNING, TSD_TEXT("qƒvƒƒZƒX‚ª%d•bŒo‚Á‚Ä‚àI—¹‚µ‚È‚¢‚½‚ßI—¹‚ğ‚İ‚Ü‚·(pid=%d): %s"),
+			output_message(MSG_WARNING, TSD_TEXT("å­ãƒ—ãƒ­ã‚»ã‚¹ãŒ%dç§’çµŒã£ã¦ã‚‚çµ‚äº†ã—ãªã„ãŸã‚çµ‚äº†ã‚’è©¦ã¿ã¾ã™(pid=%d): %s"),
 				timeout_soft/1000, pid, exec_ps[i].cmd);
 			soft_kill(exec_ps[i].child_process);
 			exec_ps[i].killmode = 1;
 			exec_ps[i].lasttime = time_ms;
 		} else if (!del && exec_ps[i].killmode && exec_ps[i].lasttime + timeout_hard < time_ms) {
 			
-			output_message(MSG_WARNING, TSD_TEXT("qƒvƒƒZƒX‚ª%d•bŒo‚Á‚Ä‚àI—¹‚µ‚È‚¢‚½‚ß‹­§I—¹‚µ‚Ü‚·(pid=%d): %s"),
+			output_message(MSG_WARNING, TSD_TEXT("å­ãƒ—ãƒ­ã‚»ã‚¹ãŒ%dç§’çµŒã£ã¦ã‚‚çµ‚äº†ã—ãªã„ãŸã‚å¼·åˆ¶çµ‚äº†ã—ã¾ã™(pid=%d): %s"),
 				timeout_hard/1000, pid, exec_ps[i].cmd);
 			hard_kill(exec_ps[i].child_process, exec_ps[i].cmd);
 			rename_redirect_file(pid, &exec_ps[i].redirects);
@@ -1263,13 +1263,13 @@ static void ps_write(pipestat_t *ps)
 			ps->write_busy = 0;
 			break;
 		}
-		/* Ä—˜—p‚ÌÛ‚É‰Šú‰»‚ª•K—v‚©‚Í•s–¾‚¾‚ªA”O‚Ì‚½‚ßg—p‘O‚É•K‚¸‰Šú‰»‚µ‚Ä‚¨‚­ */
+		/* å†åˆ©ç”¨ã®éš›ã«åˆæœŸåŒ–ãŒå¿…è¦ã‹ã¯ä¸æ˜ã ãŒã€å¿µã®ãŸã‚ä½¿ç”¨å‰ã«å¿…ãšåˆæœŸåŒ–ã—ã¦ãŠã */
 		memset(&ps->ol, 0, sizeof(OVERLAPPED));
 		if (!WriteFile(ps->write_pipe, &ps->buf[ps->written_bytes], remain, &written, &ps->ol)) {
 			if ((errcode=GetLastError()) == ERROR_IO_PENDING) {
 				/* do nothing */
 			} else {
-				output_message(MSG_SYSERROR, L"‘‚«‚İƒGƒ‰[‚Ì‚½‚ßƒpƒCƒv‚ğ•Â‚¶‚Ü‚·(WriteFile): pid=%d", pid_of(ps->child_process));
+				output_message(MSG_SYSERROR, L"æ›¸ãè¾¼ã¿ã‚¨ãƒ©ãƒ¼ã®ãŸã‚ãƒ‘ã‚¤ãƒ—ã‚’é–‰ã˜ã¾ã™(WriteFile): pid=%d", pid_of(ps->child_process));
 				goto ERROR_END;
 			}
 			break;
@@ -1302,9 +1302,9 @@ static void ps_check(pipestat_t *ps, int cancel)
 			/* do nothing */
 		} else {
 			if (errcode == ERROR_OPERATION_ABORTED && cancel) {
-				output_message(MSG_WARNING, L"IO‚ğƒLƒƒƒ“ƒZƒ‹‚µ‚Ü‚µ‚½: pid=%d", pid_of(ps->child_process));
+				output_message(MSG_WARNING, L"IOã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«ã—ã¾ã—ãŸ: pid=%d", pid_of(ps->child_process));
 			} else {
-				output_message(MSG_SYSERROR, L"‘‚«‚İƒGƒ‰[‚Ì‚½‚ßƒpƒCƒv‚ğ•Â‚¶‚Ü‚·(GetOverlappedResult): pid=%d", pid_of(ps->child_process));
+				output_message(MSG_SYSERROR, L"æ›¸ãè¾¼ã¿ã‚¨ãƒ©ãƒ¼ã®ãŸã‚ãƒ‘ã‚¤ãƒ—ã‚’é–‰ã˜ã¾ã™(GetOverlappedResult): pid=%d", pid_of(ps->child_process));
 				close_pipe(ps);
 				ps->aborted = 1;
 				return;
@@ -1316,7 +1316,7 @@ static void ps_check(pipestat_t *ps, int cancel)
 		remain = ps->write_bytes - ps->written_bytes;
 		if (remain > 0) {
 			if (cancel) {
-				output_message(MSG_WARNING, L"IO‚ğƒLƒƒƒ“ƒZƒ‹‚µ‚Ü‚µ‚½: pid=%d", pid_of(ps->child_process));
+				output_message(MSG_WARNING, L"IOã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«ã—ã¾ã—ãŸ: pid=%d", pid_of(ps->child_process));
 				ps->write_busy = 0;
 			} else {
 				ps_write(ps);
@@ -1337,18 +1337,18 @@ static int ps_write(pipestat_t *ps, const uint8_t *buf, int write_size)
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 
-	/* SIGPIPE‚ğ–³‹‚·‚é‚æ‚¤‚Éİ’è‚·‚é */
+	/* SIGPIPEã‚’ç„¡è¦–ã™ã‚‹ã‚ˆã†ã«è¨­å®šã™ã‚‹ */
 	if (sigaction(SIGPIPE, &sa, &sa_old) < 0) {
-		output_message(MSG_SYSERROR, "sigaction‚ªƒGƒ‰[‚ğ•Ô‚µ‚Ü‚µ‚½‚½‚ßƒpƒCƒv‚ğ•Â‚¶‚Ü‚·: pid=%d", (int)(ps->child_process));
+		output_message(MSG_SYSERROR, "sigactionãŒã‚¨ãƒ©ãƒ¼ã‚’è¿”ã—ã¾ã—ãŸãŸã‚ãƒ‘ã‚¤ãƒ—ã‚’é–‰ã˜ã¾ã™: pid=%d", (int)(ps->child_process));
 		goto ERROR_END;
 	}
 
 	written = write(ps->write_pipe, buf, write_size);
 	errno_t = errno;
 
-	/* SIGPIPE‚Ìƒnƒ“ƒhƒ‰‚Ìİ’è‚ğ–ß‚· */
+	/* SIGPIPEã®ãƒãƒ³ãƒ‰ãƒ©ã®è¨­å®šã‚’æˆ»ã™ */
 	if (sigaction(SIGPIPE, &sa_old, NULL) < 0) {
-		output_message(MSG_SYSERROR, "sigaction‚ªƒGƒ‰[‚ğ•Ô‚µ‚Ü‚µ‚½‚½‚ßƒpƒCƒv‚ğ•Â‚¶‚Ü‚·: pid=%d", (int)(ps->child_process));
+		output_message(MSG_SYSERROR, "sigactionãŒã‚¨ãƒ©ãƒ¼ã‚’è¿”ã—ã¾ã—ãŸãŸã‚ãƒ‘ã‚¤ãƒ—ã‚’é–‰ã˜ã¾ã™: pid=%d", (int)(ps->child_process));
 		goto ERROR_END;
 	}
 
@@ -1357,7 +1357,7 @@ static int ps_write(pipestat_t *ps, const uint8_t *buf, int write_size)
 			/* do nothing */
 			return 0;
 		} else {
-			output_message(MSG_SYSERROR, "‘‚«‚İƒGƒ‰[‚Ì‚½‚ßƒpƒCƒv‚ğ•Â‚¶‚Ü‚·(write): pid=%d", (int)(ps->child_process));
+			output_message(MSG_SYSERROR, "æ›¸ãè¾¼ã¿ã‚¨ãƒ©ãƒ¼ã®ãŸã‚ãƒ‘ã‚¤ãƒ—ã‚’é–‰ã˜ã¾ã™(write): pid=%d", (int)(ps->child_process));
 			goto ERROR_END;
 		}
 	}
@@ -1462,7 +1462,7 @@ static int check_pipe_child_process(pipestat_t *pstat, int force_close, int rema
 			return 0;
 		} else if (remain_ms <= 0) {
 			pstat->soft_closed = 1;
-			output_message(MSG_WARNING, TSD_TEXT("qƒvƒƒZƒX‚ÌI—¹‚ğ‚İ‚Ü‚·(pid=%d): %s"),
+			output_message(MSG_WARNING, TSD_TEXT("å­ãƒ—ãƒ­ã‚»ã‚¹ã®çµ‚äº†ã‚’è©¦ã¿ã¾ã™(pid=%d): %s"),
 				pid_of(pstat->child_process), pstat->cmd);
 			soft_kill(pstat->child_process);
 		}
@@ -1507,7 +1507,7 @@ static void hook_tick(int64_t time_ms)
 {
 	static int64_t last_time = 0;
 	if (last_time / 1000 != time_ms / 1000) {
-		/* Às’†ƒvƒƒZƒX‚Ìƒ`ƒFƒbƒN‚Í1•b‚É1‰ñ‚¾‚¯ŒÄ‚Ño‚· */
+		/* å®Ÿè¡Œä¸­ãƒ—ãƒ­ã‚»ã‚¹ã®ãƒã‚§ãƒƒã‚¯ã¯1ç§’ã«1å›ã ã‘å‘¼ã³å‡ºã™ */
 		check_exec_child_processes(time_ms, CMDEXEC_LIMIT_SEC*1000, CMDEXEC_KILL_SEC*1000);
 		last_time = time_ms;
 	}
@@ -1535,7 +1535,7 @@ static void hook_close_module()
 static int hook_postconfig()
 {
 	if (open_connect) {
-		output_message(MSG_ERROR, TSD_TEXT("Ú‘±æ‚ÌƒRƒ}ƒ“ƒh‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ"));
+		output_message(MSG_ERROR, TSD_TEXT("æ¥ç¶šå…ˆã®ã‚³ãƒãƒ³ãƒ‰ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“"));
 		return 0;
 	}
 	return 1;
@@ -1544,7 +1544,7 @@ static int hook_postconfig()
 static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 {
 	if (n_pipecmds >= MAX_PIPECMDS) {
-		return TSD_TEXT("w’è‚·‚éƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚Ì”‚ª‘½‚·‚¬‚Ü‚·");
+		return TSD_TEXT("æŒ‡å®šã™ã‚‹ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®æ•°ãŒå¤šã™ãã¾ã™");
 	}
 	tsd_strlcpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
 	pipecmds[n_pipecmds].set_opt = 0;
@@ -1558,10 +1558,10 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 static const TSDCHAR* set_pipe_opt(const TSDCHAR *param)
 {
 	if (n_pipecmds == 0) {
-		return TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+		return TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“");
 	}
 	if (pipecmds[n_pipecmds - 1].set_opt) {
-		return TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚ÌƒIƒvƒVƒ‡ƒ“‚ÍŠù‚Éw’è‚³‚ê‚Ä‚¢‚Ü‚·");
+		return TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã¯æ—¢ã«æŒ‡å®šã•ã‚Œã¦ã„ã¾ã™");
 	}
 	tsd_strlcpy(pipecmds[n_pipecmds - 1].opt, param, 2048 - 1);
 	pipecmds[n_pipecmds - 1].set_opt = 1;
@@ -1579,7 +1579,7 @@ static const TSDCHAR *set_connect(const TSDCHAR* param)
 {
 	UNREF_ARG(param);
 	if (n_pipecmds < 1) {
-		return TSD_TEXT("Ú‘±Œ³‚ÌƒRƒ}ƒ“ƒh‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+		return TSD_TEXT("æ¥ç¶šå…ƒã®ã‚³ãƒãƒ³ãƒ‰ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“");
 	}
 	pipecmds[n_pipecmds - 1].connecting = 1;
 	open_connect = 1;
@@ -1590,9 +1590,9 @@ static const TSDCHAR *set_nopipe(const TSDCHAR* param)
 {
 	UNREF_ARG(param);
 	if (n_pipecmds < 1) {
-		return TSD_TEXT("ƒRƒ}ƒ“ƒh‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+		return TSD_TEXT("ã‚³ãƒãƒ³ãƒ‰ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“");
 	} else if (open_connect) {
-		return TSD_TEXT("“ü—Í‚ª‚ ‚éƒRƒ}ƒ“ƒh‚É--nopipe‚Íg—p‚Å‚«‚Ü‚¹‚ñ");
+		return TSD_TEXT("å…¥åŠ›ãŒã‚ã‚‹ã‚³ãƒãƒ³ãƒ‰ã«--nopipeã¯ä½¿ç”¨ã§ãã¾ã›ã‚“");
 	}
 	pipecmds[n_pipecmds - 1].no_pipe = 1;
 	return NULL;
@@ -1601,7 +1601,7 @@ static const TSDCHAR *set_nopipe(const TSDCHAR* param)
 static const TSDCHAR* set_cmd(const TSDCHAR *param)
 {
 	if (n_execcmds >= MAX_CMDS) {
-		return TSD_TEXT("w’è‚·‚é”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh‚Ì”‚ª‘½‚·‚¬‚Ü‚·");
+		return TSD_TEXT("æŒ‡å®šã™ã‚‹ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®æ•°ãŒå¤šã™ãã¾ã™");
 	}
 	tsd_strlcpy(execcmds[n_execcmds].cmd, param, MAX_PATH_LEN - 1);
 	execcmds[n_execcmds].set_opt = 0;
@@ -1612,10 +1612,10 @@ static const TSDCHAR* set_cmd(const TSDCHAR *param)
 static const TSDCHAR* set_cmd_opt(const TSDCHAR *param)
 {
 	if (n_execcmds == 0) {
-		return TSD_TEXT("”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+		return TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“");
 	}
 	if (execcmds[n_execcmds - 1].set_opt) {
-		return TSD_TEXT("”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh‚ÌƒIƒvƒVƒ‡ƒ“‚ÍŠù‚Éw’è‚³‚ê‚Ä‚¢‚Ü‚·");
+		return TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã¯æ—¢ã«æŒ‡å®šã•ã‚Œã¦ã„ã¾ã™");
 	}
 	tsd_strlcpy(execcmds[n_execcmds - 1].opt, param, 2048 - 1);
 	execcmds[n_execcmds - 1].set_opt = 1;
@@ -1656,15 +1656,15 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--pipecmd"), TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh (•¡”w’è‰Â)"), 1, set_pipe_cmd },
-	{ TSD_TEXT("--pipeopt"), TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚ÌƒIƒvƒVƒ‡ƒ“ (•¡”w’è‰Â)"), 1, set_pipe_opt },
-	{ TSD_TEXT("--pwmin"), TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚ÌƒEƒBƒ“ƒhƒE‚ğÅ¬‰»‚·‚é"), 0, set_min },
-	{ TSD_TEXT("--pipeconn"), TSD_TEXT("ƒpƒCƒvÀsƒRƒ}ƒ“ƒh‚Ìo—Í‚ğŸ‚ÌƒRƒ}ƒ“ƒh‚Ì“ü—Í‚ÉÚ‘±‚·‚é"), 0, set_connect },
-	{ TSD_TEXT("--nopipe"), TSD_TEXT("Às‚Ì‚İ‚ÅƒpƒCƒvo—Í‚ğs‚í‚È‚¢"), 0, set_nopipe },
-	{ TSD_TEXT("--cmd"), TSD_TEXT("”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh (•¡”w’è‰Â)"), 1, set_cmd },
-	{ TSD_TEXT("--cmdopt"), TSD_TEXT("”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh‚ÌƒIƒvƒVƒ‡ƒ“ (•¡”w’è‰Â)"), 1, set_cmd_opt },
-	{ TSD_TEXT("--cwmin"), TSD_TEXT("”Ô‘gI—¹ÀsƒRƒ}ƒ“ƒh‚ÌƒEƒBƒ“ƒhƒE‚ğÅ¬‰»‚·‚é"), 0, set_cmin },
-	{ TSD_TEXT("--cmd-output-redirect"), TSD_TEXT("ŠeƒRƒ}ƒ“ƒh‚Ì•W€o—Í^ƒGƒ‰[o—Í‚ğw’è‚µ‚½ƒfƒBƒŒƒNƒgƒŠ‚É‘‚«o‚·"), 1, set_output_redirect },
+	{ TSD_TEXT("--pipecmd"), TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ (è¤‡æ•°æŒ‡å®šå¯)"), 1, set_pipe_cmd },
+	{ TSD_TEXT("--pipeopt"), TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ (è¤‡æ•°æŒ‡å®šå¯)"), 1, set_pipe_opt },
+	{ TSD_TEXT("--pwmin"), TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’æœ€å°åŒ–ã™ã‚‹"), 0, set_min },
+	{ TSD_TEXT("--pipeconn"), TSD_TEXT("ãƒ‘ã‚¤ãƒ—å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®å‡ºåŠ›ã‚’æ¬¡ã®ã‚³ãƒãƒ³ãƒ‰ã®å…¥åŠ›ã«æ¥ç¶šã™ã‚‹"), 0, set_connect },
+	{ TSD_TEXT("--nopipe"), TSD_TEXT("å®Ÿè¡Œã®ã¿ã§ãƒ‘ã‚¤ãƒ—å‡ºåŠ›ã‚’è¡Œã‚ãªã„"), 0, set_nopipe },
+	{ TSD_TEXT("--cmd"), TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ (è¤‡æ•°æŒ‡å®šå¯)"), 1, set_cmd },
+	{ TSD_TEXT("--cmdopt"), TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ (è¤‡æ•°æŒ‡å®šå¯)"), 1, set_cmd_opt },
+	{ TSD_TEXT("--cwmin"), TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚å®Ÿè¡Œã‚³ãƒãƒ³ãƒ‰ã®ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’æœ€å°åŒ–ã™ã‚‹"), 0, set_cmin },
+	{ TSD_TEXT("--cmd-output-redirect"), TSD_TEXT("å„ã‚³ãƒãƒ³ãƒ‰ã®æ¨™æº–å‡ºåŠ›ï¼ã‚¨ãƒ©ãƒ¼å‡ºåŠ›ã‚’æŒ‡å®šã—ãŸãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã«æ›¸ãå‡ºã™"), 1, set_output_redirect },
 	{ NULL },
 };
 

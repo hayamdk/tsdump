@@ -58,15 +58,15 @@ BOOL WINAPI console_ctrl_handler(DWORD ctrl)
 	int64_t t;
 	UNREF_ARG(ctrl);
 	termflag = 1;
-	output_message(MSG_NOTIFY, TSD_TEXT("\nI—¹ƒVƒOƒiƒ‹‚ğƒLƒƒƒbƒ`"));
+	output_message(MSG_NOTIFY, TSD_TEXT("\nçµ‚äº†ã‚·ã‚°ãƒŠãƒ«ã‚’ã‚­ãƒ£ãƒƒãƒ"));
 	while (!termwaiting) {
 		Sleep(10);
 	}
 	t = gettime();
 	while (!termedflag) {
 		if (gettime() - t > 1000*20) {
-			/* 20•bˆÈãŒo‰ß‚µ‚½‚ç’ú‚ß‚Äo‚é */
-			output_message(MSG_NOTIFY, TSD_TEXT("\nƒ‚ƒWƒ…[ƒ‹‚ÌƒNƒ[ƒY‚ÉŠÔ‚ª‚©‚©‚Á‚Ä‚¢‚é‚½‚ß‹­§I—¹‚µ‚Ü‚·"));
+			/* 20ç§’ä»¥ä¸ŠçµŒéã—ãŸã‚‰è«¦ã‚ã¦å‡ºã‚‹ */
+			output_message(MSG_NOTIFY, TSD_TEXT("\nãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ã‚¯ãƒ­ãƒ¼ã‚ºã«æ™‚é–“ãŒã‹ã‹ã£ã¦ã„ã‚‹ãŸã‚å¼·åˆ¶çµ‚äº†ã—ã¾ã™"));
 			break;
 		}
 		Sleep(10);
@@ -80,7 +80,7 @@ void signal_handler(int sig)
 {
 	UNREF_ARG(sig);
 	termflag = 1;
-	output_message(MSG_NOTIFY, TSD_TEXT("\nI—¹ƒVƒOƒiƒ‹‚ğƒLƒƒƒbƒ`"));
+	output_message(MSG_NOTIFY, TSD_TEXT("\nçµ‚äº†ã‚·ã‚°ãƒŠãƒ«ã‚’ã‚­ãƒ£ãƒƒãƒ"));
 }
 
 #endif
@@ -93,7 +93,7 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 	TSDCHAR msg[2048];
 	const TSDCHAR *modname;
 
-	/* Šg’£q‚ğœ‚¢‚½ƒtƒ@ƒCƒ‹–¼=ƒ‚ƒWƒ…[ƒ‹–¼‚ğƒRƒs[ */
+	/* æ‹¡å¼µå­ã‚’é™¤ã„ãŸãƒ•ã‚¡ã‚¤ãƒ«å=ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«åã‚’ã‚³ãƒ”ãƒ¼ */
 #ifdef TSD_PLATFORM_MSVC
 	const char *cp;
 	int len;
@@ -114,7 +114,7 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 	}
 	*wcp = L'\0';
 
-	/* __FILE__‚Éƒtƒ‹ƒpƒX‚ª“ü‚Á‚Ä‚¢‚éê‡‚ª‚ ‚é‚Ì‚Åƒtƒ@ƒCƒ‹–¼‚Ì‚İæ‚èo‚· */
+	/* __FILE__ã«ãƒ•ãƒ«ãƒ‘ã‚¹ãŒå…¥ã£ã¦ã„ã‚‹å ´åˆãŒã‚ã‚‹ã®ã§ãƒ•ã‚¡ã‚¤ãƒ«åã®ã¿å–ã‚Šå‡ºã™ */
 	modname = path_getfile(modpath);
 #else
 	if (msgtype == MSG_SYSERROR) {
@@ -122,7 +122,7 @@ void _output_message(const char *fname, message_type_t msgtype, const TSDCHAR *f
 		plasterr = &lasterr;
 	}
 
-	/* __FILE__‚Éƒtƒ‹ƒpƒX‚ª“ü‚Á‚Ä‚¢‚éê‡‚ª‚ ‚é‚Ì‚Åƒtƒ@ƒCƒ‹–¼‚Ì‚İæ‚èo‚· */
+	/* __FILE__ã«ãƒ•ãƒ«ãƒ‘ã‚¹ãŒå…¥ã£ã¦ã„ã‚‹å ´åˆãŒã‚ã‚‹ã®ã§ãƒ•ã‚¡ã‚¤ãƒ«åã®ã¿å–ã‚Šå‡ºã™ */
 	modname = path_getfile(fname);
 #endif
 
@@ -149,17 +149,17 @@ int print_services(ts_service_list_t *services_list)
 		}
 	}
 	if (!get_service_info) {
-		/* Å’á1ƒT[ƒrƒX‚Å‚àƒT[ƒrƒXî•ñ‚ªæ“¾‚Å‚«‚é‚Ì‚ğ‘Ò‚Â */
+		/* æœ€ä½1ã‚µãƒ¼ãƒ“ã‚¹ã§ã‚‚ã‚µãƒ¼ãƒ“ã‚¹æƒ…å ±ãŒå–å¾—ã§ãã‚‹ã®ã‚’å¾…ã¤ */
 		return 0;
 	}
 
-	output_message(MSG_DISP, TSD_TEXT("ƒT[ƒrƒX”: %d"), services_list->n_services);
+	output_message(MSG_DISP, TSD_TEXT("ã‚µãƒ¼ãƒ“ã‚¹æ•°: %d"), services_list->n_services);
 	for (i = 0; i < services_list->n_services; i++) {
 		sid = services_list->proginfos[i].service_id;
 		if (services_list->proginfos[i].status & PGINFO_GET_SERVICE_INFO) {
-			output_message(MSG_DISP, TSD_TEXT("ƒT[ƒrƒX%d: ID=%04x(%d), %s"), i, sid, sid, services_list->proginfos[i].service_name.str);
+			output_message(MSG_DISP, TSD_TEXT("ã‚µãƒ¼ãƒ“ã‚¹%d: ID=%04x(%d), %s"), i, sid, sid, services_list->proginfos[i].service_name.str);
 		} else {
-			output_message(MSG_DISP, TSD_TEXT("ƒT[ƒrƒX%d: ID=%04x(%d), (–¼Ì•s–¾)"), i, sid, sid);
+			output_message(MSG_DISP, TSD_TEXT("ã‚µãƒ¼ãƒ“ã‚¹%d: ID=%04x(%d), (åç§°ä¸æ˜)"), i, sid, sid);
 		}
 	}
 	return 1;
@@ -176,11 +176,11 @@ ssize_t save_line(COORD *new_pos)
 	hc = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hc != INVALID_HANDLE_VALUE) {
 		if (GetConsoleScreenBufferInfo(hc, &ci) != 0) {
-			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINE‚¾‚Æ‚±‚ê‚ğæ“¾‚Å‚«‚È‚¢(0‚ªƒZƒbƒg‚³‚ê‚é) */
+			if (ci.dwCursorPosition.X != 0 || ci.dwCursorPosition.Y != 0) { /* WINEã ã¨ã“ã‚Œã‚’å–å¾—ã§ããªã„(0ãŒã‚»ãƒƒãƒˆã•ã‚Œã‚‹) */
 				console_width = ci.dwSize.X;
 				new_pos->X = 0;
 				new_pos->Y = ci.dwCursorPosition.Y;
-				if ( ci.dwCursorPosition.Y > ci.dwSize.Y - 3 ) { /* 3s•ª‚Ì—]”’‚ª–³‚¯‚ê‚ÎÅŒã‚És‚ğ–ß‚· */
+				if ( ci.dwCursorPosition.Y > ci.dwSize.Y - 3 ) { /* 3è¡Œåˆ†ã®ä½™ç™½ãŒç„¡ã‘ã‚Œã°æœ€å¾Œã«è¡Œã‚’æˆ»ã™ */
 					new_pos->Y = ci.dwSize.Y - 3;
 				}
 			}
@@ -429,7 +429,7 @@ static proginfo_t *find_curr_service_pcr_pid(void *param, const unsigned int pcr
 static proginfo_t *find_curr_service_eit(void *param, const EIT_header_t *eit_h)
 {
 	if (eit_h->section_number != 0) {
-		/* Œ»İis’†‚Ì”Ô‘g‚Å‚Í‚È‚¢ */
+		/* ç¾åœ¨é€²è¡Œä¸­ã®ç•ªçµ„ã§ã¯ãªã„ */
 		return NULL;
 	}
 	return find_curr_service(param, eit_h->service_id);
@@ -466,7 +466,7 @@ static void tot_handler(void *param, const time_mjd_t *TOT_time)
 void request_shutdown(int mode)
 {
 	UNREF_ARG(mode);
-	output_message(MSG_NOTIFY, TSD_TEXT("\nƒ‚ƒWƒ…[ƒ‹‚©‚ç‚ÌI—¹ƒŠƒNƒGƒXƒg"));
+	output_message(MSG_NOTIFY, TSD_TEXT("\nãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‹ã‚‰ã®çµ‚äº†ãƒªã‚¯ã‚¨ã‚¹ãƒˆ"));
 	termflag = 1;
 }
 
@@ -511,12 +511,12 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 	while ( !termflag ) {
 		nowtime_base = gettime();
 
-		/* Å‘å100‰ñ‚Ü‚Å˜A‘±‚µ‚Äæ“¾‚ğ‚İ‚é */
+		/* æœ€å¤§100å›ã¾ã§é€£ç¶šã—ã¦å–å¾—ã‚’è©¦ã¿ã‚‹ */
 		for(n = 0; n < 100; n++) {
 			if (n_recv == 0) {
-				/* ‘O‰ñ‚Ìæ“¾ƒTƒCƒY‚ª0‚¾‚Á‚½ê‡‚ÍƒXƒgƒŠ[ƒ€‚Ì“’…‚ğ‘Ò‚Â */
+				/* å‰å›ã®å–å¾—ã‚µã‚¤ã‚ºãŒ0ã ã£ãŸå ´åˆã¯ã‚¹ãƒˆãƒªãƒ¼ãƒ ã®åˆ°ç€ã‚’å¾…ã¤ */
 				if (do_stream_generator_wait(generator_stat, 100) < 0) {
-					/* ‘Ò‚¿‹@”\‚É”ñ‘Î‰‚ÈƒXƒgƒŠ[ƒ€ƒWƒFƒlƒŒ[ƒ^‚Ìê‡10ms‘Ò‚Â */
+					/* å¾…ã¡æ©Ÿèƒ½ã«éå¯¾å¿œãªã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚¸ã‚§ãƒãƒ¬ãƒ¼ã‚¿ã®å ´åˆ10mså¾…ã¤ */
 #ifdef TSD_PLATFORM_MSVC
 					Sleep(10);
 #else
@@ -556,8 +556,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 				if (!valid_ts_header) {
 					if (tsh.valid_sync_byte) {
-						/* PESƒpƒPƒbƒg‚Å‚±‚±‚É—ˆ‚éê‡‚ª‚ ‚é‚Ì‚ÅŒx‚Í‚Ğ‚Æ‚Ü‚¸OFF  e.g. NHK BS1
-						   PESƒpƒPƒbƒg‚Ì‹KŠi‚ğ—v’²¸ */
+						/* PESãƒ‘ã‚±ãƒƒãƒˆã§ã“ã“ã«æ¥ã‚‹å ´åˆãŒã‚ã‚‹ã®ã§è­¦å‘Šã¯ã²ã¨ã¾ãšOFF  e.g. NHK BS1
+						   PESãƒ‘ã‚±ãƒƒãƒˆã®è¦æ ¼ã‚’è¦èª¿æŸ» */
 						//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 					} else {
 						output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
@@ -566,7 +566,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				}
 
 				if (service_list.n_services == 0) {
-					/* PAT‚Ìæ“¾‚Í‰‰ñ‚Ì‚İ */
+					/* PATã®å–å¾—ã¯åˆå›ã®ã¿ */
 					parse_PAT(&service_list.pid0x00, packet, &tsh, &service_list, pat_handler);
 				} else {
 					for (j = 0; j < service_list.n_services; j++) {
@@ -589,8 +589,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
 			}
 
-			if ( single_mode ) { /* ’Pˆê‘‚«o‚µƒ‚[ƒh */
-				/* tos‚ğ¶¬ */
+			if ( single_mode ) { /* å˜ä¸€æ›¸ãå‡ºã—ãƒ¢ãƒ¼ãƒ‰ */
+				/* tosã‚’ç”Ÿæˆ */
 				if ( ! tos ) {
 					n_tos = param_n_services = 1;
 					tos = (output_status_stream_t*)malloc(1 * sizeof(output_status_stream_t));
@@ -598,23 +598,23 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 					tos->proginfo = &service_list.proginfos[0];
 				}
 
-				/* ƒpƒPƒbƒg‚ğƒoƒbƒtƒ@‚ÉƒRƒs[ */
+				/* ãƒ‘ã‚±ãƒƒãƒˆã‚’ãƒãƒƒãƒ•ã‚¡ã«ã‚³ãƒ”ãƒ¼ */
 				ab_input_buf(tos->ab, decbuf, n_dec);
 
-			} else {  /* ƒT[ƒrƒX‚²‚Æ‘‚«o‚µƒ‚[ƒh */
-				/* ƒpƒPƒbƒg‚ğˆ— */
+			} else {  /* ã‚µãƒ¼ãƒ“ã‚¹ã”ã¨æ›¸ãå‡ºã—ãƒ¢ãƒ¼ãƒ‰ */
+				/* ãƒ‘ã‚±ãƒƒãƒˆã‚’å‡¦ç† */
 				for (pos = 0; pos < (int)n_dec; pos += 188) {
 					packet = &decbuf[pos];
 
-					/* PAT, PMT‚ğæ“¾ */
+					/* PAT, PMTã‚’å–å¾— */
 					//parse_ts_packet(&tps, packet);
 
-					/* tos‚ğ¶¬ */
+					/* tosã‚’ç”Ÿæˆ */
 					if ( ! tos && service_list.pid0x00.stat == PAYLOAD_STAT_FINISHED ) {
 						n_tos = create_tos_per_service(&tos, &service_list, ch_info);
 					}
 
-					/* ƒT[ƒrƒX‚²‚Æ‚ÉƒpƒPƒbƒg‚ğƒoƒbƒtƒ@‚ÉƒRƒs[ */
+					/* ã‚µãƒ¼ãƒ“ã‚¹ã”ã¨ã«ãƒ‘ã‚±ãƒƒãƒˆã‚’ãƒãƒƒãƒ•ã‚¡ã«ã‚³ãƒ”ãƒ¼ */
 					for (i = 0; i < n_tos; i++) {
 						copy_current_service_packet(&tos[i], &service_list, packet);
 					}
@@ -635,7 +635,7 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			ts_output(&tos[i], nowtime);
 		}
 
-		/* ’èŠú“I‚É”Ô‘gî•ñ‚ğƒ`ƒFƒbƒN */
+		/* å®šæœŸçš„ã«ç•ªçµ„æƒ…å ±ã‚’ãƒã‚§ãƒƒã‚¯ */
 		if ( nowtime / CHECK_INTERVAL != lasttime / CHECK_INTERVAL ) {
 
 			tdiff = (double)(nowtime - lasttime) / 1000;
@@ -649,9 +649,9 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 			lasttime = nowtime;
 			subtotal = 0;
 
-			/* ”Ô‘gî•ñ‚Ìƒ`ƒFƒbƒN */
+			/* ç•ªçµ„æƒ…å ±ã®ãƒã‚§ãƒƒã‚¯ */
 			for (i = 0; i < n_tos; i++) {
-				if (ab_get_history_bytes(tos[i].ab_history, 0) > 0) { /* ‘O‚Ìinterval‚Å‰½‚àóM‚Å‚«‚Ä‚È‚¢‚Í”Ô‘gî•ñ‚Ìƒ`ƒFƒbƒN‚ğƒpƒX‚·‚é */
+				if (ab_get_history_bytes(tos[i].ab_history, 0) > 0) { /* å‰ã®intervalã§ä½•ã‚‚å—ä¿¡ã§ãã¦ãªã„æ™‚ã¯ç•ªçµ„æƒ…å ±ã®ãƒã‚§ãƒƒã‚¯ã‚’ãƒ‘ã‚¹ã™ã‚‹ */
 					ts_check_pi(&tos[i], nowtime, ch_info);
 				}
 			}
@@ -662,8 +662,8 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 	do_close_stream();
 
-	/* I—¹ˆ— */
-	output_message(MSG_NOTIFY, TSD_TEXT("‚Ü‚¾‘‚«o‚µ‚Ä‚¢‚È‚¢ƒoƒbƒtƒ@‚ğ‘‚«o‚Ä‚¢‚Ü‚·"));
+	/* çµ‚äº†å‡¦ç† */
+	output_message(MSG_NOTIFY, TSD_TEXT("ã¾ã æ›¸ãå‡ºã—ã¦ã„ãªã„ãƒãƒƒãƒ•ã‚¡ã‚’æ›¸ãå‡ºã¦ã„ã¾ã™"));
 	do_preclose_module();
 	for (i = 0; i < n_tos; i++) {
 		prepare_close_tos(&tos[i]);
@@ -710,16 +710,16 @@ int main(int argc, const char* argv[])
 
 	output_message(MSG_NONE, TSD_TEXT("tsdump ver%s (%s)\n"), VERSION_STR, DATE_STR);
 
-	/* ƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh */
+	/* ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ */
 	if (load_modules() < 0) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒ‚ƒWƒ…[ƒ‹‚Ìƒ[ƒh‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½!"));
+		output_message(MSG_ERROR, TSD_TEXT("ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ãƒ­ãƒ¼ãƒ‰æ™‚ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ!"));
 		ret = 1;
 		goto END;
 	}
 
-	/* ƒ‚ƒWƒ…[ƒ‹‚ğ‰Šú‰» */
+	/* ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’åˆæœŸåŒ– */
 	if ( !init_modules(argc, argv) ) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒ‚ƒWƒ…[ƒ‹‚Ì‰Šú‰»‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½!"));
+		output_message(MSG_ERROR, TSD_TEXT("ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®åˆæœŸåŒ–æ™‚ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ!"));
 		print_cmd_usage();
 		ret = 1;
 		goto END;
@@ -736,7 +736,7 @@ int main(int argc, const char* argv[])
 #endif
 
 	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒXƒgƒŠ[ƒ€ƒWƒFƒlƒŒ[ƒ^‚ğŠJ‚¯‚Ü‚¹‚ñ‚Å‚µ‚½"));
+		output_message(MSG_ERROR, TSD_TEXT("ã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚¸ã‚§ãƒãƒ¬ãƒ¼ã‚¿ã‚’é–‹ã‘ã¾ã›ã‚“ã§ã—ãŸ"));
 		ret = 1;
 		goto END;
 	}
@@ -746,16 +746,16 @@ int main(int argc, const char* argv[])
 	ch_info.services = param_services;
 
 	if ( ! do_stream_decoder_open(&decoder_stat, &encrypted) ) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒXƒgƒŠ[ƒ€ƒfƒR[ƒ_‚ğŠJ‚¯‚Ü‚¹‚ñ‚Å‚µ‚½"));
+		output_message(MSG_ERROR, TSD_TEXT("ã‚¹ãƒˆãƒªãƒ¼ãƒ ãƒ‡ã‚³ãƒ¼ãƒ€ã‚’é–‹ã‘ã¾ã›ã‚“ã§ã—ãŸ"));
 		ret = 1;
 		goto END1;
 	}
 
-	/* ˆ—‚Ì–{‘Ì */
+	/* å‡¦ç†ã®æœ¬ä½“ */
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
-	//printf("³íI—¹\n");
-	output_message(MSG_NONE, TSD_TEXT("³íI—¹"));
+	//printf("æ­£å¸¸çµ‚äº†\n");
+	output_message(MSG_NONE, TSD_TEXT("æ­£å¸¸çµ‚äº†"));
 
 	do_stream_decoder_close(decoder_stat);
 
@@ -769,7 +769,7 @@ END:
 	free_modules();
 
 	if( ret ) {
-		output_message(MSG_NOTIFY, TSD_TEXT("\nƒGƒ“ƒ^[ƒL[‚ğ‰Ÿ‚·‚ÆI—¹‚µ‚Ü‚·"));
+		output_message(MSG_NOTIFY, TSD_TEXT("\nã‚¨ãƒ³ã‚¿ãƒ¼ã‚­ãƒ¼ã‚’æŠ¼ã™ã¨çµ‚äº†ã—ã¾ã™"));
 		getchar();
 	}
 
@@ -789,12 +789,12 @@ static const TSDCHAR* set_sv(const TSDCHAR *param)
 		if (param_n_services < MAX_SERVICES) {
 			sv = tsd_atoi(param);
 			if (sv <= 0 || sv > 65535) {
-				return TSD_TEXT("ƒT[ƒrƒX”Ô†‚ª•s³‚Å‚·");
+				return TSD_TEXT("ã‚µãƒ¼ãƒ“ã‚¹ç•ªå·ãŒä¸æ­£ã§ã™");
 			}
 			param_services[param_n_services] = sv;
 			param_n_services++;
 		} else {
-			return TSD_TEXT("w’è‚·‚éƒT[ƒrƒX‚Ì”‚ª‘½‚·‚¬‚Ü‚·\n");
+			return TSD_TEXT("æŒ‡å®šã™ã‚‹ã‚µãƒ¼ãƒ“ã‚¹ã®æ•°ãŒå¤šã™ãã¾ã™\n");
 		}
 	}
 	return NULL;
@@ -804,7 +804,7 @@ static const TSDCHAR* set_bufsize(const TSDCHAR *param)
 {
 	int bs = tsd_atoi(param);
 	if (bs <= 0) {
-		return TSD_TEXT("•s³‚Èƒoƒbƒtƒ@ƒTƒCƒY‚ªw’è‚³‚ê‚Ü‚µ‚½");
+		return TSD_TEXT("ä¸æ­£ãªãƒãƒƒãƒ•ã‚¡ã‚µã‚¤ã‚ºãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ");
 	}
 	BUFSIZE = bs * 1024 * 1024;
 	return NULL;
@@ -814,7 +814,7 @@ static const TSDCHAR* set_pginterval(const TSDCHAR *param)
 {
 	int i = tsd_atoi(param);
 	if (i <= 0 || i > 1000) {
-		return TSD_TEXT("•s³‚ÈƒCƒ“ƒ^[ƒoƒ‹ŠÔ‚ªw’è‚³‚ê‚Ü‚µ‚½");
+		return TSD_TEXT("ä¸æ­£ãªã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒ«æ™‚é–“ãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ");
 	}
 	CHECK_INTERVAL = i;
 	return NULL;
@@ -824,7 +824,7 @@ static const TSDCHAR* set_pgmargin(const TSDCHAR *param)
 {
 	int i = tsd_atoi(param);
 	if (i <= 0 || i > 60) {
-		return TSD_TEXT("•s³‚Èƒ}[ƒWƒ“ŠÔ‚ªw’è‚³‚ê‚Ü‚µ‚½");
+		return TSD_TEXT("ä¸æ­£ãªãƒãƒ¼ã‚¸ãƒ³æ™‚é–“ãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ");
 	}
 	OVERLAP_SEC = i;
 	return NULL;
@@ -834,7 +834,7 @@ static const TSDCHAR* set_output_delay(const TSDCHAR *param)
 {
 	int od = tsd_atoi(param);
 	if (od <= 0) {
-		return TSD_TEXT("o—Í‚ÌÅ‘å’x‰„ŠÔ‚É•s³‚È’l‚ªw’è‚³‚ê‚Ü‚µ‚½");
+		return TSD_TEXT("å‡ºåŠ›ã®æœ€å¤§é…å»¶æ™‚é–“ã«ä¸æ­£ãªå€¤ãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ");
 	}
 	MAX_OUTPUT_DELAY_SEC = od;
 	return NULL;
@@ -844,7 +844,7 @@ static const TSDCHAR* set_close_delay(const TSDCHAR *param)
 {
 	int cd = tsd_atoi(param);
 	if (cd <= 0) {
-		return TSD_TEXT("I—¹ˆ—‚ÌÅ‘å’x‰„ŠÔ‚É•s³‚È’l‚ªw’è‚³‚ê‚Ü‚µ‚½");
+		return TSD_TEXT("çµ‚äº†å‡¦ç†ã®æœ€å¤§é…å»¶æ™‚é–“ã«ä¸æ­£ãªå€¤ãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ");
 	}
 	MAX_CLOSE_DELAY_SEC = cd;
 	return NULL;
@@ -913,12 +913,12 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--sv"), TSD_TEXT("ƒT[ƒrƒX”Ô†(•¡”w’è‰Â”\)"), 1, set_sv },
-	{ TSD_TEXT("--bufsize"), TSD_TEXT("ƒoƒbƒtƒ@ƒTƒCƒY‚ğw’è(MiB)"), 1, set_bufsize },
-	{ TSD_TEXT("--pginterval"), TSD_TEXT("”Ô‘gî•ñƒ`ƒFƒbƒN‚ÌƒCƒ“ƒ^[ƒoƒ‹(ms)"), 1, set_pginterval },
-	{ TSD_TEXT("--pgmargin"), TSD_TEXT("”Ô‘g˜^‰æ‚Ì‘OŒãƒ}[ƒWƒ“(sec)"), 1, set_pgmargin },
-	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("o—Í‚ÌÅ‘å’x‰„ŠÔ(sec)"), 1, set_output_delay },
-	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("I—¹ˆ—‚ÌÅ‘å’x‰„ŠÔ(sec)"), 1, set_close_delay },
+	{ TSD_TEXT("--sv"), TSD_TEXT("ã‚µãƒ¼ãƒ“ã‚¹ç•ªå·(è¤‡æ•°æŒ‡å®šå¯èƒ½)"), 1, set_sv },
+	{ TSD_TEXT("--bufsize"), TSD_TEXT("ãƒãƒƒãƒ•ã‚¡ã‚µã‚¤ã‚ºã‚’æŒ‡å®š(MiB)"), 1, set_bufsize },
+	{ TSD_TEXT("--pginterval"), TSD_TEXT("ç•ªçµ„æƒ…å ±ãƒã‚§ãƒƒã‚¯ã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒ«(ms)"), 1, set_pginterval },
+	{ TSD_TEXT("--pgmargin"), TSD_TEXT("ç•ªçµ„éŒ²ç”»ã®å‰å¾Œãƒãƒ¼ã‚¸ãƒ³(sec)"), 1, set_pgmargin },
+	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("å‡ºåŠ›ã®æœ€å¤§é…å»¶æ™‚é–“(sec)"), 1, set_output_delay },
+	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("çµ‚äº†å‡¦ç†ã®æœ€å¤§é…å»¶æ™‚é–“(sec)"), 1, set_close_delay },
 	{ NULL },
 };
 

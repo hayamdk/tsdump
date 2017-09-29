@@ -57,8 +57,8 @@ int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsig
 
 	if (!parse_ts_header(old_packet, &tsh)) {
 		if (tsh.valid_sync_byte) {
-			/* PESƒpƒPƒbƒg‚Å‚±‚±‚É—ˆ‚éê‡‚ª‚ ‚é‚Ì‚ÅŒx‚Í‚Ğ‚Æ‚Ü‚¸OFF  e.g. NHK BS1
-				PESƒpƒPƒbƒg‚Ì‹KŠi‚ğ—v’²¸ */
+			/* PESãƒ‘ã‚±ãƒƒãƒˆã§ã“ã“ã«æ¥ã‚‹å ´åˆãŒã‚ã‚‹ã®ã§è­¦å‘Šã¯ã²ã¨ã¾ãšOFF  e.g. NHK BS1
+				PESãƒ‘ã‚±ãƒƒãƒˆã®è¦æ ¼ã‚’è¦èª¿æŸ» */
 			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 			return 0; /* pass */
 		} else {
@@ -67,12 +67,12 @@ int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsig
 		}
 	}
 
-	/* •¡”ƒpƒPƒbƒg‚É‚Ü‚½‚ª‚éPAT‚É‚Í–¢‘Î‰ */
+	/* è¤‡æ•°ãƒ‘ã‚±ãƒƒãƒˆã«ã¾ãŸãŒã‚‹PATã«ã¯æœªå¯¾å¿œ */
 	if (!tsh.payload_unit_start_indicator) {
 		return 0; /* pass */
 	}
 
-	/* •s³‚ÈƒpƒPƒbƒg‚©‚Ç‚¤‚©‚ğƒ`ƒFƒbƒN */
+	/* ä¸æ­£ãªãƒ‘ã‚±ãƒƒãƒˆã‹ã©ã†ã‹ã‚’ãƒã‚§ãƒƒã‚¯ */
 	section_len = ts_get_section_length(old_packet, &tsh);
 	if (section_len < 0) {
 		output_message(MSG_PACKETERROR, TSD_TEXT("Invalid payload pos!"));
@@ -138,8 +138,8 @@ void copy_current_service_packet(output_status_stream_t *tos, ts_service_list_t 
 
 	if (!parse_ts_header(packet, &tsh)) {
 		if (tsh.valid_sync_byte) {
-			/* PESƒpƒPƒbƒg‚Å‚±‚±‚É—ˆ‚éê‡‚ª‚ ‚é‚Ì‚ÅŒx‚Í‚Ğ‚Æ‚Ü‚¸OFF  e.g. NHK BS1
-				PESƒpƒPƒbƒg‚Ì‹KŠi‚ğ—v’²¸ */
+			/* PESãƒ‘ã‚±ãƒƒãƒˆã§ã“ã“ã«æ¥ã‚‹å ´åˆãŒã‚ã‚‹ã®ã§è­¦å‘Šã¯ã²ã¨ã¾ãšOFF  e.g. NHK BS1
+				PESãƒ‘ã‚±ãƒƒãƒˆã®è¦æ ¼ã‚’è¦èª¿æŸ» */
 			//output_message(MSG_PACKETERROR, L"Invalid ts header! pid=0x%x(%d)", tsh.pid, tsh.pid);
 		} else {
 			output_message(MSG_PACKETERROR, TSD_TEXT("Invalid ts packet!"));
@@ -150,13 +150,13 @@ void copy_current_service_packet(output_status_stream_t *tos, ts_service_list_t 
 	pid = tsh.pid;
 	ismypid = ts_is_mypid(pid, tos, service_list);
 	if (pid == 0) {
-		/* PAT‚Ì“à—e‚ğ“–ŠYƒT[ƒrƒX‚¾‚¯‚É‚·‚é */
+		/* PATã®å†…å®¹ã‚’å½“è©²ã‚µãƒ¼ãƒ“ã‚¹ã ã‘ã«ã™ã‚‹ */
 		if ( !ts_simplify_PAT_packet(new_packet, packet, service_list->proginfos[tos->tps_index].service_id, tos->PAT_packet_counter) ) {
 			return;
 		}
 		p = new_packet;
 		tos->PAT_packet_counter++;
-	} else if (ismypid != 2) { /* ‘¼ƒT[ƒrƒX"‚Ì‚İ"‚É‘®‚·‚éƒpƒPƒbƒg‚ÍƒXƒ‹[ */
+	} else if (ismypid != 2) { /* ä»–ã‚µãƒ¼ãƒ“ã‚¹"ã®ã¿"ã«å±ã™ã‚‹ãƒ‘ã‚±ãƒƒãƒˆã¯ã‚¹ãƒ«ãƒ¼ */
 		p = packet;
 	} else {
 		return;
@@ -204,7 +204,7 @@ static void module_buffer_notify_skip(ab_buffer_t *gb, void *param, int skip_byt
 	status->dropped_bytes += skip_bytes;
 	if (!status->dropped) {
 		status->dropped = 1;
-		output_message(MSG_ERROR, TSD_TEXT("o—Í‚ª‘Ø‚Á‚Ä‚¢‚é‚½‚ßƒhƒƒbƒv‚ª”­¶‚µ‚Ü‚µ‚½: %s"),
+		output_message(MSG_ERROR, TSD_TEXT("å‡ºåŠ›ãŒæ»ã£ã¦ã„ã‚‹ãŸã‚ãƒ‰ãƒ­ãƒƒãƒ—ãŒç™ºç”Ÿã—ã¾ã—ãŸ: %s"),
 			status->parent->module->def->modname);
 	}
 	status->parent->parent->parent->need_clear_buf = 1;
@@ -259,7 +259,7 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 					status->parent->refcount--;
 				}
 				if (status->closed && status->dropped) {
-					output_message(MSG_ERROR, TSD_TEXT("o—Í’†‚Ì‡ŒvƒhƒƒbƒvƒoƒCƒg”: %d bytes (ƒ‚ƒWƒ…[ƒ‹:%s)"),
+					output_message(MSG_ERROR, TSD_TEXT("å‡ºåŠ›ä¸­ã®åˆè¨ˆãƒ‰ãƒ­ãƒƒãƒ—ãƒã‚¤ãƒˆæ•°: %d bytes (ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«:%s)"),
 						status->dropped_bytes, status->parent->module->def->modname);
 				}
 			}
@@ -353,7 +353,7 @@ static output_status_module_t *do_pgoutput_create(ab_buffer_t *buf, ab_history_t
 					buf, &module_buffer_handlers, 188, &output_status_array[j], history
 				);
 			if (output_status_array[j].downstream_id < 0) {
-				output_message(MSG_ERROR, TSD_TEXT("ƒoƒbƒtƒ@‚ÉÚ‘±‚Å‚«‚È‚©‚Á‚½‚½‚ßo—Í‚ğs‚¢‚Ü‚¹‚ñ: ƒ‚ƒWƒ…[ƒ‹:%s"), modules[i].def->modname);
+				output_message(MSG_ERROR, TSD_TEXT("ãƒãƒƒãƒ•ã‚¡ã«æ¥ç¶šã§ããªã‹ã£ãŸãŸã‚å‡ºåŠ›ã‚’è¡Œã„ã¾ã›ã‚“: ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«:%s"), modules[i].def->modname);
 				continue;
 			}
 			ab_set_maxsize(buf, output_status_array[j].downstream_id, modules[i].hooks.output_block_size);
@@ -403,17 +403,17 @@ void do_pgoutput_close1(output_status_prog_t *pgos)
 	int i, j;
 	for (i = 0; i < n_modules; i++) {
 		if (pgos->client_array[i].n_clients > 0) {
-			/* o—Í‚ğs‚Á‚Ä‚¢‚éƒ‚ƒWƒ…[ƒ‹‚ÍƒXƒgƒŠ[ƒ€‚ÌcloseƒtƒbƒN‚ğŒo—R‚µ‚Äƒ‚ƒWƒ…[ƒ‹‚ÌƒtƒbƒN‚ğŒÄ‚Ño‚· */
+			/* å‡ºåŠ›ã‚’è¡Œã£ã¦ã„ã‚‹ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã¯ã‚¹ãƒˆãƒªãƒ¼ãƒ ã®closeãƒ•ãƒƒã‚¯ã‚’çµŒç”±ã—ã¦ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ãƒ•ãƒƒã‚¯ã‚’å‘¼ã³å‡ºã™ */
 			for (j = 0; j < pgos->client_array[i].n_clients; j++) {
 				if (pgos->client_array[i].client_array[j].downstream_id >= 0 &&
-						/* «”\“®“I‚ÉØ’f‚·‚é‘O‚Éab‚©‚çƒNƒ[ƒY‚³‚ê‚Ä‚¢‚éê‡‚ÍœŠO */
+						/* â†“èƒ½å‹•çš„ã«åˆ‡æ–­ã™ã‚‹å‰ã«abã‹ã‚‰ã‚¯ãƒ­ãƒ¼ã‚ºã•ã‚Œã¦ã„ã‚‹å ´åˆã¯é™¤å¤– */
 						!pgos->client_array[i].client_array[j].close_waiting) {
 					ab_disconnect_downstream(pgos->parent->ab, 
 						pgos->client_array[i].client_array[j].downstream_id, 0);
 				}
 			}
 		} else {
-			/* o—Í‚ğs‚Á‚Ä‚¢‚È‚¢ƒ‚ƒWƒ…[ƒ‹‚Í‚»‚Ìê‚ÅI—¹ˆµ‚¢ */
+			/* å‡ºåŠ›ã‚’è¡Œã£ã¦ã„ãªã„ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã¯ãã®å ´ã§çµ‚äº†æ‰±ã„ */
 			assert(pgos->client_array[i].refcount == 0);
 			assert(pgos->client_array[i].client_array == NULL);
 			pgos->refcount--;
@@ -461,13 +461,13 @@ void printpi(const proginfo_t *pi)
 
 	if (!PGINFO_READY(pi->status)) {
 		if (pi->status & PGINFO_GET_SERVICE_INFO) {
-			output_message(MSG_DISP, TSD_TEXT("<<< ------------ ”Ô‘gî•ñ ------------\n")
-				TSD_TEXT("[”Ô‘gî•ñ‚È‚µ]\n%s\n")
+			output_message(MSG_DISP, TSD_TEXT("<<< ------------ ç•ªçµ„æƒ…å ± ------------\n")
+				TSD_TEXT("[ç•ªçµ„æƒ…å ±ãªã—]\n%s\n")
 				TSD_TEXT("---------------------------------- >>>"), pi->service_name.str);
 			return;
 		} else {
-			output_message(MSG_DISP, TSD_TEXT("<<< ------------ ”Ô‘gî•ñ ------------\n")
-				TSD_TEXT("[”Ô‘gî•ñ‚È‚µ]\n")
+			output_message(MSG_DISP, TSD_TEXT("<<< ------------ ç•ªçµ„æƒ…å ± ------------\n")
+				TSD_TEXT("[ç•ªçµ„æƒ…å ±ãªã—]\n")
 				TSD_TEXT("---------------------------------- >>>"));
 			return;
 		}
@@ -476,8 +476,8 @@ void printpi(const proginfo_t *pi)
 	get_extended_text(et, sizeof(et) / sizeof(TSDCHAR), pi);
 
 	if ( pi_endtime_unknown(pi) ) {
-		output_message(MSG_DISP, TSD_TEXT("<<< ------------ ”Ô‘gî•ñ ------------\n")
-			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02d` +–¢’è]\n%s:%s\nu%sv\n")
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ ç•ªçµ„æƒ…å ± ------------\n")
+			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02dã€œ +æœªå®š]\n%s:%s\nã€Œ%sã€\n")
 			TSD_TEXT("---------------------------------- >>>"),
 			pi->start.year, pi->start.mon, pi->start.day,
 			pi->start.hour, pi->start.min, pi->start.sec,
@@ -487,8 +487,8 @@ void printpi(const proginfo_t *pi)
 		);
 	} else {
 		time_add_offset(&endtime, &pi->start, &pi->dur);
-		output_message(MSG_DISP, TSD_TEXT("<<< ------------ ”Ô‘gî•ñ ------------\n")
-			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02d`%02d:%02d:%02d]\n%s:%s\nu%sv\n")
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ ç•ªçµ„æƒ…å ± ------------\n")
+			TSD_TEXT("[%d/%02d/%02d %02d:%02d:%02dã€œ%02d:%02d:%02d]\n%s:%s\nã€Œ%sã€\n")
 			TSD_TEXT("---------------------------------- >>>"),
 			pi->start.year, pi->start.mon, pi->start.day,
 			pi->start.hour, pi->start.min, pi->start.sec,
@@ -606,7 +606,7 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 {
 	int i, j;
 
-	/* ƒtƒ@ƒCƒ‹o—ÍI—¹ƒ^ƒCƒ~ƒ“ƒO‚ğƒ`ƒFƒbƒN */
+	/* ãƒ•ã‚¡ã‚¤ãƒ«å‡ºåŠ›çµ‚äº†ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã‚’ãƒã‚§ãƒƒã‚¯ */
 	for (i = j = 0; i < tos->n_pgos; j++) {
 		assert(j < MAX_PGOVERLAP);
 		if (tos->pgos[j].refcount <= 0) {
@@ -614,7 +614,7 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 		}
 		i++;
 
-		/* o—ÍI—¹‚ğƒ`ƒFƒbƒN */
+		/* å‡ºåŠ›çµ‚äº†ã‚’ãƒã‚§ãƒƒã‚¯ */
 		if (0 < tos->pgos[j].closetime && tos->pgos[j].closetime < nowtime) {
 			if (!tos->pgos[j].close_flag1) {
 				tos->pgos[j].close_flag1 = 1;
@@ -629,9 +629,9 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 		}
 	}
 
-	/* ƒoƒbƒtƒ@Ø‚è‹l‚ß */
+	/* ãƒãƒƒãƒ•ã‚¡åˆ‡ã‚Šè©°ã‚ */
 	if ( nowtime - tos->last_bufminimize_time >= OVERLAP_SEC*1000/4 ) {
-		/* (OVERLAP_SEC/4)•bˆÈãŒo‚Á‚Ä‚¢‚½‚çƒoƒbƒtƒ@Ø‚è‹l‚ß‚ğs‚·‚é */
+		/* (OVERLAP_SEC/4)ç§’ä»¥ä¸ŠçµŒã£ã¦ã„ãŸã‚‰ãƒãƒƒãƒ•ã‚¡åˆ‡ã‚Šè©°ã‚ã‚’è©¦è¡Œã™ã‚‹ */
 		//ts_minimize_buf(tos);
 		ab_clear_buf(tos->ab, 0);
 		tos->last_bufminimize_time = nowtime;
@@ -642,12 +642,12 @@ void ts_output(output_status_stream_t *tos, int64_t nowtime)
 			tos->last_bufminimize_time = nowtime;
 		}
 		if (nowtime < tos->last_bufminimize_time) {
-			/* ‚ÌŠª‚«–ß‚è‚É‘Î‰ */
+			/* æ™‚åˆ»ã®å·»ãæˆ»ã‚Šã«å¯¾å¿œ */
 			tos->last_bufminimize_time = nowtime;
 		}
 	}
 
-	/* ƒtƒ@ƒCƒ‹‘‚«o‚µ */
+	/* ãƒ•ã‚¡ã‚¤ãƒ«æ›¸ãå‡ºã— */
 	ab_output_buf(tos->ab);
 }
 
@@ -663,10 +663,10 @@ void ts_check_extended_text(output_status_stream_t *tos)
 	//current_pgos = &tos->pgos[tos->n_pgos - 1];
 	if (!(tos->curr_pgos->initial_pi_status & PGINFO_GET_EXTEND_TEXT) &&
 			(tos->proginfo->status & PGINFO_GET_EXTEND_TEXT)) {
-		/* Šg’£Œ`®ƒCƒxƒ“ƒgî•ñ‚ª“r’†‚©‚ç—ˆ‚½ê‡ */
+		/* æ‹¡å¼µå½¢å¼ã‚¤ãƒ™ãƒ³ãƒˆæƒ…å ±ãŒé€”ä¸­ã‹ã‚‰æ¥ãŸå ´åˆ */
 		get_extended_text(et, sizeof(et) / sizeof(TSDCHAR), tos->proginfo);
-		output_message(MSG_DISP, TSD_TEXT("<<< ------------ ’Ç‰Á”Ô‘gî•ñ ------------\n")
-			TSD_TEXT("u%sv\n")
+		output_message(MSG_DISP, TSD_TEXT("<<< ------------ è¿½åŠ ç•ªçµ„æƒ…å ± ------------\n")
+			TSD_TEXT("ã€Œ%sã€\n")
 			TSD_TEXT("---------------------------------- >>>"),
 			et
 		);
@@ -677,10 +677,10 @@ void check_stream_timeinfo(output_status_stream_t *tos)
 {
 	uint64_t diff_prc;
 
-	/* check_pi‚ÌƒCƒ“ƒ^[ƒoƒ‹‚²‚Æ‚ÉPCR,TOTŠÖ˜A‚Ìƒ`ƒFƒbƒNAƒNƒŠƒA‚ğs‚¤ */
+	/* check_piã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒ«ã”ã¨ã«PCR,TOTé–¢é€£ã®ãƒã‚§ãƒƒã‚¯ã€ã‚¯ãƒªã‚¢ã‚’è¡Œã† */
 	if ((tos->proginfo->status&PGINFO_TIMEINFO) == PGINFO_TIMEINFO) {
 
-		/* 1•b’ö“xˆÈãPCR‚ÌXV‚ª‚È‚¯‚ê‚Î–³Œø‚Æ‚µ‚ÄƒNƒŠƒA‚·‚é */
+		/* 1ç§’ç¨‹åº¦ä»¥ä¸ŠPCRã®æ›´æ–°ãŒãªã‘ã‚Œã°ç„¡åŠ¹ã¨ã—ã¦ã‚¯ãƒªã‚¢ã™ã‚‹ */
 		if (tos->proginfo->status & PGINFO_PCR_UPDATED) {
 			tos->pcr_retry_count = 0;
 		} else {
@@ -691,7 +691,7 @@ void check_stream_timeinfo(output_status_stream_t *tos)
 			return;
 		}
 
-		/* 120•bˆÈãŒÃ‚¢TOT‚Í–³Œø‚Æ‚µ‚ÄƒNƒŠƒA‚·‚é(’Êí‚Í30•bˆÈ‰º‚ÌŠÔŠu‚Å‘—o) */
+		/* 120ç§’ä»¥ä¸Šå¤ã„TOTã¯ç„¡åŠ¹ã¨ã—ã¦ã‚¯ãƒªã‚¢ã™ã‚‹(é€šå¸¸ã¯30ç§’ä»¥ä¸‹ã®é–“éš”ã§é€å‡º) */
 		diff_prc = tos->proginfo->PCR_base - tos->proginfo->TOT_PCR;
 		if (tos->proginfo->PCR_wraparounded) {
 			diff_prc += PCR_BASE_MAX;
@@ -721,23 +721,23 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 
 	/* split! */
 	if (tos->n_pgos >= MAX_PGOVERLAP) {
-		output_message(MSG_WARNING, TSD_TEXT("”Ô‘g‚ÌØ‚è‘Ö‚í‚è‚ğ’ZŠÔ‚É˜A‘±‚µ‚ÄŒŸo‚µ‚½‚½‚ßƒXƒLƒbƒv‚µ‚Ü‚·"));
+		output_message(MSG_WARNING, TSD_TEXT("ç•ªçµ„ã®åˆ‡ã‚Šæ›¿ã‚ã‚Šã‚’çŸ­æ™‚é–“ã«é€£ç¶šã—ã¦æ¤œå‡ºã—ãŸãŸã‚ã‚¹ã‚­ãƒƒãƒ—ã—ã¾ã™"));
 	} else {
-		/* ”Ô‘gI—¹ŠÔ‚ğƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚©‚ç“¾‚é‚©‚Ç‚¤‚© */
-		if ( !(tos->last_proginfo.status & PGINFO_UNKNOWN_STARTTIME) &&		/* ŠJnŠÔ‚ªŠù’m‚©‚Â */
-				(tos->last_proginfo.status & PGINFO_UNKNOWN_DURATION) &&	/* ‘±‚ª–¢’m‚©‚Â */
-				get_stream_timestamp(&tos->last_proginfo, &curr_time) ) {	/* ƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚Í³í */
+		/* ç•ªçµ„çµ‚äº†æ™‚é–“ã‚’ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã‹ã‚‰å¾—ã‚‹ã‹ã©ã†ã‹ */
+		if ( !(tos->last_proginfo.status & PGINFO_UNKNOWN_STARTTIME) &&		/* é–‹å§‹æ™‚é–“ãŒæ—¢çŸ¥ã‹ã¤ */
+				(tos->last_proginfo.status & PGINFO_UNKNOWN_DURATION) &&	/* æŒç¶šæ™‚åˆ»ãŒæœªçŸ¥ã‹ã¤ */
+				get_stream_timestamp(&tos->last_proginfo, &curr_time) ) {	/* ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã¯æ­£å¸¸ */
 			get_time_offset(&offset, &curr_time, &tos->last_proginfo.start);
 			tmp_pi = tos->last_proginfo;
 			tmp_pi.dur = offset;
 			tmp_pi.status &= ~PGINFO_UNKNOWN_DURATION;
 			final_pi = &tmp_pi;
-			output_message(MSG_NOTIFY, TSD_TEXT("I—¹‚ª–¢’è‚Ì‚Ü‚Ü”Ô‘g‚ªI—¹‚µ‚½‚Ì‚ÅŒ»İ‚Ìƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚ğ”Ô‘gI—¹‚É‚µ‚Ü‚·"));
+			output_message(MSG_NOTIFY, TSD_TEXT("çµ‚äº†æ™‚åˆ»ãŒæœªå®šã®ã¾ã¾ç•ªçµ„ãŒçµ‚äº†ã—ãŸã®ã§ç¾åœ¨ã®ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã‚’ç•ªçµ„çµ‚äº†æ™‚åˆ»ã«ã—ã¾ã™"));
 		} else {
 			final_pi = &tos->last_proginfo;
 		}
 
-		/* ’Ç‰Á‚·‚×‚«pgos‚ÌƒXƒƒbƒg‚ğ’Tõ */
+		/* è¿½åŠ ã™ã¹ãpgosã®ã‚¹ãƒ­ãƒƒãƒˆã‚’æ¢ç´¢ */
 		pgos = NULL;
 		for (i = 0; i <= tos->n_pgos; i++) {
 			if (tos->pgos[i].refcount == 0) {
@@ -747,18 +747,18 @@ void ts_prog_changed(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch
 		}
 		assert(pgos);
 
-		/* ‚·‚Å‚É˜^‰æ’†‚Ì”Ô‘g‚ª‚ ‚é‚©‚Ç‚¤‚© */
+		/* ã™ã§ã«éŒ²ç”»ä¸­ã®ç•ªçµ„ãŒã‚ã‚‹ã‹ã©ã†ã‹ */
 		if (tos->curr_pgos) {
 			actually_start = 1;
 			tos->curr_pgos->closetime = nowtime + OVERLAP_SEC * 1000;
 			tos->curr_pgos->final_pi = *final_pi;
-			/* endƒtƒbƒN‚ğŒÄ‚Ño‚· */
+			/* endãƒ•ãƒƒã‚¯ã‚’å‘¼ã³å‡ºã™ */
 			do_pgoutput_end(tos->curr_pgos->client_array, final_pi);
 		}
 
 		pgos->initial_pi_status = tos->proginfo->status;
-		do_path_resolver(tos->proginfo, ch_info, pgos->fn); /* ‚±‚±‚Åch_info‚ÉƒAƒNƒZƒX */
-		pgos->client_array = do_pgoutput_create(tos->ab, tos->ab_history, pgos, tos->proginfo, ch_info, actually_start); /* ‚±‚±‚Åch_info‚ÉƒAƒNƒZƒX */
+		do_path_resolver(tos->proginfo, ch_info, pgos->fn); /* ã“ã“ã§ch_infoã«ã‚¢ã‚¯ã‚»ã‚¹ */
+		pgos->client_array = do_pgoutput_create(tos->ab, tos->ab_history, pgos, tos->proginfo, ch_info, actually_start); /* ã“ã“ã§ch_infoã«ã‚¢ã‚¯ã‚»ã‚¹ */
 		pgos->closetime = -1;
 		pgos->close_flag1 = 0;
 		pgos->close_flag2 = 0;
@@ -781,7 +781,7 @@ void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_inf
 
 	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) && 
 			( (PGINFO_READY(tos->last_proginfo.status) && tos->curr_pgos) || !tos->curr_pgos) ) {
-		/* ÅV‚Ì”Ô‘gî•ñ‚ªæ“¾‚Å‚«‚Ä‚¢‚È‚­‚Ä‚à15•b‚Í”»’è‚ğ•Û—¯‚·‚é */
+		/* æœ€æ–°ã®ç•ªçµ„æƒ…å ±ãŒå–å¾—ã§ãã¦ã„ãªãã¦ã‚‚15ç§’ã¯åˆ¤å®šã‚’ä¿ç•™ã™ã‚‹ */
 		if (tos->proginfo_retry_count < 15 * 1000 / CHECK_INTERVAL) {
 			tos->proginfo_retry_count++;
 			return;
@@ -794,69 +794,69 @@ void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_inf
 
 	if ( PGINFO_READY(tos->proginfo->status) ) {
 		if ( PGINFO_READY(tos->last_proginfo.status) ) {
-			/* ”Ô‘gî•ñ‚ ‚è¨‚ ‚è‚Ìê‡ƒCƒxƒ“ƒgID‚ğ”äŠr */
+			/* ç•ªçµ„æƒ…å ±ã‚ã‚Šâ†’ã‚ã‚Šã®å ´åˆã‚¤ãƒ™ãƒ³ãƒˆIDã‚’æ¯”è¼ƒ */
 			if (tos->last_proginfo.event_id != (int)tos->proginfo->event_id) {
 				changed = 1;
 			}
 		} else {
-			/* ”Ô‘gî•ñ‚È‚µ¨‚ ‚è‚Ì•Ï‰» */
+			/* ç•ªçµ„æƒ…å ±ãªã—â†’ã‚ã‚Šã®å¤‰åŒ– */
 			changed = 1;
 		}
 	} else {
 		if (PGINFO_READY(tos->last_proginfo.status)) {
-			/* ”Ô‘gî•ñ‚ ‚è¨‚È‚µ‚Ì•Ï‰» */
+			/* ç•ªçµ„æƒ…å ±ã‚ã‚Šâ†’ãªã—ã®å¤‰åŒ– */
 			changed = 1;
-		/* ”Ô‘gî•ñ‚ª‚È‚­‚Ä‚à1ŠÔ‚¨‚«‚É”Ô‘g‚ğØ‚è‘Ö‚¦‚é */
+		/* ç•ªçµ„æƒ…å ±ãŒãªãã¦ã‚‚1æ™‚é–“ãŠãã«ç•ªçµ„ã‚’åˆ‡ã‚Šæ›¿ãˆã‚‹ */
 		} else if( get_stream_timestamp_rough(tos->proginfo, &time1) &&
 				get_stream_timestamp_rough(&tos->last_proginfo, &time2) ) {
-			/* ƒXƒgƒŠ[ƒ€‚Ìƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚ª³í‚Éæ“¾‚Å‚«‚Ä‚¢‚ê‚Î‚»‚ê‚ğ”äŠr */
+			/* ã‚¹ãƒˆãƒªãƒ¼ãƒ ã®ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ãŒæ­£å¸¸ã«å–å¾—ã§ãã¦ã„ã‚Œã°ãã‚Œã‚’æ¯”è¼ƒ */
 			if (time1.hour > time2.hour) {
 				changed = 1;
 			}
 		} else if( timenum64(nowtime) / 100 > timenum64(tos->last_checkpi_time) / 100 ) {
-			/* ‚»‚¤‚Å‚È‚¯‚ê‚ÎPC‚ÌŒ»İ‚ğ”äŠr */
+			/* ãã†ã§ãªã‘ã‚Œã°PCã®ç¾åœ¨æ™‚åˆ»ã‚’æ¯”è¼ƒ */
 			changed = 1;
 		} else if (!tos->curr_pgos) {
-			/* ‚Ü‚¾o—Í‚ªn‚Ü‚Á‚Ä‚¢‚È‚©‚Á‚½‚ç‹­§ŠJn */
+			/* ã¾ã å‡ºåŠ›ãŒå§‹ã¾ã£ã¦ã„ãªã‹ã£ãŸã‚‰å¼·åˆ¶é–‹å§‹ */
 			changed = 1;
 		}
 	}
 
 	if (changed) {
-		/* ”Ô‘g‚ªØ‚è‘Ö‚í‚Á‚½ */
+		/* ç•ªçµ„ãŒåˆ‡ã‚Šæ›¿ã‚ã£ãŸ */
 		ts_prog_changed(tos, nowtime, ch_info);
 	} else if( PGINFO_READY(tos->proginfo->status) && PGINFO_READY(tos->last_proginfo.status) ) {
 		
 		if( proginfo_cmp(tos->proginfo, &tos->last_proginfo) ) {
 			if (tos->curr_pgos) {
-				/* ŒÄ‚Ño‚·‚Ì‚ÍÅV‚Ì”Ô‘g‚É‘Î‚µ‚Ä‚Ì‚İ */
+				/* å‘¼ã³å‡ºã™ã®ã¯æœ€æ–°ã®ç•ªçµ„ã«å¯¾ã—ã¦ã®ã¿ */
 				do_pgoutput_changed(tos->curr_pgos->client_array, &tos->last_proginfo, tos->proginfo);
 			}
 
-			/* ”Ô‘g‚ÌŠÔ‚ª“r’†‚Å•ÏX‚³‚ê‚½ê‡ */
+			/* ç•ªçµ„ã®æ™‚é–“ãŒé€”ä¸­ã§å¤‰æ›´ã•ã‚ŒãŸå ´åˆ */
 			time_add_offset(&endtime, &tos->proginfo->start, &tos->proginfo->dur);
 			time_add_offset(&last_endtime, &tos->last_proginfo.start, &tos->last_proginfo.dur);
 
 			if ( get_time_offset(NULL, &tos->proginfo->start, &tos->last_proginfo.start) != 0 ) {
-				tsd_snprintf(msg1, 64, TSD_TEXT("”Ô‘gŠJnŠÔ‚Ì•ÏX(ƒT[ƒrƒX%d)"), tos->proginfo->service_id);
+				tsd_snprintf(msg1, 64, TSD_TEXT("ç•ªçµ„é–‹å§‹æ™‚é–“ã®å¤‰æ›´(ã‚µãƒ¼ãƒ“ã‚¹%d)"), tos->proginfo->service_id);
 
 				time_changed = 1;
-				output_message( MSG_NOTIFY, TSD_TEXT("%s: %02d:%02d:%02d ¨ %02d:%02d:%02d"), msg1,
+				output_message( MSG_NOTIFY, TSD_TEXT("%s: %02d:%02d:%02d â†’ %02d:%02d:%02d"), msg1,
 					tos->proginfo->start.hour, tos->proginfo->start.min, tos->proginfo->start.sec,
 					tos->last_proginfo.start.hour, tos->last_proginfo.start.min, tos->last_proginfo.start.sec );
 			}
 			if ( get_time_offset(NULL, &endtime, &last_endtime) != 0 ) {
-				tsd_snprintf(msg1, 64, TSD_TEXT("”Ô‘gI—¹ŠÔ‚Ì•ÏX(ƒT[ƒrƒX%d)"), tos->proginfo->service_id);
+				tsd_snprintf(msg1, 64, TSD_TEXT("ç•ªçµ„çµ‚äº†æ™‚é–“ã®å¤‰æ›´(ã‚µãƒ¼ãƒ“ã‚¹%d)"), tos->proginfo->service_id);
 
 				if ( pi_endtime_unknown(&tos->last_proginfo) ) {
-					tsd_strcpy(msg2, TSD_TEXT("–¢’è ¨"));
+					tsd_strcpy(msg2, TSD_TEXT("æœªå®š â†’"));
 				} else {
-					tsd_snprintf( msg2, 64, TSD_TEXT("%02d:%02d:%02d ¨"), last_endtime.hour, last_endtime.min, last_endtime.sec );
+					tsd_snprintf( msg2, 64, TSD_TEXT("%02d:%02d:%02d â†’"), last_endtime.hour, last_endtime.min, last_endtime.sec );
 				}
 
 				time_changed = 1;
 				if ( pi_endtime_unknown(tos->proginfo) ) {
-					output_message(MSG_NOTIFY, TSD_TEXT("%s: %s –¢’è"), msg1, msg2);
+					output_message(MSG_NOTIFY, TSD_TEXT("%s: %s æœªå®š"), msg1, msg2);
 				} else {
 					output_message( MSG_NOTIFY, TSD_TEXT("%s: %s %02d:%02d:%02d"), msg1, msg2,
 						endtime.hour, endtime.min, endtime.sec );
@@ -864,7 +864,7 @@ void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_inf
 			}
 
 			if (!time_changed) {
-				output_message(MSG_NOTIFY, TSD_TEXT("”Ô‘gî•ñ‚Ì•ÏX"));
+				output_message(MSG_NOTIFY, TSD_TEXT("ç•ªçµ„æƒ…å ±ã®å¤‰æ›´"));
 				printpi(tos->proginfo);
 			}
 		}

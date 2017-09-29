@@ -4,8 +4,8 @@
 #include <assert.h>
 
 #ifdef _MSC_VER
-#include <sys/timeb.h>  
-#include <time.h>  
+#include <sys/timeb.h>
+#include <time.h>
 #else
 #include <sys/time.h>
 #endif

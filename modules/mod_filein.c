@@ -78,7 +78,7 @@ static int hook_postconfig()
 		return 1;
 	}
 	if(!reg_hooks) {
-		output_message(MSG_ERROR, TSD_TEXT("generatorƒtƒbƒN‚Ì“o˜^‚É¸”s‚µ‚Ü‚µ‚½"));
+		output_message(MSG_ERROR, TSD_TEXT("generatorãƒ•ãƒƒã‚¯ã®ç™»éŒ²ã«å¤±æ•—ã—ã¾ã—ãŸ"));
 		return 0;
 	}
 	return 1;
@@ -129,11 +129,11 @@ static void set_timestamp_pcr(filein_stat_t *stat, const uint8_t *buf, const int
 	ts_alignment_filter(&stat->filter, &buf_filtered, &size_filtered, buf, size);
 	for (i = 0; i < size_filtered; i += 188) {
 		if (!parse_ts_header(&buf_filtered[i], &tsh)) {
-			/* –³Œø‚ÈƒpƒPƒbƒg‚ÍƒXƒ‹[ */
+			/* ç„¡åŠ¹ãªãƒ‘ã‚±ãƒƒãƒˆã¯ã‚¹ãƒ«ãƒ¼ */
 			continue;
 		}
 		if (tsh.transport_scrambling_control) {
-			/* ˆÃ†‰»‚³‚ê‚½ƒpƒPƒbƒg‚ÍƒXƒ‹[ */
+			/* æš—å·åŒ–ã•ã‚ŒãŸãƒ‘ã‚±ãƒƒãƒˆã¯ã‚¹ãƒ«ãƒ¼ */
 			continue;
 		}
 		if (!(stat->proginfo.status & PGINFO_GET_PAT)) {
@@ -169,7 +169,7 @@ int wait_timestamp(filein_stat_t *stat, int timeout_ms)
 	int64_t offset;
 	int remain = 0;
 
-	/* Œ»İ‚Ìƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚Æ5•bˆÈã—£‚ê‚Ä‚¢‚½‚ç•s³‚Èƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚Æ‚µ‚ÄƒŠƒZƒbƒg */
+	/* ç¾åœ¨ã®ã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã¨5ç§’ä»¥ä¸Šé›¢ã‚Œã¦ã„ãŸã‚‰ä¸æ­£ãªã‚¿ã‚¤ãƒ ã‚¹ã‚¿ãƒ³ãƒ—ã¨ã—ã¦ãƒªã‚»ãƒƒãƒˆ */
 	if (tn < stat->timestamp - 5 * 1000 || tn > stat->timestamp + 5 * 1000) {
 		offset = tn - stat->timestamp;
 		stat->timestamp = tn;
@@ -223,7 +223,7 @@ static int check_read(filein_stat_t *stat, int timeout_ms)
 		if ((errnum = GetLastError()) == ERROR_IO_INCOMPLETE) {
 			if (timeout_ms > 0) {
 				WaitForSingleObject(stat->fh, timeout_ms);
-				/* ƒŠƒgƒ‰ƒCƒ`ƒFƒbƒN */
+				/* ãƒªãƒˆãƒ©ã‚¤ãƒã‚§ãƒƒã‚¯ */
 				return check_read(stat, 0);
 			}
 			return 0;
@@ -232,10 +232,10 @@ static int check_read(filein_stat_t *stat, int timeout_ms)
 			stat->read_busy = 0;
 			return 1;
 		} else {
-			/* IOƒGƒ‰[”­¶ */
+			/* IOã‚¨ãƒ©ãƒ¼ç™ºç”Ÿæ™‚ */
 			now = gettime();
 			if (now - last > 1000 || errnum_last != errnum) {
-				output_message(MSG_SYSERROR, L"IOƒGƒ‰[(GetOverlappedResult)");
+				output_message(MSG_SYSERROR, L"IOã‚¨ãƒ©ãƒ¼(GetOverlappedResult)");
 				errnum_last = errnum;
 				last = now;
 			}
@@ -281,7 +281,7 @@ static void read_from_file(filein_stat_t *stat)
 			stat->eof = 1;
 			return;
 		} else {
-			output_message(MSG_SYSERROR, L"ReadFile()‚É¸”s‚µ‚Ü‚µ‚½");
+			output_message(MSG_SYSERROR, L"ReadFile()ã«å¤±æ•—ã—ã¾ã—ãŸ");
 			stat->read_busy = 0;
 		}
 	}
@@ -435,13 +435,13 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		NULL
 	);
 	if (fh == INVALID_HANDLE_VALUE) {
-		output_message(MSG_SYSERROR, L"ƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(CreateFile): %s", infile_name);
+		output_message(MSG_SYSERROR, L"ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(CreateFile): %s", infile_name);
 		return 0;
 	}
 #else
 	int fd = open(infile_name, O_RDONLY | O_NONBLOCK);
 	if (fd < 0) {
-		output_message(MSG_SYSERROR, "ƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ(open): %s", infile_name);
+		output_message(MSG_SYSERROR, "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“(open): %s", infile_name);
 		return 0;
 	}
 #endif
@@ -455,8 +455,8 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	memset(&stat->ol, 0, sizeof(OVERLAPPED));
 #endif
 	chinfo->tuner_name = TSD_TEXT("mod_filein");
-	chinfo->sp_str = TSD_TEXT("ƒtƒ@ƒCƒ‹“ü—Í");
-	chinfo->ch_str = TSD_TEXT("ƒtƒ@ƒCƒ‹“ü—Í");
+	chinfo->sp_str = TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«å…¥åŠ›");
+	chinfo->ch_str = TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«å…¥åŠ›");
 #ifdef TSD_PLATFORM_MSVC
 	stat->fh = fh;
 #else
@@ -512,12 +512,12 @@ static const TSDCHAR *set_infile(const TSDCHAR* param)
 static const TSDCHAR *set_mbps(const TSDCHAR* param)
 {
 	if (flg_set_unlim) {
-		return TSD_TEXT("ƒtƒ@ƒCƒ‹‚ÌƒrƒbƒgƒŒ[ƒg‚ªŠù‚É–³§ŒÀ‚Éw’è‚³‚ê‚Ä‚¢‚Ü‚·");
+		return TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ“ãƒƒãƒˆãƒ¬ãƒ¼ãƒˆãŒæ—¢ã«ç„¡åˆ¶é™ã«æŒ‡å®šã•ã‚Œã¦ã„ã¾ã™");
 	}
 	flg_set_mbps = 1;
 	mbps = tsd_atof(param);
 	if (mbps <= 0) {
-		return TSD_TEXT("•s³‚ÈƒrƒbƒgƒŒ[ƒg‚Å‚·");
+		return TSD_TEXT("ä¸æ­£ãªãƒ“ãƒƒãƒˆãƒ¬ãƒ¼ãƒˆã§ã™");
 	}
 	return NULL;
 }
@@ -526,7 +526,7 @@ static const TSDCHAR *set_unlim(const TSDCHAR* param)
 {
 	UNREF_ARG(param);
 	if (flg_set_mbps) {
-		return TSD_TEXT("ƒtƒ@ƒCƒ‹‚ÌƒrƒbƒgƒŒ[ƒg‚ªŠù‚Éw’è‚³‚ê‚Ä‚¢‚Ü‚·");
+		return TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ“ãƒƒãƒˆãƒ¬ãƒ¼ãƒˆãŒæ—¢ã«æŒ‡å®šã•ã‚Œã¦ã„ã¾ã™");
 	}
 	flg_set_unlim = 1;
 	return NULL;
@@ -540,10 +540,10 @@ static const TSDCHAR *set_eof(const TSDCHAR* param)
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--filein"), TSD_TEXT("“ü—Íƒtƒ@ƒCƒ‹"), 1, set_infile },
-	{ TSD_TEXT("--filembps"), TSD_TEXT("ƒtƒ@ƒCƒ‹“Ç‚İ‚İ‚ÌƒrƒbƒgƒŒ[ƒg(Mbps)‚ğw’è"), 1, set_mbps },
-	{ TSD_TEXT("--unlimited-filebps"), TSD_TEXT("–³§ŒÀ‚ÌƒrƒbƒgƒŒ[ƒg‚Åƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚Ş"), 0, set_unlim },
-	{ TSD_TEXT("--eof"), TSD_TEXT("ƒtƒ@ƒCƒ‹‚ÌEOF‚ÅI—¹‚·‚é"), 0, set_eof },
+	{ TSD_TEXT("--filein"), TSD_TEXT("å…¥åŠ›ãƒ•ã‚¡ã‚¤ãƒ«"), 1, set_infile },
+	{ TSD_TEXT("--filembps"), TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«èª­ã¿è¾¼ã¿ã®ãƒ“ãƒƒãƒˆãƒ¬ãƒ¼ãƒˆ(Mbps)ã‚’æŒ‡å®š"), 1, set_mbps },
+	{ TSD_TEXT("--unlimited-filebps"), TSD_TEXT("ç„¡åˆ¶é™ã®ãƒ“ãƒƒãƒˆãƒ¬ãƒ¼ãƒˆã§ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚€"), 0, set_unlim },
+	{ TSD_TEXT("--eof"), TSD_TEXT("ãƒ•ã‚¡ã‚¤ãƒ«ã®EOFã§çµ‚äº†ã™ã‚‹"), 0, set_eof },
 	{ NULL },
 };
 

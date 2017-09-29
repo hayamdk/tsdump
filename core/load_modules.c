@@ -147,7 +147,7 @@ int register_hooks_stream_generator(hooks_stream_generator_t *handlers)
 	if (hooks_stream_generator == NULL) {
 		hooks_stream_generator = handlers;
 	} else {
-		output_message(MSG_ERROR, TSD_TEXT("ƒXƒgƒŠ[ƒ€ƒWƒFƒlƒŒ[ƒ^‚ÍŠù‚É“o˜^‚³‚ê‚Ä‚¢‚Ü‚·"));
+		output_message(MSG_ERROR, TSD_TEXT("ã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚¸ã‚§ãƒãƒ¬ãƒ¼ã‚¿ã¯æ—¢ã«ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã™"));
 		return 0;
 	}
 	return 1;
@@ -158,7 +158,7 @@ int register_hooks_stream_decoder(hooks_stream_decoder_t *handlers)
 	if (hooks_stream_decoder == NULL) {
 		hooks_stream_decoder = handlers;
 	} else {
-		output_message(MSG_ERROR, TSD_TEXT("ƒXƒgƒŠ[ƒ€ƒfƒR[ƒ_‚ÍŠù‚É“o˜^‚³‚ê‚Ä‚¢‚Ü‚·"));
+		output_message(MSG_ERROR, TSD_TEXT("ã‚¹ãƒˆãƒªãƒ¼ãƒ ãƒ‡ã‚³ãƒ¼ãƒ€ã¯æ—¢ã«ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã™"));
 		return 0;
 	}
 	return 1;
@@ -174,7 +174,7 @@ int register_hook_path_resolver(hook_path_resolver_t handler)
 	if (hook_path_resolver == NULL) {
 		hook_path_resolver = handler;
 	} else {
-		output_message(MSG_ERROR, TSD_TEXT("ƒpƒXƒŠƒ]ƒ‹ƒo‚ÍŠù‚É“o˜^‚³‚ê‚Ä‚¢‚Ü‚·"));
+		output_message(MSG_ERROR, TSD_TEXT("ãƒ‘ã‚¹ãƒªã‚¾ãƒ«ãƒã¯æ—¢ã«ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã™"));
 		return 0;
 	}
 	return 1;
@@ -291,7 +291,7 @@ int do_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (hooks_stream_generator) {
 		return hooks_stream_generator->open_handler(param, chinfo);
 	}
-	output_message(MSG_ERROR, TSD_TEXT("ƒXƒgƒŠ[ƒ€ƒWƒFƒlƒŒ[ƒ^‚ªˆê‚Â‚à“o˜^‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ"));
+	output_message(MSG_ERROR, TSD_TEXT("ã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚¸ã‚§ãƒãƒ¬ãƒ¼ã‚¿ãŒä¸€ã¤ã‚‚ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã›ã‚“"));
 	return 0;
 }
 
@@ -393,7 +393,7 @@ void do_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *er
 {
 	int i;
 
-	/* ƒ‚ƒWƒ…[ƒ‹ƒ[ƒh‘O‚Å‚à‚±‚ÌƒtƒbƒN‚¾‚¯‚ÍŒÄ‚Ô */
+	/* ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ãƒ­ãƒ¼ãƒ‰å‰ã§ã‚‚ã“ã®ãƒ•ãƒƒã‚¯ã ã‘ã¯å‘¼ã¶ */
 	ghook_message(modname, msgtype, err, msg);
 
 	for (i = 0; i < n_modules; i++) {
@@ -442,7 +442,7 @@ static int load_module_cmd(module_def_t *mod, cmd_def_t *cmd)
 {
 	cmd_load_t *cmd_load = get_cmddef(cmd->cmd_name);
 	if ( cmd_load != NULL ) {
-		output_message(MSG_ERROR, TSD_TEXT("%s: ƒRƒ}ƒ“ƒhƒIƒvƒVƒ‡ƒ“ %s ‚ÍŠù‚Éƒ‚ƒWƒ…[ƒ‹ %s ‚É‚æ‚Á‚Ä“o˜^‚³‚ê‚Ä‚¢‚Ü‚·"),
+		output_message(MSG_ERROR, TSD_TEXT("%s: ã‚³ãƒãƒ³ãƒ‰ã‚ªãƒ—ã‚·ãƒ§ãƒ³ %s ã¯æ—¢ã«ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ« %s ã«ã‚ˆã£ã¦ç™»éŒ²ã•ã‚Œã¦ã„ã¾ã™"),
 			mod->modname, cmd->cmd_name, cmd_load->cmd_module->modname );
 		return 0;
 	}
@@ -459,12 +459,12 @@ static int load_module(module_def_t *mod, void *handle)
 #endif
 {
 	if ( mod->mod_ver != TSDUMP_MODULE_API_VER ) {
-		output_message(MSG_ERROR, TSD_TEXT("ŒİŠ·«‚Ì–³‚¢ƒ‚ƒWƒ…[ƒ‹‚Å‚·: %s"), mod->modname);
+		output_message(MSG_ERROR, TSD_TEXT("äº’æ›æ€§ã®ç„¡ã„ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã§ã™: %s"), mod->modname);
 		return 0;
 	}
 
 	if (n_modules >= MAX_MODULES) {
-		output_message(MSG_ERROR, TSD_TEXT("‚±‚êˆÈãƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh‚Å‚«‚Ü‚¹‚ñ(Å‘å”:%d)"), MAX_MODULES);
+		output_message(MSG_ERROR, TSD_TEXT("ã“ã‚Œä»¥ä¸Šãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã›ã‚“(æœ€å¤§æ•°:%d)"), MAX_MODULES);
 		return 0;
 	}
 
@@ -485,7 +485,7 @@ static int unload_module(const TSDCHAR *modname)
 			return 1;
 		}
 	}
-	output_message(MSG_ERROR, TSD_TEXT("ƒ‚ƒWƒ…[ƒ‹%s‚Íƒ[ƒh‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ"), modname);
+	output_message(MSG_ERROR, TSD_TEXT("ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«%sã¯ãƒ­ãƒ¼ãƒ‰ã•ã‚Œã¦ã„ã¾ã›ã‚“"), modname);
 	return 0;
 }
 
@@ -507,7 +507,7 @@ static int load_dll_modules()
 #endif
 
 	if (!path_self(exepath)) {
-		output_message(MSG_SYSERROR, TSD_TEXT("Àsƒtƒ@ƒCƒ‹‚ÌƒpƒX‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ"));
+		output_message(MSG_SYSERROR, TSD_TEXT("å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ‘ã‚¹ã‚’å–å¾—ã§ãã¾ã›ã‚“"));
 		return 0;
 	}
 	path_getdir(exedir, exepath);
@@ -521,14 +521,14 @@ static int load_dll_modules()
 	if (fp) {
 		while ( fgets(modfile, MAX_PATH_LEN - 1, fp) != NULL ) {
 #endif
-			/* ––”ö‚Ì‰üsA‹ó•¶š‚ğíœ */
+			/* æœ«å°¾ã®æ”¹è¡Œã€ç©ºæ–‡å­—ã‚’å‰Šé™¤ */
 			tsd_rstrip(modfile);
 
 			if (modfile[0] == TSD_CHAR('#')) {
-				/* #‚©‚çn‚Ü‚és‚Í–³‹‚·‚é */
+				/* #ã‹ã‚‰å§‹ã¾ã‚‹è¡Œã¯ç„¡è¦–ã™ã‚‹ */
 				continue;
 			} else if (modfile[0] == TSD_CHAR('!')) {
-				/* !‚©‚çn‚Ü‚és‚Íƒ‚ƒWƒ…[ƒ‹‚ğæ‚èÁ‚· */
+				/* !ã‹ã‚‰å§‹ã¾ã‚‹è¡Œã¯ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’å–ã‚Šæ¶ˆã™ */
 				if (!unload_module(&modfile[1])) {
 					fclose(fp);
 					return 0;
@@ -539,7 +539,7 @@ static int load_dll_modules()
 #ifdef TSD_PLATFORM_MSVC
 			handle = LoadLibrary(modfile);
 			if (handle == NULL) {
-				output_message(MSG_SYSERROR, TSD_TEXT("DLLƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½: %s (LoadLibrary)"), modfile);
+				output_message(MSG_SYSERROR, TSD_TEXT("DLLãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã›ã‚“ã§ã—ãŸ: %s (LoadLibrary)"), modfile);
 				fclose(fp);
 				return 0;
 			}
@@ -552,7 +552,7 @@ static int load_dll_modules()
 #else
 			handle = dlopen(modfile, RTLD_LAZY);
 			if (!handle) {
-				output_message(MSG_ERROR, "“®“Iƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(dlopen): %s", dlerror());
+				output_message(MSG_ERROR, "å‹•çš„ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã›ã‚“ã§ã—ãŸ(dlopen): %s", dlerror());
 				fclose(fp);
 				return 0;
 			}
@@ -562,10 +562,10 @@ static int load_dll_modules()
 #endif
 			if (mod == NULL) {
 #ifdef TSD_PLATFORM_MSVC
-				output_message(MSG_SYSERROR, TSD_TEXT("ƒ‚ƒWƒ…[ƒ‹ƒ|ƒCƒ“ƒ^‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½: %s (GetProcAddress)"), modfile);
+				output_message(MSG_SYSERROR, TSD_TEXT("ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ: %s (GetProcAddress)"), modfile);
 				FreeLibrary(handle);
 #else
-				output_message(MSG_SYSERROR, TSD_TEXT("ƒ‚ƒWƒ…[ƒ‹ƒ|ƒCƒ“ƒ^‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(dlsym): %s"), dlerror());
+				output_message(MSG_SYSERROR, TSD_TEXT("ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ(dlsym): %s"), dlerror());
 				dlclose(handle);
 #endif
 				
@@ -585,9 +585,9 @@ static int load_dll_modules()
 		fclose(fp);
 	} else {
 #ifdef TSD_PLATFORM_MSVC
-		output_message(MSG_NOTIFY, TSD_TEXT("modules.conf‚ğŠJ‚¯‚È‚¢‚Ì‚ÅDLLƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh‚µ‚Ü‚¹‚ñ"));
+		output_message(MSG_NOTIFY, TSD_TEXT("modules.confã‚’é–‹ã‘ãªã„ã®ã§DLLãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¾ã›ã‚“"));
 #else
-		output_message(MSG_NOTIFY, TSD_TEXT("modules.conf‚ğŠJ‚¯‚È‚¢‚Ì‚Å“®“Iƒ‚ƒWƒ…[ƒ‹‚ğƒ[ƒh‚µ‚Ü‚¹‚ñ"));
+		output_message(MSG_NOTIFY, TSD_TEXT("modules.confã‚’é–‹ã‘ãªã„ã®ã§å‹•çš„ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¾ã›ã‚“"));
 #endif
 	}
 	return 1;
@@ -601,13 +601,13 @@ static int get_cmd_params( int argc, const TSDCHAR* argv[] )
 	for ( i = 1; i < argc; i++ ) {
 		cmd_load = get_cmddef(argv[i]);
 		if ( ! cmd_load ) {
-			output_message(MSG_ERROR, TSD_TEXT("•s–¾‚ÈƒRƒ}ƒ“ƒhƒIƒvƒVƒ‡ƒ“ %s ‚ªw’è‚³‚ê‚Ü‚µ‚½"), argv[i]);
+			output_message(MSG_ERROR, TSD_TEXT("ä¸æ˜ãªã‚³ãƒãƒ³ãƒ‰ã‚ªãƒ—ã‚·ãƒ§ãƒ³ %s ãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ"), argv[i]);
 			return 0;
 		}
 		cmd_def = cmd_load->cmd_def;
 		if ( cmd_def->have_option ) {
 			if ( i == argc-1 ) {
-				output_message(MSG_ERROR, TSD_TEXT("ƒRƒ}ƒ“ƒhƒIƒvƒVƒ‡ƒ“ %s ‚É’l‚ğw’è‚µ‚Ä‚­‚¾‚³‚¢"), argv[i]);
+				output_message(MSG_ERROR, TSD_TEXT("ã‚³ãƒãƒ³ãƒ‰ã‚ªãƒ—ã‚·ãƒ§ãƒ³ %s ã«å€¤ã‚’æŒ‡å®šã—ã¦ãã ã•ã„"), argv[i]);
 				return 0;
 			} else {
 				cmd_def->cmd_handler(argv[i+1]);
@@ -664,7 +664,7 @@ int init_modules(int argc, const TSDCHAR* argv[])
 		}
 	}
 
-	/* ƒ‚ƒWƒ…[ƒ‹‚Ìˆø”‚ğˆ— */
+	/* ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®å¼•æ•°ã‚’å‡¦ç† */
 	if (!get_cmd_params(argc, argv)) {
 		return 0;
 	}
@@ -676,7 +676,7 @@ int init_modules(int argc, const TSDCHAR* argv[])
 		modules[i].def->register_hooks();
 	}
 
-	/* postconfigƒtƒbƒN‚ğŒÄ‚Ño‚µ */
+	/* postconfigãƒ•ãƒƒã‚¯ã‚’å‘¼ã³å‡ºã— */
 	if (!do_postconfig()) {
 		return 0;
 	}
@@ -717,7 +717,7 @@ void free_modules()
 void print_cmd_usage()
 {
 	int i;
-	tsd_printf(TSD_TEXT("\n----------------------\n<ƒRƒ}ƒ“ƒhƒIƒvƒVƒ‡ƒ“>\n"));
+	tsd_printf(TSD_TEXT("\n----------------------\n<ã‚³ãƒãƒ³ãƒ‰ã‚ªãƒ—ã‚·ãƒ§ãƒ³>\n"));
 	for (i = 0; i < n_modulecmds; i++) {
 		if (modulecmds[i].cmd_def->have_option) {
 			tsd_printf(TSD_TEXT("%s [option]: %s\n"),
@@ -731,5 +731,5 @@ void print_cmd_usage()
 				);
 		}
 	}
-	tsd_printf(TSD_TEXT("* ‚Í•K{ƒIƒvƒVƒ‡ƒ“\n"));
+	tsd_printf(TSD_TEXT("* ã¯å¿…é ˆã‚ªãƒ—ã‚·ãƒ§ãƒ³\n"));
 }

@@ -45,16 +45,16 @@ static int hook_postconfig()
 	}
 
 	if (!reg_hook) {
-		output_message(MSG_ERROR, L"generatorƒtƒbƒN‚Ì“o˜^‚É¸”s‚µ‚Ü‚µ‚½");
+		output_message(MSG_ERROR, L"generatorãƒ•ãƒƒã‚¯ã®ç™»éŒ²ã«å¤±æ•—ã—ã¾ã—ãŸ");
 		return 0;
 	}
 
 	if (ch_num < 0) {
-		output_message(MSG_ERROR, L"ƒ`ƒƒƒ“ƒlƒ‹‚ªw’è‚³‚ê‚Ä‚¢‚È‚¢‚©A‚Ü‚½‚Í•s³‚Å‚·");
+		output_message(MSG_ERROR, L"ãƒãƒ£ãƒ³ãƒãƒ«ãŒæŒ‡å®šã•ã‚Œã¦ã„ãªã„ã‹ã€ã¾ãŸã¯ä¸æ­£ã§ã™");
 		return 0;
 	}
 	if (sp_num < 0) {
-		output_message(MSG_ERROR, L"ƒ`ƒ…[ƒi[‹óŠÔ‚ªw’è‚³‚ê‚Ä‚¢‚È‚¢‚©A‚Ü‚½‚Í•s³‚Å‚·");
+		output_message(MSG_ERROR, L"ãƒãƒ¥ãƒ¼ãƒŠãƒ¼ç©ºé–“ãŒæŒ‡å®šã•ã‚Œã¦ã„ãªã„ã‹ã€ã¾ãŸã¯ä¸æ­£ã§ã™");
 		return 0;
 	}
 
@@ -66,7 +66,7 @@ static void hook_stream_generator(void *param, unsigned char **buf, int *size)
 	DWORD n_recv;
 	bondriver_stat_t *pstat = (bondriver_stat_t*)param;
 
-	/* ts‚ğƒ`ƒ…[ƒi[‚©‚çæ“¾ */
+	/* tsã‚’ãƒãƒ¥ãƒ¼ãƒŠãƒ¼ã‹ã‚‰å–å¾— */
 	if (!pstat->pBon2->GetTsStream(buf, &n_recv, &pstat->n_rem)) {
 		*size = 0;
 		*buf = NULL;
@@ -99,21 +99,21 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	stat.hdll = LoadLibrary(bon_dll_name);
 	if (stat.hdll == NULL) {
-		output_message(MSG_SYSERROR, L"BonDriver‚ğƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(LoadLibrary): %s", bon_dll_name);
+		output_message(MSG_SYSERROR, L"BonDriverã‚’ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã›ã‚“ã§ã—ãŸ(LoadLibrary): %s", bon_dll_name);
 		return 0;
 	}
 
 	stat.pCreateBonDriver = (pCreateBonDriver_t*)GetProcAddress(stat.hdll, "CreateBonDriver");
 	if (stat.pCreateBonDriver == NULL) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_SYSERROR, L"CreateBonDriver()‚Ìƒ|ƒCƒ“ƒ^‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(GetProcAddress): %s", bon_dll_name);
+		output_message(MSG_SYSERROR, L"CreateBonDriver()ã®ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ(GetProcAddress): %s", bon_dll_name);
 		return 0;
 	}
 
 	stat.pBon = stat.pCreateBonDriver();
 	if (stat.pBon == NULL) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_ERROR, L"CreateBonDriver()‚É¸”s‚µ‚Ü‚µ‚½: %s", bon_dll_name);
+		output_message(MSG_ERROR, L"CreateBonDriver()ã«å¤±æ•—ã—ã¾ã—ãŸ: %s", bon_dll_name);
 		return 0;
 	}
 
@@ -121,7 +121,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 
 	if (! stat.pBon2->OpenTuner()) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_ERROR, L"OpenTuner()‚É¸”s‚µ‚Ü‚µ‚½");
+		output_message(MSG_ERROR, L"OpenTuner()ã«å¤±æ•—ã—ã¾ã—ãŸ");
 		return 0;
 	}
 
@@ -141,7 +141,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		ci.sp_str = L"Null";
 	}
 
-	/* ‚±‚ê‚ğ“ü‚ê‚Ä‚¨‚©‚È‚¢‚ÆSetChannel‚É¸”s‚·‚éBonDriver‚ª‘¶İ‚·‚é e.g. BonDriver PT-ST l’Œ”Å3 */
+	/* ã“ã‚Œã‚’å…¥ã‚Œã¦ãŠã‹ãªã„ã¨SetChannelã«å¤±æ•—ã™ã‚‹BonDriverãŒå­˜åœ¨ã™ã‚‹ e.g. BonDriver PT-ST äººæŸ±ç‰ˆ3 */
 	Sleep(500);
 
 	output_message(MSG_NOTIFY, L"BonTuner: %s\nSpace: %s\nChannel: %s",
@@ -149,7 +149,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	if (!stat.pBon2->SetChannel(sp_num, ch_num)) {
 		stat.pBon2->CloseTuner();
 		FreeLibrary(stat.hdll);
-		output_message(MSG_ERROR, L"SetChannel()‚É¸”s‚µ‚Ü‚µ‚½");
+		output_message(MSG_ERROR, L"SetChannel()ã«å¤±æ•—ã—ã¾ã—ãŸ");
 		return 0;
 	}
 
@@ -204,7 +204,7 @@ static const WCHAR* set_sp(const WCHAR *param)
 {
 	sp_num = _wtoi(param);
 	if (sp_num < 0) {
-		return L"ƒXƒy[ƒX”Ô†‚ª•s³‚Å‚·";
+		return L"ã‚¹ãƒšãƒ¼ã‚¹ç•ªå·ãŒä¸æ­£ã§ã™";
 	}
 	return NULL;
 }
@@ -213,15 +213,15 @@ static const WCHAR* set_ch(const WCHAR *param)
 {
 	ch_num = _wtoi(param);
 	if (ch_num < 0) {
-		return L"ƒ`ƒƒƒ“ƒlƒ‹”Ô†‚ª•s³‚Å‚·";
+		return L"ãƒãƒ£ãƒ³ãƒãƒ«ç•ªå·ãŒä¸æ­£ã§ã™";
 	}
 	return NULL;
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--bon", L"BonDriver‚ÌDLL *", 1, set_bon },
-	{ L"--sp", L"ƒ`ƒ…[ƒi[‹óŠÔ”Ô† *", 1, set_sp },
-	{ L"--ch", L"ƒ`ƒƒƒ“ƒlƒ‹”Ô† *", 1, set_ch },
+	{ L"--bon", L"BonDriverã®DLL *", 1, set_bon },
+	{ L"--sp", L"ãƒãƒ¥ãƒ¼ãƒŠãƒ¼ç©ºé–“ç•ªå· *", 1, set_sp },
+	{ L"--ch", L"ãƒãƒ£ãƒ³ãƒãƒ«ç•ªå· *", 1, set_ch },
 	NULL,
 };
 

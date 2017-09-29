@@ -25,14 +25,14 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 
 	stat.hdll = LoadLibrary(L"B25Decoder.dll");
 	if (stat.hdll == NULL) {
-		output_message(MSG_SYSERROR, L"B25Decoder.dll‚ğƒ[ƒh‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(LoadLibrary)");
+		output_message(MSG_SYSERROR, L"B25Decoder.dllã‚’ãƒ­ãƒ¼ãƒ‰ã§ãã¾ã›ã‚“ã§ã—ãŸ(LoadLibrary)");
 		return 0;
 	}
 
 	stat.pCreateB25Decoder2 = (pCreateB25Decoder2_t*)GetProcAddress(stat.hdll, "CreateB25Decoder2");
 	if (stat.pCreateB25Decoder2 == NULL) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_SYSERROR, L"CreateB25Decoder2()‚Ìƒ|ƒCƒ“ƒ^‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(GetProcAddress)");
+		output_message(MSG_SYSERROR, L"CreateB25Decoder2()ã®ãƒã‚¤ãƒ³ã‚¿ã‚’å–å¾—ã§ãã¾ã›ã‚“ã§ã—ãŸ(GetProcAddress)");
 		return 0;
 	}
 
@@ -40,13 +40,13 @@ static int hook_stream_decoder_open(void **param, int *encrypted)
 
 	if (stat.pB25Decoder2 == NULL) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_ERROR, L"CreateB25Decoder2()‚É¸”s");
+		output_message(MSG_ERROR, L"CreateB25Decoder2()ã«å¤±æ•—");
 		return 0;
 	}
 
 	if ( ! stat.pB25Decoder2->Initialize() ) {
 		FreeLibrary(stat.hdll);
-		output_message(MSG_ERROR, L"pB25Decoder2->Initialize()‚É¸”s");
+		output_message(MSG_ERROR, L"pB25Decoder2->Initialize()ã«å¤±æ•—");
 		return 0;
 	}
 
@@ -105,7 +105,7 @@ static int hook_postconfig()
 	}
 
 	if (!reg_hook) {
-		output_message(MSG_ERROR, L"generatorƒtƒbƒN‚Ì“o˜^‚É¸”s‚µ‚Ü‚µ‚½");
+		output_message(MSG_ERROR, L"generatorãƒ•ãƒƒã‚¯ã®ç™»éŒ²ã«å¤±æ•—ã—ã¾ã—ãŸ");
 		return 0;
 	}
 
@@ -127,7 +127,7 @@ static const WCHAR *set_b25dll(const WCHAR*)
 }
 
 static cmd_def_t cmds[] = {
-	{ L"--b25dec", L"B25Decoder‚É‚æ‚Á‚ÄƒfƒR[ƒh‚ğs‚¤", 0, set_b25dll },
+	{ L"--b25dec", L"B25Decoderã«ã‚ˆã£ã¦ãƒ‡ã‚³ãƒ¼ãƒ‰ã‚’è¡Œã†", 0, set_b25dll },
 	NULL,
 };
 

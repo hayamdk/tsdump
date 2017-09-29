@@ -1,17 +1,13 @@
 PROGRAM = tsdump
 
-SOURCES_CP932 = core/tsdump.c core/ts_output.c core/load_modules.c core/default_decoder.c utils/tsdstr.c utils/arib_parser.c utils/path.c utils/advanced_buffer.c
-MODULES_CP932 = modules/mod_path_resolver.c modules/mod_log.c modules/mod_filein.c modules/mod_fileout.c modules/mod_cmdexec.c
-SOURCES = utils/aribstr.c
-MODULES = 
+SOURCES = core/tsdump.c core/ts_output.c core/load_modules.c core/default_decoder.c utils/tsdstr.c utils/arib_parser.c utils/path.c utils/advanced_buffer.c utils/aribstr.c
+MODULES = modules/mod_path_resolver.c modules/mod_log.c modules/mod_filein.c modules/mod_fileout.c modules/mod_cmdexec.c
 MODULES_LINUX = modules/mod_dvb.c modules/mod_arib25.c
 MODULES := $(if $(shell uname -a | grep -i linux), $(MODULES) $(MODULES_LINUX), $(MODULES) )
 
-CC := gcc
+CC := cc
 
-OBJS1 = $(SOURCES_CP932:.c=.o) $(MODULES_CP932:.c=.o)
-OBJS2 = $(SOURCES:.c=.o) $(MODULES:.c=.o)
-OBJS = $(OBJS1) $(OBJS2)
+OBJS = $(SOURCES:.c=.o) $(MODULES:.c=.o)
 
 #CFLAGS = -O3 -flto -Wall -I$(CURDIR)
 CFLAGS = -Ofast -march=native -Wall -flto -I$(CURDIR)
@@ -27,11 +23,7 @@ $(PROGRAM): $(OBJS)
 #SUFFIXES: .o .c
 
 .c.o:
-	$(CC) $(CFLAGS) $(CHARSET_FLAG) -c $< -o $@
-
-$(OBJS1): CHARSET_FLAG = -finput-charset=cp932
-
-$(OBJS2): CHARSET_FLAG = 
+	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 

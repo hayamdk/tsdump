@@ -64,15 +64,15 @@ static int hook_postconfig()
 	}
 
 #ifdef TSD_PLATFORM_MSVC
-	logfp = _wfsopen(pfname, L"a, ccs=UTF-8", _SH_DENYWR); /* ‘¼‚ÌƒvƒƒZƒX‚©‚çƒƒO‚Ìread‚Í‚Å‚«‚é‚æ‚¤‚É */
+	logfp = _wfsopen(pfname, L"a, ccs=UTF-8", _SH_DENYWR); /* ä»–ã®ãƒ—ãƒ­ã‚»ã‚¹ã‹ã‚‰ãƒ­ã‚°ã®readã¯ã§ãã‚‹ã‚ˆã†ã« */
 #else
 	logfp = fopen(pfname, "a");
 #endif
 	if (!logfp) {
-		output_message(MSG_ERROR, TSD_TEXT("ƒƒOƒtƒ@ƒCƒ‹: %s ‚ğŠJ‚¯‚Ü‚¹‚ñ"), pfname);
+		output_message(MSG_ERROR, TSD_TEXT("ãƒ­ã‚°ãƒ•ã‚¡ã‚¤ãƒ«: %s ã‚’é–‹ã‘ã¾ã›ã‚“"), pfname);
 		return 0;
 	}
-	setvbuf(logfp, NULL, _IONBF, 0); /* ƒeƒLƒXƒgƒGƒfƒBƒ^“™‚©‚ç’¼‚¿‚ÉÅV‚ÌƒƒO‚ğŒ©‚ç‚ê‚é‚æ‚¤‚É */
+	setvbuf(logfp, NULL, _IONBF, 0); /* ãƒ†ã‚­ã‚¹ãƒˆã‚¨ãƒ‡ã‚£ã‚¿ç­‰ã‹ã‚‰ç›´ã¡ã«æœ€æ–°ã®ãƒ­ã‚°ã‚’è¦‹ã‚‰ã‚Œã‚‹ã‚ˆã†ã« */
 
 	return 1;
 }
@@ -100,7 +100,7 @@ static void hook_message(const TSDCHAR* modname, message_type_t msgtype, tsd_sys
 		return;
 	}
 
-	/* ‰üs‚ğæ‚èœ‚­ */
+	/* æ”¹è¡Œã‚’å–ã‚Šé™¤ã */
 	len = (int)tsd_strlen(msg);
 	if (len >= 1024) {
 		len = 1023;
@@ -168,8 +168,8 @@ static void register_hooks()
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--log"), TSD_TEXT("ƒƒO‚ğo—Í‚·‚é"), 0, set_log },
-	{ TSD_TEXT("--logfile"), TSD_TEXT("ƒƒO‚Ìƒtƒ@ƒCƒ‹–¼"), 1, set_logfile },
+	{ TSD_TEXT("--log"), TSD_TEXT("ãƒ­ã‚°ã‚’å‡ºåŠ›ã™ã‚‹"), 0, set_log },
+	{ TSD_TEXT("--logfile"), TSD_TEXT("ãƒ­ã‚°ã®ãƒ•ã‚¡ã‚¤ãƒ«å"), 1, set_logfile },
 	{ NULL },
 };
 

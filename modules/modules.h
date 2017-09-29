@@ -1,4 +1,4 @@
-/* 静的リンクするモジュールの記述 */
+/* 髱咏噪繝ｪ繝ｳ繧ｯ縺吶ｋ繝｢繧ｸ繝･繝ｼ繝ｫ縺ｮ險倩ｿｰ */
 
 extern module_def_t mod_core;
 extern module_def_t mod_path_resolver;

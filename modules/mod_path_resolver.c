@@ -22,15 +22,15 @@ TSDCHAR param_base_dir[MAX_PATH_LEN] = {TSD_CHAR('\0')};
 static void normalize_fname(TSDCHAR *fname, size_t fname_max)
 {
 	tsdstr_replace_set_t replace_sets[] = {
-		{ TSD_TEXT("\\"), TSD_TEXT("") },
-		{ TSD_TEXT("/"), TSD_TEXT("^") },
-		{ TSD_TEXT("*"), TSD_TEXT("–") },
-		{ TSD_TEXT("?"), TSD_TEXT("H") },
-		{ TSD_TEXT("\""), TSD_TEXT("h") },
-		{ TSD_TEXT("<"), TSD_TEXT("ƒ") },
-		{ TSD_TEXT(">"), TSD_TEXT("„") },
-		{ TSD_TEXT("|"), TSD_TEXT("b") },
-		{ TSD_TEXT(":"), TSD_TEXT("F") },
+		{ TSD_TEXT("\\"), TSD_TEXT("ï¿¥") },
+		{ TSD_TEXT("/"), TSD_TEXT("ï¼") },
+		{ TSD_TEXT("*"), TSD_TEXT("ï¼Š") },
+		{ TSD_TEXT("?"), TSD_TEXT("ï¼Ÿ") },
+		{ TSD_TEXT("\""), TSD_TEXT("â€") },
+		{ TSD_TEXT("<"), TSD_TEXT("ï¼œ") },
+		{ TSD_TEXT(">"), TSD_TEXT("ï¼") },
+		{ TSD_TEXT("|"), TSD_TEXT("ï½œ") },
+		{ TSD_TEXT(":"), TSD_TEXT("ï¼š") },
 	};
 
 	tsd_replace_sets(fname, fname_max, replace_sets, sizeof(replace_sets) / sizeof(tsdstr_replace_set_t), 0);
@@ -46,7 +46,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 	TSDCHAR pname_n[256], chname_n[256];
 	TSDCHAR filename[MAX_PATH_LEN + 1];
 
-	pname = TSD_TEXT("”Ô‘gî•ñ‚È‚µ");
+	pname = TSD_TEXT("ç•ªçµ„æƒ…å ±ãªã—");
 
 	if (PGINFO_READY(pi->status)) {
 		tn = timenum_start(pi);
@@ -74,7 +74,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 	normalize_fname(pname_n, 256-1);
 	normalize_fname(chname_n, 256-1);
 
-	/* tn‚Í”Ô‘gî•ñ‚ÌŠJn */
+	/* tnã¯ç•ªçµ„æƒ…å ±ã®é–‹å§‹æ™‚åˆ» */
 	if (!isok && ch_info->n_services > 1) {
 		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
 	} else {
@@ -85,7 +85,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 		goto END;
 	}
 
-	/* ƒtƒ@ƒCƒ‹‚ªŠù‚É‘¶İ‚µ‚½‚çtn‚ğŒ»İ‚É */
+	/* ãƒ•ã‚¡ã‚¤ãƒ«ãŒæ—¢ã«å­˜åœ¨ã—ãŸã‚‰tnã‚’ç¾åœ¨æ™‚åˆ»ã« */
 	tn = timenumnow();
 	if (!isok && ch_info->n_services > 1) {
 		tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s%s"), tn, chname_n, pi->service_id, pname_n, ext);
@@ -97,7 +97,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 		goto END;
 	}
 
-	/* ‚»‚ê‚Å‚à‘¶İ‚µ‚½‚çsuffix‚ğ‚Â‚¯‚é */
+	/* ãã‚Œã§ã‚‚å­˜åœ¨ã—ãŸã‚‰suffixã‚’ã¤ã‘ã‚‹ */
 	for (i = 2;; i++) {
 		if (!isok && ch_info->n_services > 1) {
 			tsd_snprintf(filename, MAX_PATH_LEN - 1, TSD_TEXT("%"PRId64"_%s(sv=%d)_%s_%d%s"), tn, chname_n, pi->service_id, pname_n, i, ext);
@@ -128,14 +128,14 @@ static const TSDCHAR* set_dir(const TSDCHAR *param)
 static int hook_postconfig()
 {
 	if (param_base_dir[0] == L'\0') {
-		output_message(MSG_ERROR, TSD_TEXT("o—ÍƒfƒBƒŒƒNƒgƒŠ‚ªw’è‚³‚ê‚Ä‚¢‚È‚¢‚©A‚Ü‚½‚Í•s³‚Å‚·"));
+		output_message(MSG_ERROR, TSD_TEXT("å‡ºåŠ›ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒæŒ‡å®šã•ã‚Œã¦ã„ãªã„ã‹ã€ã¾ãŸã¯ä¸æ­£ã§ã™"));
 		return 0;
 	}
 	return 1;
 }
 
 static cmd_def_t cmds[] = {
-	{ TSD_TEXT("--dir"), TSD_TEXT("o—ÍæƒfƒBƒŒƒNƒgƒŠ *"), 1, set_dir },
+	{ TSD_TEXT("--dir"), TSD_TEXT("å‡ºåŠ›å…ˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª *"), 1, set_dir },
 	{ NULL },
 };
 
