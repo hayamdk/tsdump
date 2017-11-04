@@ -110,6 +110,9 @@ static int n_execcmds = 0;
 static cmd_opt_t execcmds[MAX_CMDS];
 static int cwindow_min = 0;
 
+/* the last is: 0=none, 1=pipe-command, 2=post-execution-command */
+static int set_last_cmd = 0;
+
 static int output_redirect = 0;
 static TSDCHAR output_redirect_dir[MAX_PATH_LEN];
 
@@ -1552,14 +1555,12 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 	pipecmds[n_pipecmds].no_pipe = 0;
 	n_pipecmds++;
 	open_connect = 0;
+	set_last_cmd = 1;
 	return NULL;
 }
 
-static const TSDCHAR* set_pipe_opt(const TSDCHAR *param)
+static const TSDCHAR* _set_pipe_opt(const TSDCHAR *param)
 {
-	if (n_pipecmds == 0) {
-		return TSD_TEXT("パイプ実行コマンドが指定されていません");
-	}
 	if (pipecmds[n_pipecmds - 1].set_opt) {
 		return TSD_TEXT("パイプ実行コマンドのオプションは既に指定されています");
 	}
@@ -1606,20 +1607,28 @@ static const TSDCHAR* set_cmd(const TSDCHAR *param)
 	tsd_strlcpy(execcmds[n_execcmds].cmd, param, MAX_PATH_LEN - 1);
 	execcmds[n_execcmds].set_opt = 0;
 	n_execcmds++;
+	set_last_cmd = 2;
 	return NULL;
 }
 
-static const TSDCHAR* set_cmd_opt(const TSDCHAR *param)
+static const TSDCHAR* _set_cmd_opt(const TSDCHAR *param)
 {
-	if (n_execcmds == 0) {
-		return TSD_TEXT("番組終了時実行コマンドが指定されていません");
-	}
 	if (execcmds[n_execcmds - 1].set_opt) {
 		return TSD_TEXT("番組終了時実行コマンドのオプションは既に指定されています");
 	}
 	tsd_strlcpy(execcmds[n_execcmds - 1].opt, param, 2048 - 1);
 	execcmds[n_execcmds - 1].set_opt = 1;
 	return NULL;
+}
+
+static const TSDCHAR* set_opt(const TSDCHAR *param)
+{
+	if (set_last_cmd == 0) {
+		return TSD_TEXT("オプション指定先のコマンドが設定されていません");
+	} if (set_last_cmd == 1) {
+		return _set_pipe_opt(param);
+	} /*else*/
+	return _set_cmd_opt(param);
 }
 
 static const TSDCHAR *set_cmin(const TSDCHAR* param)
@@ -1657,12 +1666,11 @@ static void register_hooks()
 
 static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--pipecmd"), TSD_TEXT("パイプ実行コマンド (複数指定可)"), 1, set_pipe_cmd },
-	{ TSD_TEXT("--pipeopt"), TSD_TEXT("パイプ実行コマンドのオプション (複数指定可)"), 1, set_pipe_opt },
 	{ TSD_TEXT("--pwmin"), TSD_TEXT("パイプ実行コマンドのウィンドウを最小化する"), 0, set_min },
 	{ TSD_TEXT("--pipeconn"), TSD_TEXT("パイプ実行コマンドの出力を次のコマンドの入力に接続する"), 0, set_connect },
 	{ TSD_TEXT("--nopipe"), TSD_TEXT("実行のみでパイプ出力を行わない"), 0, set_nopipe },
 	{ TSD_TEXT("--cmd"), TSD_TEXT("番組終了時実行コマンド (複数指定可)"), 1, set_cmd },
-	{ TSD_TEXT("--cmdopt"), TSD_TEXT("番組終了時実行コマンドのオプション (複数指定可)"), 1, set_cmd_opt },
+	{ TSD_TEXT("--setopt"), TSD_TEXT("コマンドのオプションを指定する"), 1, set_opt },
 	{ TSD_TEXT("--cwmin"), TSD_TEXT("番組終了時実行コマンドのウィンドウを最小化する"), 0, set_cmin },
 	{ TSD_TEXT("--cmd-output-redirect"), TSD_TEXT("各コマンドの標準出力／エラー出力を指定したディレクトリに書き出す"), 1, set_output_redirect },
 	{ NULL },
