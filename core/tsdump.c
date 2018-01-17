@@ -39,6 +39,11 @@ int MAX_PGOVERLAP = MAX_PGOVERLAP_DEFAULT;
 int MAX_OUTPUT_DELAY_SEC = 120;
 int MAX_CLOSE_DELAY_SEC = 30;
 
+#ifdef TSD_PLATFORM_MSVC
+static int use_process_priority = 0;
+static DWORD process_priority;
+#endif
+
 static volatile int termflag = 0;
 static volatile int termwaiting = 0;
 static volatile int termedflag = 0;
@@ -751,6 +756,14 @@ int main(int argc, const char* argv[])
 		goto END1;
 	}
 
+#ifdef TSD_PLATFORM_MSVC
+	if (use_process_priority) {
+		if (SetPriorityClass(GetCurrentProcess(), process_priority) == 0) {
+			output_message(MSG_ERROR, TSD_TEXT("プロセスの優先度の設定に失敗しました"));
+		}
+	}
+#endif
+
 	/* 処理の本体 */
 	main_loop(generator_stat, decoder_stat, encrypted, &ch_info);
 
@@ -850,6 +863,31 @@ static const TSDCHAR* set_close_delay(const TSDCHAR *param)
 	return NULL;
 }
 
+#ifdef TSD_PLATFORM_MSVC
+
+static const TSDCHAR* set_pri(const TSDCHAR *param)
+{
+	if (tsd_strcmp(param, TSD_TEXT("realtime")) == 0) {
+		process_priority = REALTIME_PRIORITY_CLASS;
+	} else if(tsd_strcmp(param, TSD_TEXT("high")) == 0) {
+		process_priority = HIGH_PRIORITY_CLASS;
+	} else if(tsd_strcmp(param, TSD_TEXT("above")) == 0) {
+		process_priority = ABOVE_NORMAL_PRIORITY_CLASS;
+	} else if(tsd_strcmp(param, TSD_TEXT("normal")) == 0) {
+		process_priority = NORMAL_PRIORITY_CLASS;
+	} else if(tsd_strcmp(param, TSD_TEXT("below")) == 0) {
+		process_priority = BELOW_NORMAL_PRIORITY_CLASS;
+	} else if(tsd_strcmp(param, TSD_TEXT("idle")) == 0) {
+		process_priority = IDLE_PRIORITY_CLASS;
+	} else {
+		return TSD_TEXT("プロセスの優先度として不正な文字列が指定されました");
+	}
+	use_process_priority = 1;
+	return NULL;
+}
+
+#endif
+
 void ghook_message(const TSDCHAR *modname, message_type_t msgtype, tsd_syserr_t *err, const TSDCHAR *msg)
 {
 	const TSDCHAR *msgtype_str = TSD_TEXT("");
@@ -919,6 +957,9 @@ static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 1, set_pgmargin },
 	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("出力の最大遅延時間(sec)"), 1, set_output_delay },
 	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("終了処理の最大遅延時間(sec)"), 1, set_close_delay },
+#ifdef TSD_PLATFORM_MSVC
+	{ TSD_TEXT("--pri"), TSD_TEXT("プロセスの優先度(realtime|high|above|normal|below|idle)"), 1, set_pri },
+#endif
 	{ NULL },
 };
 
