@@ -598,6 +598,7 @@ static int get_cmd_params( int argc, const TSDCHAR* argv[] )
 	int i;
 	cmd_load_t *cmd_load;
 	cmd_def_t *cmd_def;
+	const TSDCHAR *ret = NULL;
 	for ( i = 1; i < argc; i++ ) {
 		cmd_load = get_cmddef(argv[i]);
 		if ( ! cmd_load ) {
@@ -610,11 +611,15 @@ static int get_cmd_params( int argc, const TSDCHAR* argv[] )
 				output_message(MSG_ERROR, TSD_TEXT("コマンドオプション %s に値を指定してください"), argv[i]);
 				return 0;
 			} else {
-				cmd_def->cmd_handler(argv[i+1]);
+				ret = cmd_def->cmd_handler(argv[i+1]);
 				i++;
 			}
 		} else {
-			cmd_def->cmd_handler(NULL);
+			ret = cmd_def->cmd_handler(NULL);
+		}
+		if (ret) {
+			output_message(MSG_ERROR, ret);
+			return 0;
 		}
 	}
 	return 1;
