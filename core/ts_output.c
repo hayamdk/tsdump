@@ -810,10 +810,10 @@ void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_inf
 		} else if( get_stream_timestamp_rough(tos->proginfo, &time1) &&
 				get_stream_timestamp_rough(&tos->last_proginfo, &time2) ) {
 			/* ストリームのタイムスタンプが正常に取得できていればそれを比較 */
-			if (time1.hour > time2.hour) {
+			if (time1.hour != time2.hour) {
 				changed = 1;
 			}
-		} else if( timenum64(nowtime) / 100 > timenum64(tos->last_checkpi_time) / 100 ) {
+		} else if( timenum64(nowtime) / 100 != timenum64(tos->last_checkpi_time) / 100 ) {
 			/* そうでなければPCの現在時刻を比較 */
 			changed = 1;
 		} else if (!tos->curr_pgos) {
