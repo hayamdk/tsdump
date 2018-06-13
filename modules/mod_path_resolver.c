@@ -62,7 +62,7 @@ static void get_fname(TSDCHAR* fname, const proginfo_t *pi, const ch_info_t *ch_
 		}
 
 		if (get_stream_timestamp_rough(pi, &time_mjd)) {
-			tn = timenum_timemjd(time_mjd);
+			tn = timenum_timemjd(&time_mjd);
 		} else {
 			tn = timenumnow();
 		}

@@ -960,6 +960,7 @@ void store_TOT(proginfo_t *proginfo, const time_mjd_t *TOT_time)
 	}
 	proginfo->PCR_wraparounded = 0;
 	proginfo->status |= PGINFO_GET_TOT;
+	proginfo->status |= PGINFO_TOT_UPDATED;
 }
 
 void parse_TOT_TDT(const uint8_t *packet, const ts_header_t *tsh, PSI_parse_t *TOT_payload, void *param, tot_callback_handler_t handler)

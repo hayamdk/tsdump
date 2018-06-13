@@ -44,9 +44,10 @@ struct output_status_stream_struct {
 	ab_history_t *ab_history;
 	proginfo_t *proginfo;
 	proginfo_t last_proginfo;
-	int64_t last_checkpi_time;
+	int64_t last_progchange_timenum;
 	int proginfo_retry_count;
 	int pcr_retry_count;
+	int tot_retry_count;
 	int64_t last_bufminimize_time;
 	int n_pgos;
 	output_status_prog_t *pgos;

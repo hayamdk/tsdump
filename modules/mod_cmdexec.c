@@ -165,7 +165,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		chname = proginfo->event_name.str;
 		progname = proginfo->service_name.str;
 
-		timenum = timenum_timemjd(proginfo->start);
+		timenum = timenum_timemjd(&proginfo->start);
 		year = proginfo->start.year;
 		mon = proginfo->start.mon;
 		day = proginfo->start.day;

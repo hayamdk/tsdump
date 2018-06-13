@@ -34,21 +34,24 @@ static inline int64_t gettime()
 	return result;
 }
 
-static inline int64_t timenum_timemjd(const time_mjd_t timemjd)
+static inline int64_t make_timenum(int year, int mon, int day, int hour, int min)
 {
 	int64_t tn;
-	tn = timemjd.year;
+	tn = year;
 	tn *= 100;
-	tn += timemjd.mon;
+	tn += mon;
 	tn *= 100;
-	tn += timemjd.day;
+	tn += day;
 	tn *= 100;
-	tn += timemjd.hour;
+	tn += hour;
 	tn *= 100;
-	tn += timemjd.min;
-	//tn *= 100;
-	//tn += timemjd.sec;
+	tn += min;
 	return tn;
+}
+
+static inline int64_t timenum_timemjd(const time_mjd_t *timemjd)
+{
+	return make_timenum(timemjd->year, timemjd->mon, timemjd->day, timemjd->hour, timemjd->min);
 }
 
 static inline int64_t timenum_start(const proginfo_t *pi)
@@ -56,12 +59,11 @@ static inline int64_t timenum_start(const proginfo_t *pi)
 	if (pi->status & PGINFO_UNKNOWN_STARTTIME) {
 		return 0;
 	}
-	return timenum_timemjd(pi->start);
+	return timenum_timemjd(&pi->start);
 }
 
 static inline int64_t timenumtt(time_t t)
 {
-	int64_t tn;
 	struct tm lt;
 	
 #ifdef TSD_PLATFORM_MSVC
@@ -69,24 +71,12 @@ static inline int64_t timenumtt(time_t t)
 #else
 	lt = *(localtime(&t));
 #endif
-
-	tn = lt.tm_year + 1900;
-	tn *= 100;
-	tn += (lt.tm_mon + 1);
-	tn *= 100;
-	tn += lt.tm_mday;
-	tn *= 100;
-	tn += lt.tm_hour;
-	tn *= 100;
-	tn += lt.tm_min;
-	return tn;
+	return make_timenum(lt.tm_year + 1900, lt.tm_mon, lt.tm_mday, lt.tm_hour, lt.tm_min);
 }
 
 static inline int64_t timenum64(int64_t ms)
 {
-	int64_t tn;
 	struct tm lt;
-
 	time_t tt = ms / 1000;
 
 #ifdef TSD_PLATFORM_MSVC
@@ -94,17 +84,7 @@ static inline int64_t timenum64(int64_t ms)
 #else
 	lt = *(localtime(&tt));
 #endif
-
-	tn = lt.tm_year + 1900;
-	tn *= 100;
-	tn += (lt.tm_mon + 1);
-	tn *= 100;
-	tn += lt.tm_mday;
-	tn *= 100;
-	tn += lt.tm_hour;
-	tn *= 100;
-	tn += lt.tm_min;
-	return tn;
+	return make_timenum(lt.tm_year + 1900, lt.tm_mon, lt.tm_mday, lt.tm_hour, lt.tm_min);
 }
 
 static inline int64_t timenumnow()
