@@ -71,7 +71,7 @@ static inline int64_t timenumtt(time_t t)
 #else
 	lt = *(localtime(&t));
 #endif
-	return make_timenum(lt.tm_year + 1900, lt.tm_mon, lt.tm_mday, lt.tm_hour, lt.tm_min);
+	return make_timenum(lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 }
 
 static inline int64_t timenum64(int64_t ms)
@@ -84,7 +84,7 @@ static inline int64_t timenum64(int64_t ms)
 #else
 	lt = *(localtime(&tt));
 #endif
-	return make_timenum(lt.tm_year + 1900, lt.tm_mon, lt.tm_mday, lt.tm_hour, lt.tm_min);
+	return make_timenum(lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 }
 
 static inline int64_t timenumnow()
