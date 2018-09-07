@@ -79,12 +79,12 @@ gccの存在するUNIXライクOSならば多少の修正でビルド自体は可能かと思います。
 	パイプのみに出力したい場合など
 --cmd [終了時実行コマンド](複数指定可)
 	ファイルクローズの際に呼ばれる
---cmdopt [終了時実行コマンドの引数](複数指定可)
 --cwmin 終了時実行コマンドを最小化状態で起動する
 --pipecmd [パイプ実行コマンド](複数指定可)
 	ファイルに書き出すのと同じ内容がパイプで送り込まれる
---pipecmd [パイプ実行コマンドの引数](複数指定可)
 --pipeconn パイプ実行コマンドの出力を次のコマンドの入力に接続する
+--setopt [実行コマンドのオプション](複数指定可)
+--nopipe 実行のみでパイプ出力を行わない
 --cmd-output-redirect [dir]
 	各コマンドの標準出力／エラー出力を指定したディレクトリに書き出す
 --pwmin パイプ実行コマンドを最小化状態で起動する
@@ -113,7 +113,7 @@ tsdump --type isdb-t --ch 27 --dir /data/rec
 /data/recに27chを録画する
 
 (発展的な使い方)
-tsdump (略: 録画オプション、要MULTI2デコード) --pipecmd [ffmpegのパス] --pipeopt "-i - -vcodec libx264 -acodec aac -preset ultrafast \"{FILENE}.mp4\""
+tsdump (略: 録画オプション、要MULTI2デコード) --pipecmd ffmpeg --setopt "-i - -vcodec libx264 -acodec aac -preset ultrafast \"{FILENE}.mp4\""
 
 ffmpegを用いて録画と同時にエンコードして同じディレクトリに.mp4ファイルを出力する
 --no-fileoutを付ければ.mp4のみ保存する
