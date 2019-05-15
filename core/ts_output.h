@@ -60,6 +60,7 @@ struct output_status_stream_struct {
 void init_tos(output_status_stream_t *tos);
 void close_tos(output_status_stream_t *tos);
 void prepare_close_tos(output_status_stream_t *tos);
+void ts_check_si(output_status_stream_t* tos, int64_t nowtime, ch_info_t* ch_info);
 void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info);
 void ts_output(output_status_stream_t *tos, int64_t nowtime);
 int create_tos_per_service(output_status_stream_t **ptos, ts_service_list_t *service_list, ch_info_t *ch_info);

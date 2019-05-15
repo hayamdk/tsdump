@@ -53,6 +53,7 @@ int param_ch_num = -1;
 int param_all_services;
 unsigned int param_services[MAX_SERVICES];
 int param_n_services = 0;
+int param_nosplit = 0;
 
 int need_clear_line = 0;
 
@@ -589,9 +590,12 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 				parse_PCR(packet, &tsh, &service_list, find_curr_service_pcr_pid);
 				parse_TOT_TDT(packet, &tsh, &service_list.pid0x14, &service_list, tot_handler);
 				parse_SDT(&service_list.pid0x11, packet, &tsh, &service_list, find_curr_service);
-				parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
-				parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
-				parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
+
+				if (!param_nosplit) {
+					parse_EIT(&service_list.pid0x12, packet, &tsh, &service_list, find_curr_service_eit);
+					parse_EIT(&service_list.pid0x26, packet, &tsh, &service_list, find_curr_service_eit);
+					parse_EIT(&service_list.pid0x27, packet, &tsh, &service_list, find_curr_service_eit);
+				}
 			}
 
 			if ( single_mode ) { /* 単一書き出しモード */
@@ -656,6 +660,10 @@ void main_loop(void *generator_stat, void *decoder_stat, int encrypted, ch_info_
 
 			/* 番組情報のチェック */
 			for (i = 0; i < n_tos; i++) {
+				if (param_nosplit) {
+					ts_check_si(&tos[i], nowtime, ch_info);
+					continue;
+				}
 				if (ab_get_history_bytes(tos[i].ab_history, 0) > 0) { /* 前のintervalで何も受信できてない時は番組情報のチェックをパスする */
 					ts_check_pi(&tos[i], nowtime, ch_info);
 				}
@@ -863,6 +871,13 @@ static const TSDCHAR* set_close_delay(const TSDCHAR *param)
 	return NULL;
 }
 
+static const TSDCHAR* set_nosplit(const TSDCHAR *param)
+{
+	UNREF_ARG(param);
+	param_nosplit = 1;
+	return NULL;
+}
+
 #ifdef TSD_PLATFORM_MSVC
 
 static const TSDCHAR* set_pri(const TSDCHAR *param)
@@ -957,6 +972,7 @@ static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--pgmargin"), TSD_TEXT("番組録画の前後マージン(sec)"), 1, set_pgmargin },
 	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("出力の最大遅延時間(sec)"), 1, set_output_delay },
 	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("終了処理の最大遅延時間(sec)"), 1, set_close_delay },
+	{ TSD_TEXT("--nosplit"), TSD_TEXT("番組ごとに分割しない"), 0, set_nosplit },
 #ifdef TSD_PLATFORM_MSVC
 	{ TSD_TEXT("--pri"), TSD_TEXT("プロセスの優先度(realtime|high|above|normal|below|idle)"), 1, set_pri },
 #endif

@@ -774,6 +774,25 @@ static int64_t choose_curr_timenum(int64_t nowtime, proginfo_t *proginfo)
 	return timenum64(nowtime);
 }
 
+void ts_check_si(output_status_stream_t* tos, int64_t nowtime, ch_info_t* ch_info)
+{
+	check_stream_timeinfo(tos);
+
+	if (tos->curr_pgos) {
+		return;
+	}
+
+	if ( !(tos->proginfo->status & PGINFO_GET_SERVICE_INFO) ) {
+		/* サービス情報を取得できていなくても5秒は判定を保留する */
+		if (tos->proginfo_retry_count < 5 * 1000 / CHECK_INTERVAL) {
+			tos->proginfo_retry_count++;
+			return;
+		}
+	}
+	ts_prog_changed(tos, nowtime, ch_info);
+	return;
+}
+
 void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_info)
 {
 	int changed = 0, time_changed = 0;
@@ -785,7 +804,7 @@ void ts_check_pi(output_status_stream_t *tos, int64_t nowtime, ch_info_t *ch_inf
 
 	if ( !(tos->proginfo->status & PGINFO_READY_UPDATED) && 
 		(PGINFO_READY(tos->last_proginfo.status) || !tos->curr_pgos) ) {
-		/* 最新の番組情報が取得できていなくても15秒は判定を保留する */
+		/* 最新の番組情報を取得できていなくても15秒は判定を保留する */
 		if (tos->proginfo_retry_count < 15 * 1000 / CHECK_INTERVAL) {
 			tos->proginfo_retry_count++;
 			return;
