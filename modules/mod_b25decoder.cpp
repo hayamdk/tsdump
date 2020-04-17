@@ -5,6 +5,7 @@
 #include "core/tsdump_def.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_api.h"
+#include "utils/tsdstr.h"
 
 #include "IB25Decoder.h"
 
@@ -16,14 +17,17 @@ typedef struct {
 	IB25Decoder2 *pB25Decoder2;
 } b25decoder_stat_t;
 
+#define B25DLLNAME_MAXLEN 256
+
 static int use_b25dll = 0;
 static int reg_hook = 0;
+WCHAR b25dllname[B25DLLNAME_MAXLEN] = L"B25Decoder.dll";
 
 static int hook_stream_decoder_open(void **param, int *encrypted)
 {
 	b25decoder_stat_t *pstat, stat;
 
-	stat.hdll = LoadLibrary(L"B25Decoder.dll");
+	stat.hdll = LoadLibrary(b25dllname);
 	if (stat.hdll == NULL) {
 		output_message(MSG_SYSERROR, L"B25Decoder.dllをロードできませんでした(LoadLibrary)");
 		return 0;
@@ -120,14 +124,21 @@ static void register_hooks()
 	register_hook_postconfig(hook_postconfig);
 }
 
-static const WCHAR *set_b25dll(const WCHAR*)
+static const WCHAR *set_b25dec(const WCHAR*)
 {
 	use_b25dll = 1;
 	return NULL;
 }
 
+static const WCHAR* set_b25dll(const WCHAR* param)
+{
+	tsd_strlcpy(b25dllname, param, B25DLLNAME_MAXLEN - 1);
+	return NULL;
+}
+
 static cmd_def_t cmds[] = {
-	{ L"--b25dec", L"B25Decoderによってデコードを行う", 0, set_b25dll },
+	{ L"--b25dec", L"B25Decoderによってデコードを行う", 0, set_b25dec },
+	{ L"--b25dll", L"B25DecoderのDLL名を指定", 1, set_b25dll },
 	NULL,
 };
 

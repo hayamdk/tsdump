@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif /*__cplusplus*/
+
 #ifdef TSD_PLATFORM_MSVC
 	#define tsd_printf(...)				tsd_fprintf(stdout, __VA_ARGS__)
 	int									tsd_fprintf(FILE *fp, const TSDCHAR *fmt, ...);
@@ -9,8 +13,8 @@
 #define tsd_sizeof(x)					(sizeof(x)/sizeof(TSDCHAR))
 
 typedef struct {
-	const TSDCHAR *old;
-	const TSDCHAR *new;
+	const TSDCHAR *oldstr;
+	const TSDCHAR *newstr;
 	size_t old_len;
 	size_t new_len;
 } tsdstr_replace_set_t;
@@ -28,10 +32,10 @@ int tsd_strcmp(const TSDCHAR *s1, const TSDCHAR *s2);
 int tsd_strncmp(const TSDCHAR *s1, const TSDCHAR *s2, size_t n);
 void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *sets, size_t n_sets, int longest_match);
 
-#define TSD_REPLACE_ADD_SET(sets, n, _old, _new) \
+#define TSD_REPLACE_ADD_SET(sets, n, _oldstr, _newstr) \
 	do { \
-		(sets)[(n)].old = (_old); \
-		(sets)[(n)].new = (_new); \
+		(sets)[(n)].oldstr = (_oldstr); \
+		(sets)[(n)].newstr = (_newstr); \
 		(sets)[(n)].old_len = 0; \
 		(sets)[(n)].new_len = 0; \
 		(n)++; \
@@ -42,3 +46,7 @@ int tsd_vsnprintf(TSDCHAR *str, size_t size, const TSDCHAR *format, va_list ap);
 #endif
 
 void tsd_rstrip(TSDCHAR *str);
+
+#ifdef __cplusplus
+}
+#endif /*__cplusplus*/

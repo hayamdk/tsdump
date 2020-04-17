@@ -157,18 +157,18 @@ double tsd_atof(const TSDCHAR *str)
 static size_t get_old_len(tsdstr_replace_set_t *sets, size_t idx)
 {
 	if (sets[idx].old_len == 0) {
-		sets[idx].old_len = tsd_strlen(sets[idx].old) + 1;
+		sets[idx].old_len = tsd_strlen(sets[idx].oldstr) + 1;
 	}
 	return sets[idx].old_len - 1;
 }
 
 static size_t get_new_len(tsdstr_replace_set_t *sets, size_t idx)
 {
-	if (!sets[idx].new) {
+	if (!sets[idx].newstr) {
 		return 0;
 	}
 	if (sets[idx].new_len == 0) {
-		sets[idx].new_len = tsd_strlen(sets[idx].new) + 1;
+		sets[idx].new_len = tsd_strlen(sets[idx].newstr) + 1;
 	}
 	return sets[idx].new_len - 1;
 }
@@ -181,7 +181,7 @@ static ssize_t search_sets(const TSDCHAR *str, tsdstr_replace_set_t *sets, size_
 
 	for (i = 0; i < n_sets; i++) {
 		len = get_old_len(sets, i);
-		ret = tsd_strncmp(str, sets[i].old, len);
+		ret = tsd_strncmp(str, sets[i].oldstr, len);
 		if (ret == 0) {
 			if (found == -1) {
 				found = i;
@@ -232,7 +232,7 @@ void tsd_replace_sets(TSDCHAR *str, size_t str_maxlen, tsdstr_replace_set_t *set
 				str_len = str_len + new_len - old_len;
 			}
 			if (new_len > 0) {
-				memcpy(&str[i], sets[ret].new, new_len * sizeof(TSDCHAR));
+				memcpy(&str[i], sets[ret].newstr, new_len * sizeof(TSDCHAR));
 			}
 			i = i + new_len;
 		} else {
