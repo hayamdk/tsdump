@@ -242,7 +242,7 @@ void clear_line()
 void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 {
 #ifdef TSD_PLATFORM_MSVC
-	int n, backward_size, pos_write, pos;
+	int n, backward_size, pos_write, pos, buf_offset;
 	ssize_t width, console_width;
 	char line[256], hor[256];
 	char *p = line;
@@ -264,9 +264,9 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 	} else if (console_width == 0) {
 #endif
 		assert(n_tos >= 1);
-		ab_get_status(tos[0].ab, &buf_used);
+		ab_get_status(tos[0].ab, &buf_used, NULL);
 		for (i = 1; i < n_tos; i++) {
-			ab_get_status(tos[i].ab, &buf_used_sv);
+			ab_get_status(tos[i].ab, &buf_used_sv, NULL);
 			if (buf_used_sv > buf_used) {
 				buf_used = buf_used_sv;
 			}
@@ -279,7 +279,7 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 		width = ( console_width - 6 - (n_tos-1) ) / n_tos;
 
 		for (i = 0; i < n_tos; i++) {
-			ab_get_status(tos[i].ab, &buf_used);
+			ab_get_status(tos[i].ab, &buf_used, &buf_offset);
 			backward_size = ab_get_history_backward_bytes(tos[i].ab_history);
 
 			pos_write = buf_used;
@@ -292,6 +292,11 @@ void print_buf(output_status_stream_t *tos, int n_tos, const TSDCHAR *stat)
 
 			for (n = 0; n < width; n++) {
 				pos = (int)( (double)BUFSIZE / width * (n+0.5) );
+				pos -= buf_offset;
+				if (pos < 0) {
+					pos += BUFSIZE;
+				}
+
 				if (pos < pos_write) {
 					*p = '-';
 				} else if (pos < buf_used) {

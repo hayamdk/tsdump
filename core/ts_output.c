@@ -119,6 +119,11 @@ int ts_simplify_PAT_packet(uint8_t *new_packet, const uint8_t *old_packet, unsig
 
 void require_a_few_buffer(ab_buffer_t *ab, ab_history_t *history)
 {
+	/* magic_ring_bufferモードではこの処理は不要 */
+	if (ab_use_magic_ring_buffer) {
+		return;
+	}
+
 	int clearsize = ab_get_history_backward_bytes(history) / 4;
 	if (clearsize > (int)((float)BUFSIZE * 0.9)) {
 		clearsize = (int)((float)BUFSIZE * 0.9);
@@ -162,7 +167,7 @@ void copy_current_service_packet(output_status_stream_t *tos, ts_service_list_t 
 		return;
 	}
 
-	ab_get_status(tos->ab, &buf_used);
+	ab_get_status(tos->ab, &buf_used, NULL);
 	if (buf_used > BUFSIZE - 188) {
 		require_a_few_buffer(tos->ab, tos->ab_history);
 		cleared = 1;

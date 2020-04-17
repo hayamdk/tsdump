@@ -3,12 +3,18 @@
 #include <inttypes.h>
 #include <assert.h>
 
+//#define DISABLE_MAGIC_RING_BUFFER
+
 #ifdef _MSC_VER
 #include <sys/timeb.h>
 #include <time.h>
-#else
+#ifndef DISABLE_MAGIC_RING_BUFFER
+#include <Windows.h>
+#define USE_MAGIC_RING_BUFFER
+#endif /*DISABLE_MAGIC_RING_BUFFER*/
+#else /* _MSC_VER */
 #include <sys/time.h>
-#endif
+#endif /* _MSC_VER */
 
 #define AB_MAX_DOWNSTREAMS	64
 
@@ -41,6 +47,12 @@ struct ab_buffer_struct {
 	int buf_size;
 	uint8_t *buf;
 	ab_history_t *history;
+#ifdef USE_MAGIC_RING_BUFFER
+	uint8_t* buf_orig;
+#ifdef _MSC_VER
+	HANDLE mapping_handle;
+#endif /*_MSC_VER*/
+#endif /*USE_MAGIC_RING_BUFFER*/
 };
 
 typedef struct {
@@ -65,6 +77,80 @@ struct ab_history_struct {
 
 #define alignment_floor(x, alignment_size) ( (alignment_size) > 1 ? (x) / (alignment_size) * (alignment_size) : (x) )
 #define alignment_ceil(x, alignment_size)  ( (alignment_size) > 1 ? ((x)+(alignment_size)-1) / (alignment_size) * (alignment_size) : (x) )
+
+
+#ifdef USE_MAGIC_RING_BUFFER
+
+const int ab_use_magic_ring_buffer = 1;
+
+/* Magic Ring Buffer */
+/* see: https://www.slideshare.net/urakarin/magic-ring-buffer */
+/* see: https://en.wikipedia.org/wiki/Circular_buffer#Optimization */
+
+#ifdef _MSC_VER
+
+void* magic_alloc(HANDLE* handle, size_t size)
+{
+	uint8_t* target_ptr;
+	void* ret;
+	uint64_t alloc_size;
+	HANDLE handle_tmp;
+	int retrycount;
+
+	if (size % (64 * 1024) != 0) {
+		return NULL;
+	}
+	alloc_size = size * 2;
+
+	/* Retry to overcome race condition */
+	for (retrycount = 0; retrycount < 5; retrycount++) {
+		handle_tmp = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, alloc_size >> 32, alloc_size & 0xffffffffu, NULL);
+		if (!handle_tmp) {
+			continue;
+		}
+
+		target_ptr = VirtualAlloc(0, size * 2, MEM_RESERVE, PAGE_NOACCESS);
+		if (!target_ptr) {
+			CloseHandle(handle_tmp);
+			continue;
+		}
+		VirtualFree(target_ptr, 0, MEM_RELEASE);
+
+		/* There is a possibility of race condition between VirtualFree and MapViewOfFileEx */
+
+		ret = MapViewOfFileEx(handle_tmp, FILE_MAP_ALL_ACCESS, 0, 0, size, target_ptr);
+		if (!ret) {
+			CloseHandle(handle_tmp);
+			continue;
+		}
+		ret = MapViewOfFileEx(handle_tmp, FILE_MAP_ALL_ACCESS, 0, 0, size, target_ptr + size);
+		if (!ret) {
+			UnmapViewOfFile(target_ptr);
+			CloseHandle(handle_tmp);
+			continue;
+		}
+
+		*handle = handle_tmp;
+		return target_ptr;
+	}
+
+	return NULL;
+}
+
+void magic_free(HANDLE handle, void* ptr, size_t size)
+{
+	UnmapViewOfFile(ptr);
+	UnmapViewOfFile((uint8_t*)ptr + size);
+	CloseHandle(handle);
+}
+
+#endif /*_MSC_VER*/
+
+#else /*USE_MAGIC_RING_BUFFER*/
+
+const int ab_use_magic_ring_buffer = 0;
+
+#endif /*USE_MAGIC_RING_BUFFER*/
 
 static int ab_next_downstream_internal(ab_buffer_t *ab, int id, int ignore_history)
 {
@@ -123,7 +209,14 @@ static void check_close(ab_buffer_t *ab)
 void ab_init(ab_buffer_t *ab, int buf_size)
 {
 	int i;
+#ifdef USE_MAGIC_RING_BUFFER
+#ifdef _MSC_VER
+	ab->buf_orig = magic_alloc(&ab->mapping_handle, buf_size);
+	ab->buf = ab->buf_orig;
+#endif /*_MSC_VER*/
+#else /*USE_MAGIC_RING_BUFFER*/
 	ab->buf = (uint8_t*)malloc(buf_size);
+#endif /*USE_MAGIC_RING_BUFFER*/
 	ab->buf_size = buf_size;
 	ab->buf_used = 0;
 	ab->n_downstreams = 0;
@@ -138,13 +231,18 @@ ab_buffer_t* ab_create(int buf_size)
 {
 	ab_buffer_t *ab = (ab_buffer_t*)malloc(sizeof(ab_buffer_t));
 	ab_init(ab, buf_size);
+	assert(ab != NULL && ab->buf != NULL);
 	return ab;
 }
 
 void ab_delete(ab_buffer_t *ab)
 {
 	ab_close_buf(ab);
+#ifdef USE_MAGIC_RING_BUFFER
+	magic_free(ab->mapping_handle, ab->buf_orig, ab->buf_size);
+#else  /*USE_MAGIC_RING_BUFFER*/
 	free(ab->buf);
+#endif /*USE_MAGIC_RING_BUFFER*/
 	free(ab);
 }
 
@@ -252,9 +350,16 @@ void ab_clear_buf(ab_buffer_t *ab, int require_size)
 	move_size = ab->buf_used - clear_size;
 	assert(0 <= move_size && move_size <= ab->buf_used);
 
+#ifdef USE_MAGIC_RING_BUFFER
+	ab->buf += clear_size;
+	if (ab->buf - ab->buf_orig > ab->buf_size) {
+		ab->buf -= ab->buf_size;
+	}
+#else /*USE_MAGIC_RING_BUFFER*/
 	if (move_size > 0 && clear_size > 0) {
 		memmove(ab->buf, &ab->buf[clear_size], move_size);
 	}
+#endif /*USE_MAGIC_RING_BUFFER*/
 	ab->buf_used -= clear_size;
 
 	for (i = j = 0; i < ab->n_downstreams; j++) {
@@ -407,10 +512,18 @@ void ab_close_buf(ab_buffer_t *ab)
 	}
 }
 
-void ab_get_status(ab_buffer_t *ab, int *buf_used)
+void ab_get_status(ab_buffer_t *ab, int *buf_used, int *buf_offset)
 {
 	if (buf_used) {
 		*buf_used = ab->buf_used;
+	}
+
+	if (buf_offset) {
+#ifdef USE_MAGIC_RING_BUFFER
+		*buf_offset = (int)(ab->buf - ab->buf_orig);
+#else
+		*buf_offset = 0;
+#endif
 	}
 }
 
@@ -524,17 +637,15 @@ static void history_handler_close(ab_buffer_t *ab, void *param, const uint8_t *b
 
 static int history_handler_pre_output(ab_buffer_t *ab, void *param, int *outbytes)
 {
-	//UNREF_ARG(ab);
-	int buf_used, buf_pos, buf_remain_bytes;
+	int buf_pos, buf_remain_bytes;
 	ab_history_t *history = (ab_history_t*)param;
 
 	if (history->close_flg) {
 		return 0;
 	}
 
-	ab_get_status(ab, &buf_used);
 	ab_get_downstream_status(ab, history->stream_id, &buf_pos, NULL);
-	buf_remain_bytes = buf_used - buf_pos;
+	buf_remain_bytes = ab->buf_used - buf_pos;
 	if (buf_remain_bytes > history->backward_bytes) {
 		*outbytes = buf_remain_bytes - history->backward_bytes;
 		return 0;

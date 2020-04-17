@@ -2,6 +2,8 @@ typedef struct ab_buffer_struct ab_buffer_t;
 typedef struct ab_downstream_struct ab_downstream_t;
 typedef struct ab_history_struct ab_history_t;
 
+extern const int ab_use_magic_ring_buffer;
+
 typedef struct {
 	int (*output)(ab_buffer_t*, void*, const uint8_t*, int);
 	void (*notify_skip)(ab_buffer_t*, void*, int);
@@ -27,7 +29,7 @@ void ab_input_buf(ab_buffer_t *ab, const uint8_t *buf, int size);
 void ab_output_buf(ab_buffer_t *ab);
 void ab_close_buf(ab_buffer_t *ab);
 
-void ab_get_status(ab_buffer_t *ab, int *buf_used);
+void ab_get_status(ab_buffer_t *ab, int *buf_used, int *buf_offset);
 int ab_get_downstream_status(ab_buffer_t *ab, int id, int *buf_pos, int *remain_size);
 void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate);
 
