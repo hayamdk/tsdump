@@ -6,15 +6,28 @@
 //#define DISABLE_MAGIC_RING_BUFFER
 
 #ifdef _MSC_VER
-#include <sys/timeb.h>
-#include <time.h>
-#ifndef DISABLE_MAGIC_RING_BUFFER
-#include <Windows.h>
-#define USE_MAGIC_RING_BUFFER
-#endif /*DISABLE_MAGIC_RING_BUFFER*/
+	#include <sys/timeb.h>
+	#include <time.h>
+
+	#ifndef DISABLE_MAGIC_RING_BUFFER
+		#include <Windows.h>
+		#define USE_MAGIC_RING_BUFFER
+	#endif
 #else /* _MSC_VER */
-#include <sys/time.h>
+	#ifndef __linux__
+		#define DISABLE_MAGIC_RING_BUFFER
+	#endif /*__linux__*/
+	
+	#include <sys/time.h>
+
+	#ifndef DISABLE_MAGIC_RING_BUFFER
+		#include <unistd.h>
+		#include <sys/mman.h>
+		#define USE_MAGIC_RING_BUFFER
+	#endif
 #endif /* _MSC_VER */
+
+
 
 #define AB_MAX_DOWNSTREAMS	64
 
@@ -49,10 +62,10 @@ struct ab_buffer_struct {
 	ab_history_t *history;
 #ifdef USE_MAGIC_RING_BUFFER
 	uint8_t* buf_orig;
-#ifdef _MSC_VER
-	HANDLE mapping_handle;
-#endif /*_MSC_VER*/
-#endif /*USE_MAGIC_RING_BUFFER*/
+	#ifdef _MSC_VER
+		HANDLE mapping_handle;
+	#endif
+#endif
 };
 
 typedef struct {
@@ -144,6 +157,56 @@ void magic_free(HANDLE handle, void* ptr, size_t size)
 	CloseHandle(handle);
 }
 
+#else /*_MSC_VER*/
+
+void *magic_alloc(size_t size)
+{
+	char tmppath[] = "/tmp/tsdump_ring_buffer-XXXXXX";
+	int fd;
+	uint8_t *target_ptr;
+	
+	/* using memfd_create is more better? */
+	fd = mkstemp(tmppath);
+	if ( fd == -1 ) {
+		return NULL;
+	}
+	
+	if ( unlink(tmppath) == -1 ) {
+		close(fd);
+		return NULL;
+	}
+	
+	if ( ftruncate(fd, size) == -1 ) {
+		close(fd);
+		return NULL;
+	}
+	
+	target_ptr = mmap(NULL, size*2, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	if ( target_ptr == MAP_FAILED ) {
+		close(fd);
+		return NULL;
+	}
+	
+	if ( mmap(target_ptr, size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, fd, 0) == MAP_FAILED ) {
+		close(fd);
+		munmap(target_ptr, size*2);
+		return NULL;
+	}
+	if ( mmap(target_ptr+size, size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, fd, 0) == MAP_FAILED ) {
+		close(fd);
+		munmap(target_ptr, size*2);
+		return NULL;
+	}
+	
+	close(fd);
+	return target_ptr;
+}
+
+void magic_free(void* ptr, size_t size)
+{
+	munmap(ptr, size*2);
+}
+
 #endif /*_MSC_VER*/
 
 #else /*USE_MAGIC_RING_BUFFER*/
@@ -209,14 +272,18 @@ static void check_close(ab_buffer_t *ab)
 void ab_init(ab_buffer_t *ab, int buf_size)
 {
 	int i;
+	
 #ifdef USE_MAGIC_RING_BUFFER
-#ifdef _MSC_VER
-	ab->buf_orig = magic_alloc(&ab->mapping_handle, buf_size);
+	#ifdef _MSC_VER
+		ab->buf_orig = magic_alloc(&ab->mapping_handle, buf_size);
+	#else
+		ab->buf_orig = magic_alloc(buf_size);
+	#endif
 	ab->buf = ab->buf_orig;
-#endif /*_MSC_VER*/
-#else /*USE_MAGIC_RING_BUFFER*/
+#else
 	ab->buf = (uint8_t*)malloc(buf_size);
-#endif /*USE_MAGIC_RING_BUFFER*/
+#endif
+	
 	ab->buf_size = buf_size;
 	ab->buf_used = 0;
 	ab->n_downstreams = 0;
@@ -239,10 +306,14 @@ void ab_delete(ab_buffer_t *ab)
 {
 	ab_close_buf(ab);
 #ifdef USE_MAGIC_RING_BUFFER
-	magic_free(ab->mapping_handle, ab->buf_orig, ab->buf_size);
-#else  /*USE_MAGIC_RING_BUFFER*/
+	#ifdef _MSC_VER
+		magic_free(ab->mapping_handle, ab->buf_orig, ab->buf_size);
+	#else
+		magic_free(ab->buf_orig, ab->buf_size);
+	#endif
+#else
 	free(ab->buf);
-#endif /*USE_MAGIC_RING_BUFFER*/
+#endif
 	free(ab);
 }
 
