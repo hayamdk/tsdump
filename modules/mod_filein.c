@@ -46,10 +46,12 @@ typedef struct {
 #else
 	int fd;
 #endif
-	int64_t timestamp_orig;
+	int64_t timestamp_init;
 	int64_t timestamp;
+	int set_last_PCR;
+	int64_t last_PCR;
+	int64_t remain_PCR;
 	int64_t total_bytes;
-	int PCR_set_orig;
 	PSI_parse_t pid_PAT;
 	PSI_parse_t pid_PMT;
 	proginfo_t proginfo;
@@ -115,7 +117,7 @@ void set_timpstamp_bytes(filein_stat_t *stat, int size)
 {
 	stat->total_bytes += size;
 	int64_t timestamp_offset = (int64_t)( (double)stat->total_bytes / mbps / 1024 / 1024 * 8 * 1000 );
-	stat->timestamp = stat->timestamp_orig + timestamp_offset;
+	stat->timestamp = stat->timestamp_init + timestamp_offset;
 }
 
 static void set_timestamp_pcr(filein_stat_t *stat, const uint8_t *buf, const int size)
@@ -123,8 +125,9 @@ static void set_timestamp_pcr(filein_stat_t *stat, const uint8_t *buf, const int
 	uint8_t *buf_filtered;
 	int size_filtered;
 	ts_header_t tsh;
-	int i, set=0;
-	int64_t timestamp_offset = 0;
+	int i;
+	int64_t PCR_diff;
+	int64_t timestamp_diff;
 
 	ts_alignment_filter(&stat->filter, &buf_filtered, &size_filtered, buf, size);
 	for (i = 0; i < size_filtered; i += 188) {
@@ -142,24 +145,23 @@ static void set_timestamp_pcr(filein_stat_t *stat, const uint8_t *buf, const int
 			parse_PMT(&buf_filtered[i], &tsh, &stat->pid_PMT, &stat->proginfo);
 			parse_PCR(&buf_filtered[i], &tsh, stat, pcr_handler);
 			if (stat->proginfo.status & PGINFO_VALID_PCR && stat->proginfo.status & PGINFO_PCR_UPDATED) {
-				timestamp_offset = stat->proginfo.PCR_base * 1000 / PCR_BASE_HZ;
-				if (!stat->PCR_set_orig) {
-					stat->PCR_set_orig = 1;
-					stat->timestamp_orig = gettime() - timestamp_offset;
-				} else if (stat->proginfo.PCR_wraparounded) {
-					stat->timestamp_orig += PCR_BASE_MAX * 1000 / PCR_BASE_MAX;
+				if (!stat->set_last_PCR) {
+					stat->set_last_PCR = 1;
+					stat->timestamp = gettime();
+					stat->last_PCR = stat->proginfo.PCR_base;
+				} else {
+					PCR_diff = diff_PCR(stat->proginfo.PCR_base, stat->last_PCR);
+					if (PCR_diff > 0) {
+						PCR_diff += stat->remain_PCR;
+						timestamp_diff = PCR_diff * 1000 / PCR_BASE_HZ;
+						stat->remain_PCR = PCR_diff - (timestamp_diff * PCR_BASE_HZ / 1000);
+						stat->timestamp += timestamp_diff;
+						stat->last_PCR = stat->proginfo.PCR_base;
+					}
 				}
-				set = 1;
 				stat->proginfo.status &= ~PGINFO_PCR_UPDATED;
 			}
 		}
-	}
-	if (!stat->PCR_set_orig) {
-		stat->timestamp = gettime();
-		return;
-	}
-	if (set) {
-		stat->timestamp = stat->timestamp_orig + timestamp_offset;
 	}
 }
 
@@ -173,7 +175,7 @@ int wait_timestamp(filein_stat_t *stat, int timeout_ms)
 	if (tn < stat->timestamp - 5 * 1000 || tn > stat->timestamp + 5 * 1000) {
 		offset = tn - stat->timestamp;
 		stat->timestamp = tn;
-		stat->timestamp_orig += offset;
+		stat->set_last_PCR = 0;
 	}
 
 	offset = stat->timestamp - tn;
@@ -449,7 +451,7 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 	stat->bytes = 0;
 	stat->eof = 0;
 	stat->total_bytes = 0;
-	stat->timestamp = stat->timestamp_orig = gettime();
+	stat->timestamp = stat->timestamp_init = gettime();
 #ifdef TSD_PLATFORM_MSVC
 	stat->read_busy = 0;
 	memset(&stat->ol, 0, sizeof(OVERLAPPED));
@@ -469,7 +471,8 @@ static int hook_stream_generator_open(void **param, ch_info_t *chinfo)
 		create_ts_alignment_filter(&stat->filter);
 		stat->pid_PAT.pid= 0;
 		stat->pid_PAT.stat = PAYLOAD_STAT_INIT;
-		stat->PCR_set_orig = 0;
+		stat->set_last_PCR = 0;
+		stat->remain_PCR = 0;
 	}
 	return 1;
 }

@@ -263,6 +263,8 @@ typedef struct {
 	unsigned int pid : 13;
 } PAT_item_t;
 
+int64_t diff_PCR(uint64_t pcr1, uint64_t pcr2);
+
 typedef proginfo_t* (*eit_callback_handler_t)(void*, const EIT_header_t*);
 typedef proginfo_t* (*service_callback_handler_t)(void*, const unsigned int);
 typedef void (*pat_callback_handler_t)(void*, const int, const int, const PAT_item_t*);

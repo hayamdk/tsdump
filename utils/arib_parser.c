@@ -279,6 +279,25 @@ void mjd_to_ymd(const unsigned int mjd16, int *year, int *mon, int *day)
 	*day = d;
 }
 
+int64_t abs64(int64_t x)
+{
+	if (x < 0) {
+		x = -x;
+	}
+	return x;
+}
+
+/* PCRのwraparound対策として差が近いものを選ぶ */
+int64_t diff_PCR(uint64_t pcr1, uint64_t pcr2)
+{
+	int64_t diff1 = (int64_t)pcr1 - pcr2;
+	int64_t diff2 = diff1 + PCR_BASE_MAX;
+	if ( abs64(diff1) > abs64(diff2) ) {
+		return diff2;
+	}
+	return diff1;
+}
+
 int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time)
 {
 	int64_t diff_pcr, usec;
@@ -288,13 +307,7 @@ int get_stream_timestamp(const proginfo_t *pi, time_mjd_t *jst_time)
 		return 0;
 	}
 
-	diff_pcr = pi->PCR_base - pi->TOT_PCR;
-	if (pi->PCR_wraparounded) {
-		diff_pcr += PCR_BASE_MAX;
-	}
-	if (diff_pcr < 0) {
-		return 0;
-	}
+	diff_pcr = diff_PCR(pi->PCR_base, pi->TOT_PCR);
 
 	usec = diff_pcr*1000*1000 / PCR_BASE_HZ + pi->TOT_time.usec;
 	sec = (int)(usec/(1000*1000)) + pi->TOT_time.sec;
@@ -617,7 +630,7 @@ void init_proginfo(proginfo_t *proginfo)
 	proginfo->status = 0;
 	proginfo->last_desc = -1;
 	proginfo->PCR_base = 0;
-	proginfo->PCR_wraparounded = 0;
+	proginfo->PCR_ext = 0;
 }
 
 int parse_EIT_Sed(const uint8_t *desc, Sed_t *sed)
@@ -901,7 +914,6 @@ void parse_EIT_Cd(const uint8_t *desc, Cd_t *cd)
 
 void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, service_callback_handler_t handler)
 {
-	int wraparounded;
 	const uint8_t *p;
 	uint64_t PCR_base = 0;
 	int64_t offset;
@@ -926,26 +938,19 @@ void parse_PCR(const uint8_t *packet, const ts_header_t *tsh, void *param, servi
 	if (tsh->pid == current_proginfo->PCR_pid) {
 		PCR_base = get_bits64(p, 8, 33);
 		PCR_ext = get_bits(p, 47, 9);
-		offset = (int64_t)PCR_base - (int64_t)current_proginfo->PCR_base;
-		wraparounded = 0;
-		if (offset < 0) {
-			/* wrap-around対策 */
-			offset += PCR_BASE_MAX;
-			wraparounded = 1;
-		}
+		offset = diff_PCR(PCR_base, current_proginfo->PCR_base);
 
-		if( offset < 1*PCR_BASE_HZ ) {
+		if( 0 < offset && offset < 1*PCR_BASE_HZ ) {
 			current_proginfo->status |= PGINFO_VALID_PCR;
 			current_proginfo->status |= PGINFO_PCR_UPDATED;
 			//output_message(MSG_DISP, TSD_TEXT("PCR %x: %"PRId64" %I64x %d %d"),
 			//	sl->proginfos[i].service_id, PCR_base, PCR_base, PCR_ext, wraparounded);
 		} else {
-			/* 前のPCRから1秒以上差があれば有効とは見なさない */
+			/* 前のPCRから1秒以上差があるか、あるいは巻き戻っていれば有効とは見なさない */
 			current_proginfo->status &= ~PGINFO_VALID_PCR;
 		}
 		current_proginfo->PCR_base = PCR_base;
 		current_proginfo->PCR_ext = PCR_ext;
-		current_proginfo->PCR_wraparounded |= wraparounded;
 	}
 }
 
@@ -958,7 +963,6 @@ void store_TOT(proginfo_t *proginfo, const time_mjd_t *TOT_time)
 	} else {
 		proginfo->status &= ~PGINFO_VALID_TOT_PCR;
 	}
-	proginfo->PCR_wraparounded = 0;
 	proginfo->status |= PGINFO_GET_TOT;
 	proginfo->status |= PGINFO_TOT_UPDATED;
 }

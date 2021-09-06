@@ -149,7 +149,6 @@ typedef struct {
 	/***** PCR *****/
 	uint64_t PCR_base;
 	unsigned int PCR_ext : 9;
-	unsigned int PCR_wraparounded : 1;
 
 	/***** SDT *****/
 	unsigned int network_id : 16;
