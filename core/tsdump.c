@@ -54,6 +54,7 @@ int param_all_services;
 unsigned int param_services[MAX_SERVICES];
 int param_n_services = 0;
 int param_nosplit = 0;
+int param_wait_stream = 0;
 
 int need_clear_line = 0;
 
@@ -753,10 +754,19 @@ int main(int argc, const char* argv[])
 	signal(SIGTERM, signal_handler);
 #endif
 
-	if ( ! do_stream_generator_open(&generator_stat, &ch_info) ) {
-		output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータを開けませんでした"));
-		ret = 1;
-		goto END;
+	while ( !do_stream_generator_open(&generator_stat, &ch_info) ) {
+		if (param_wait_stream) {
+			output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータを開けませんでしたが10秒後再試行します"));
+			#ifdef TSD_PLATFORM_MSVC
+						Sleep(10*1000);
+			#else
+						usleep(10*1000*1000);
+			#endif
+		} else {
+			output_message(MSG_ERROR, TSD_TEXT("ストリームジェネレータを開けませんでした"));
+			ret = 1;
+			goto END;
+		}
 	}
 
 	ch_info.mode_all_services = param_all_services;
@@ -883,6 +893,13 @@ static const TSDCHAR* set_nosplit(const TSDCHAR *param)
 	return NULL;
 }
 
+static const TSDCHAR* set_wait_stream(const TSDCHAR* param)
+{
+	UNREF_ARG(param);
+	param_wait_stream = 1;
+	return NULL;
+}
+
 #ifdef TSD_PLATFORM_MSVC
 
 static const TSDCHAR* set_pri(const TSDCHAR *param)
@@ -978,6 +995,7 @@ static cmd_def_t cmds[] = {
 	{ TSD_TEXT("--max-output-delay"), TSD_TEXT("出力の最大遅延時間(sec)"), 1, set_output_delay },
 	{ TSD_TEXT("--max-close-delay"), TSD_TEXT("終了処理の最大遅延時間(sec)"), 1, set_close_delay },
 	{ TSD_TEXT("--nosplit"), TSD_TEXT("番組ごとに分割しない"), 0, set_nosplit },
+	{ TSD_TEXT("--wait-stream"), TSD_TEXT("ストリームを開けるまで待機する"), 0, set_wait_stream },
 #ifdef TSD_PLATFORM_MSVC
 	{ TSD_TEXT("--pri"), TSD_TEXT("プロセスの優先度(realtime|high|above|normal|below|idle)"), 1, set_pri },
 #endif
