@@ -23,13 +23,15 @@
 #include "utils/arib_proginfo.h"
 #include "core/module_api.h"
 #include "utils/arib_parser.h"
-#include "core/tsdump.h"
-#include "utils/advanced_buffer.h"
-#include "core/load_modules.h"
-#include "core/ts_output.h"
 #include "utils/tsdstr.h"
+#include "utils/advanced_buffer.h"
 #include "utils/aribstr.h"
 #include "utils/path.h"
+
+#include "core/tsdump.h"
+#include "core/load_modules.h"
+#include "core/ts_output.h"
+
 #include "core/default_decoder.h"
 
 int BUFSIZE = BUFSIZE_DEFAULT * 1024 * 1024;

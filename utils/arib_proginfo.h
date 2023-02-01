@@ -180,6 +180,8 @@ typedef struct {
 
 } proginfo_t;
 
+int get_primary_video_pid(const proginfo_t* proginfo);
+int get_primary_audio_pid(const proginfo_t* proginfo);
 int get_extended_text(TSDCHAR *dst, size_t n, const proginfo_t *pi);
 void get_genre_str(const TSDCHAR **genre1, const TSDCHAR **genre2, Cd_t_item item);
 int proginfo_cmp(const proginfo_t *pi1, const proginfo_t *pi2);

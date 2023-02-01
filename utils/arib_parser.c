@@ -103,6 +103,32 @@ const TSDCHAR *genre_user[] = {
 	TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-"), TSD_TEXT("-")
 };
 
+int get_primary_video_pid(const proginfo_t* proginfo)
+{
+	int i;
+	if (PGINFO_READY(proginfo->status)) {
+		for (i = 0; i < proginfo->n_service_pids; i++) {
+			if (proginfo->service_pids[i].stream_type == 0x02) {
+				return proginfo->service_pids[i].pid;
+			}
+		}
+	}
+	return -1;
+}
+
+int get_primary_audio_pid(const proginfo_t* proginfo)
+{
+	int i;
+	if (PGINFO_READY(proginfo->status)) {
+		for (i = 0; i < proginfo->n_service_pids; i++) {
+			if (proginfo->service_pids[i].stream_type == 0x0f) {
+				return proginfo->service_pids[i].pid;
+			}
+		}
+	}
+	return -1;
+}
+
 void get_genre_str(const TSDCHAR **genre1, const TSDCHAR **genre2, Cd_t_item item)
 {
 	if (item.content_nibble_level_1 != 0xe) {

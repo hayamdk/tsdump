@@ -18,11 +18,12 @@
 #include "utils/arib_proginfo.h"
 #include "core/module_api.h"
 #include "utils/arib_parser.h"
-#include "core/tsdump.h"
+#include "utils/tsdstr.h"
 #include "utils/advanced_buffer.h"
+
+#include "core/tsdump.h"
 #include "core/load_modules.h"
 #include "core/ts_output.h"
-#include "utils/tsdstr.h"
 
 //#include "timecalc.h"
 

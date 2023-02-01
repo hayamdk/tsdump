@@ -24,12 +24,13 @@
 #include "utils/tsdstr.h"
 #include "utils/arib_proginfo.h"
 #include "core/module_api.h"
+#include "utils/arib_parser.h"
+#include "utils/path.h"
+
 #include "core/tsdump.h"
 #include "core/load_modules.h"
-#include "utils/arib_parser.h"
 #include "core/default_decoder.h"
 #include "modules/modules.h"
-#include "utils/path.h"
 
 static hooks_stream_generator_t *hooks_stream_generator = NULL;
 static hooks_stream_decoder_t *hooks_stream_decoder = NULL;
