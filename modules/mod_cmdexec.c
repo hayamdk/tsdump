@@ -124,7 +124,7 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	const TSDCHAR *fname_base_r, *fname_r;
 	TSDCHAR retcode_name[MAX_PIPECMDS][8], retcode[MAX_PIPECMDS][16];
 	TSDCHAR cmdresult_name[MAX_PIPECMDS][8], cmdresult[MAX_PIPECMDS][16];
-	tsdstr_replace_set_t sets[64+MAX_PIPECMDS];
+	tsdstr_replace_set_t sets[64 + MAX_PIPECMDS*2];
 	size_t n_sets = 0;
 	int i;
 
