@@ -55,10 +55,12 @@ typedef struct {
 } redirect_pathinfo_t;
 
 typedef struct {
+	unsigned int is_top : 1;
 	unsigned int used : 1;
 	unsigned int soft_closed : 1;
 	unsigned int aborted : 1;
 	unsigned int no_pipe : 1;
+	unsigned int pipe_dropped : 1;
 #ifdef TSD_PLATFORM_MSVC
 	unsigned int write_busy : 1;
 	OVERLAPPED ol;
@@ -68,7 +70,8 @@ typedef struct {
 #endif
 	my_retcode_t cmd_retcode;
 	int cmd_result;
-	int n_connected_cmds;
+	size_t pipe_dropped_bytes;
+	int n_downstream_cmds;
 	const TSDCHAR *cmd;
 	redirect_pathinfo_t redirects;
 	my_process_handle_t child_process;
@@ -83,7 +86,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int set_opt : 1;
-	unsigned int connecting : 1;
+	unsigned int has_downstream: 1;
 	unsigned int no_pipe : 1;
 	TSDCHAR cmd[MAX_PATH_LEN];
 	TSDCHAR opt[2048];
@@ -124,7 +127,9 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 	const TSDCHAR *fname_base_r, *fname_r;
 	TSDCHAR retcode_name[MAX_PIPECMDS][8], retcode[MAX_PIPECMDS][16];
 	TSDCHAR cmdresult_name[MAX_PIPECMDS][8], cmdresult[MAX_PIPECMDS][16];
-	tsdstr_replace_set_t sets[64 + MAX_PIPECMDS*2];
+	TSDCHAR pipe_dropped_name[MAX_PIPECMDS][14], pipe_dropped[MAX_PIPECMDS][3];
+	TSDCHAR pipe_dropped_bytes_name[MAX_PIPECMDS][14], pipe_dropped_bytes[MAX_PIPECMDS][22];
+	tsdstr_replace_set_t sets[64 + MAX_PIPECMDS*4];
 	size_t n_sets = 0;
 	int i;
 
@@ -147,10 +152,16 @@ static void generate_arg(TSDCHAR *arg, size_t maxlen_arg, const cmd_opt_t *cmd, 
 		for (i = 0; i < n_pipecmds; i++) {
 			tsd_snprintf(cmdresult_name[i], 8, TSD_TEXT("{RES%d}"), i);
 			tsd_snprintf(retcode_name[i], 8, TSD_TEXT("{RET%d}"), i);
+			tsd_snprintf(pipe_dropped_name[i], 14, TSD_TEXT("{PIPEDROP%d}"), i);
+			tsd_snprintf(pipe_dropped_bytes_name[i], 14, TSD_TEXT("{PIPEDROPB%d}"), i);
 			tsd_snprintf(cmdresult[i], 16, TSD_TEXT("%d"), ps[i].cmd_result);
 			tsd_snprintf(retcode[i], 16, TSD_TEXT("%d"), (int)ps[i].cmd_retcode);
+			tsd_snprintf(pipe_dropped[i], 3, TSD_TEXT("%d"), ps[i].pipe_dropped);
+			tsd_snprintf(pipe_dropped_bytes[i], 22, TSD_TEXT("%zu"), ps[i].pipe_dropped_bytes);
 			TSD_REPLACE_ADD_SET(sets, n_sets, cmdresult_name[i], cmdresult[i]);
 			TSD_REPLACE_ADD_SET(sets, n_sets, retcode_name[i], retcode[i]);
+			TSD_REPLACE_ADD_SET(sets, n_sets, pipe_dropped_name[i], pipe_dropped[i]);
+			TSD_REPLACE_ADD_SET(sets, n_sets, pipe_dropped_bytes_name[i], pipe_dropped_bytes[i]);
 		}
 	}
 
@@ -907,6 +918,7 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 	tsd_strlcpy(stat->filename, fname, MAX_PATH_LEN - 1);
 
 	for (i = n = 0; i < n_pipecmds; i++) {
+		stat->pipestats[i].is_top = 0;
 		stat->pipestats[i].used = 0;
 		stat->pipestats[i].no_pipe = 0;
 		stat->pipestats[i].cmd_result = -1;
@@ -916,14 +928,15 @@ static void *hook_pgoutput_precreate(const TSDCHAR *fname, const proginfo_t *pi,
 			if (pipecmds[i].no_pipe) {
 				stat->pipestats[i].no_pipe = 1;
 			}
+			stat->pipestats[i].is_top = 1;
 			n++;
 			last_pipe_cmd = i;
-			stat->pipestats[last_pipe_cmd].n_connected_cmds = 0;
+			stat->pipestats[last_pipe_cmd].n_downstream_cmds = 0;
 		} else {
 			assert(!pipecmds[i].no_pipe);
-			stat->pipestats[last_pipe_cmd].n_connected_cmds++;
+			stat->pipestats[last_pipe_cmd].n_downstream_cmds++;
 		}
-		if (pipecmds[i].connecting) {
+		if (pipecmds[i].has_downstream) {
 			connected = 1;
 		} else {
 			connected = 0;
@@ -950,16 +963,16 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 	pipestat_t *ps, *ps_conn;
 
 	ps = &ms->pipestats[ms->idx_of_pipestats];
-	if (ps->n_connected_cmds > 0) {
+	if (ps->n_downstream_cmds > 0) {
 		p_next = &next;
 	} else {
 		p_next = NULL;
 	}
 
 	if (exec_child(ps, &pipecmds[ms->idx_of_pipestats], fname, pi, NULL, p_next)) {
-		for (i = 1; i <= ps->n_connected_cmds; i++) {
+		for (i = 1; i <= ps->n_downstream_cmds; i++) {
 			ps_conn = &ms->pipestats[ms->idx_of_pipestats + i];
-			if (pipecmds[ms->idx_of_pipestats + i].connecting) {
+			if (pipecmds[ms->idx_of_pipestats + i].has_downstream) {
 				p_next = &next;
 			} else {
 				p_next = NULL;
@@ -969,7 +982,7 @@ static void *hook_pgoutput_create(void *param, const TSDCHAR *fname, const progi
 			}
 		}
 	}
-	ms->idx_of_pipestats += ps->n_connected_cmds + 1;
+	ms->idx_of_pipestats += ps->n_downstream_cmds + 1;
 	return ps;
 }
 
@@ -1362,19 +1375,31 @@ static int hook_pgoutput_forceclose(void *param, int force_close, int remain_ms)
 	int i, busy = 0;
 
 	busy |= check_pipe_child_process(pstat, force_close, remain_ms);
-	for (i = 1; i <= pstat->n_connected_cmds; i++) {
+	for (i = 1; i <= pstat->n_downstream_cmds; i++) {
 		busy |= check_pipe_child_process(&pstat[i], force_close, remain_ms);
 	}
 	return busy;
 }
 
-static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi)
+static void hook_pgoutput_postclose(void *stat, const proginfo_t *pi, const void *modparam)
 {
-	int i;
+	int i, j;
 	my_file_handle_t child;
 	redirect_pathinfo_t redirect;
 
 	module_stat_t *pstat = (module_stat_t*)stat;
+
+	j = 0;
+	for (i = 0; i < n_pipecmds; i++) {
+		if (pstat->pipestats[i].is_top) {
+			pstat->pipestats[i].pipe_dropped = module_buffer_dropped(modparam, j);
+			pstat->pipestats[i].pipe_dropped_bytes = module_buffer_dropped_bytes(modparam, j);
+			j += 1;
+		} else {
+			pstat->pipestats[i].pipe_dropped = 0;
+			pstat->pipestats[i].pipe_dropped_bytes = 0;
+		}
+	}
 
 	for (i = 0; i < n_execcmds; i++) {
 		child = exec_cmd(&execcmds[i], pstat->filename, pi, &redirect, pstat->pipestats);
@@ -1434,7 +1459,7 @@ static const TSDCHAR* set_pipe_cmd(const TSDCHAR *param)
 	}
 	tsd_strlcpy(pipecmds[n_pipecmds].cmd, param, MAX_PATH_LEN - 1);
 	pipecmds[n_pipecmds].set_opt = 0;
-	pipecmds[n_pipecmds].connecting = 0;
+	pipecmds[n_pipecmds].has_downstream = 0;
 	pipecmds[n_pipecmds].no_pipe = 0;
 	n_pipecmds++;
 	open_connect = 0;
@@ -1465,7 +1490,7 @@ static const TSDCHAR *set_connect(const TSDCHAR* param)
 	if (n_pipecmds < 1) {
 		return TSD_TEXT("接続元のコマンドが指定されていません");
 	}
-	pipecmds[n_pipecmds - 1].connecting = 1;
+	pipecmds[n_pipecmds - 1].has_downstream = 1;
 	open_connect = 1;
 	return NULL;
 }

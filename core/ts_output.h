@@ -11,7 +11,7 @@ struct output_status_struct {
 	unsigned int dropped : 1;
 	int64_t closetime;
 	int downstream_id;
-	int dropped_bytes;
+	size_t dropped_bytes;
 	void *param;
 	output_status_module_t *parent;
 };

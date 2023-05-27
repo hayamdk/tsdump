@@ -617,11 +617,13 @@ void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate)
 	int remain;
 	ab_downstream_t *ds = &ab->downstreams[id];
 	assert(ds->in_use);
+	
 	if (immediate) {
-		ds->close_flg = 1;
+		if (ds->handler.notify_skip) {
+			ds->handler.notify_skip(ab, ds->param, ds->remain_to_close);
+		}
 		ds->remain_to_close = 0;
 	} else {
-		ds->close_flg = 1;
 		remain = ab->buf_used - ds->pos;
 		if (ds->use_retval) {
 			remain -= ds->remain_unaligned;
@@ -634,6 +636,7 @@ void ab_disconnect_downstream(ab_buffer_t *ab, int id, int immediate)
 		}
 		ds->remain_to_close = remain;
 	}
+	ds->close_flg = 1;
 }
 
 static int64_t gettime()

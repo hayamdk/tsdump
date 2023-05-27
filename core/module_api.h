@@ -5,7 +5,7 @@ typedef void (*register_hooks_t)();
 
 typedef const TSDCHAR* (*cmd_handler_t)(const TSDCHAR*);
 
-#define TSDUMP_MODULE_API_VER 6
+#define TSDUMP_MODULE_API_VER 7
 
 typedef enum {
 	TSDUMP_SCALE_NONE,
@@ -44,7 +44,7 @@ typedef struct{
 typedef void* (*hook_pgoutput_precreate_t)(const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int, int*);
 typedef void(*hook_pgoutput_changed_t)(void*, const proginfo_t*, const proginfo_t*);
 typedef void(*hook_pgoutput_end_t)(void*, const proginfo_t*);
-typedef void(*hook_pgoutput_postclose_t)(void*, const proginfo_t*);
+typedef void(*hook_pgoutput_postclose_t)(void*, const proginfo_t*, const void*);
 typedef void* (*hook_pgoutput_create_t)(void*, const TSDCHAR*, const proginfo_t*, const ch_info_t*, const int);
 typedef int (*hook_pgoutput_t)(void*, const unsigned char*, const size_t);
 typedef const int (*hook_pgoutput_check_t)(void*);
@@ -187,6 +187,9 @@ typedef struct {
 TSD_API_DEF(void, _output_message, (const char *fname, message_type_t msgtype, const TSDCHAR *fmt, ...));
 TSD_API_DEF(void, get_stream_stats, (const stream_stats_t **s));
 TSD_API_DEF(void, request_shutdown, (int));
+
+TSD_API_DEF(int, module_buffer_dropped, (const void*, int));
+TSD_API_DEF(size_t, module_buffer_dropped_bytes, (const void*, int));
 
 TSD_API_DEF(void, register_hook_pgoutput_precreate, (hook_pgoutput_precreate_t));
 TSD_API_DEF(void, register_hook_pgoutput_changed, (hook_pgoutput_changed_t));

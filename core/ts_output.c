@@ -185,9 +185,23 @@ void do_pgoutput_postclose(output_status_prog_t *pgos)
 	int i;
 	for (i = 0; i < n_modules; i++) {
 		if (modules[i].hooks.hook_pgoutput_postclose) {
-			modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param, &pgos->final_pi);
+			modules[i].hooks.hook_pgoutput_postclose(pgos->client_array[i].param, &pgos->final_pi, &pgos->client_array[i]);
 		}
 	}
+}
+
+int module_buffer_dropped(const void* param, int idx)
+{
+	const output_status_module_t *osm = (output_status_module_t*)param;
+	assert(idx < osm->n_clients);
+	return osm->client_array[idx].dropped;
+}
+
+size_t module_buffer_dropped_bytes(const void* param, int idx)
+{
+	const output_status_module_t * osm = (output_status_module_t*)param;
+	assert(idx < osm->n_clients);
+	return osm->client_array[idx].dropped_bytes;
 }
 
 static int module_buffer_output(ab_buffer_t *gb, void *param, const uint8_t *buf, int size)
@@ -265,7 +279,7 @@ static void do_pgoutput_check_close_completed(output_status_prog_t *pgos)
 					status->parent->refcount--;
 				}
 				if (status->closed && status->dropped) {
-					output_message(MSG_ERROR, TSD_TEXT("出力中の合計ドロップバイト数: %d bytes (モジュール:%s)"),
+					output_message(MSG_ERROR, TSD_TEXT("出力中の合計ドロップバイト数: %zu bytes (モジュール:%s)"),
 						status->dropped_bytes, status->parent->module->def->modname);
 				}
 			}
